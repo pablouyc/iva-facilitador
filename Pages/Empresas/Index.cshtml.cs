@@ -25,6 +25,7 @@ namespace IvaFacilitador.Pages.Empresas
             Companies = _companyStore.GetCompaniesForUser().OrderBy(c => c.Name).ToList();
         }
 
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> OnPostDisconnect(string realmId)
         {
             if (string.IsNullOrWhiteSpace(realmId))
@@ -33,23 +34,30 @@ namespace IvaFacilitador.Pages.Empresas
                 return RedirectToPage();
             }
 
-            // 1) Intentar revocar el refresh_token en Intuit (si existe)
-            var token = _tokenStore.Get(realmId);
-            if (token != null && !string.IsNullOrEmpty(token.refresh_token))
+            try
             {
-                var (ok, error) = await _auth.TryRevokeRefreshTokenAsync(token.refresh_token);
-                if (!ok && !string.IsNullOrWhiteSpace(error))
+                // 1) Revocar refresh_token en Intuit (si existe)
+                var token = _tokenStore.Get(realmId);
+                if (token != null && !string.IsNullOrEmpty(token.refresh_token))
                 {
-                    // No bloqueamos el proceso local, solo informamos
-                    TempData["Error"] = $"No se pudo revocar en Intuit: {error}. Se eliminará localmente.";
+                    var (ok, error) = await _auth.TryRevokeRefreshTokenAsync(token.refresh_token);
+                    if (!ok && !string.IsNullOrWhiteSpace(error))
+                    {
+                        TempData["Error"] = $"No se pudo revocar en Intuit: {error}. Se eliminará localmente.";
+                    }
                 }
+
+                // 2) Eliminar localmente
+                _tokenStore.Delete(realmId);
+                _companyStore.RemoveCompany(realmId);
+
+                TempData["Success"] = $"La empresa ({realmId}) fue desconectada.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error al desconectar: {ex.Message}";
             }
 
-            // 2) Borrar datos locales
-            _tokenStore.Delete(realmId);
-            _companyStore.RemoveCompany(realmId);
-
-            TempData["Success"] = $"La empresa ({realmId}) fue desconectada.";
             return RedirectToPage();
         }
     }

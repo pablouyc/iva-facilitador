@@ -53,7 +53,7 @@ namespace IvaFacilitador.Services
             }
         }
 
-        public void RemoveCompany(string realmId, string userId = "demo-user") // ← NUEVO
+        public void RemoveCompany(string realmId, string userId = "demo-user")
         {
             lock (_lock)
             {

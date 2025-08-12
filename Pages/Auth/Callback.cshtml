@@ -1,8 +1,28 @@
 @page
 @model IvaFacilitador.Pages.Auth.CallbackModel
-@{ ViewData["Title"]="Conexión completada"; Layout="/Pages/Shared/_Layout.cshtml"; }
-<div class="row justify-content-center"><div class="col-lg-8"><div class="card shadow-sm card-iva">
-<div class="card-body p-4"><h1 class="h4 mb-3">Conexión completada</h1>
-@if(!string.IsNullOrEmpty(Model.Error)){<div class="alert alert-danger">@Model.Error</div>}
-else{<div class="alert alert-success">¡Listo! Empresa conectada: @Model.RealmId</div>
-<a class="btn btn-primary" href="/IVA/Seleccion">Continuar a Selección</a>}</div></div></div></div>
+@{
+    ViewData["Title"]="Conexión completada";
+    Layout="/Pages/Shared/_Layout.cshtml";
+}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm card-iva">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Conexión completada</h1>
+
+        @if(!string.IsNullOrEmpty(Model.Error)){
+          <div class="alert alert-danger">@Model.Error</div>
+        } else {
+          <div class="alert alert-success">
+            <div><strong>¡Listo!</strong> Empresa conectada:</div>
+            <div class="mt-2">
+              <span class="fw-semibold">@Model.CompanyName</span>
+              <span class="text-muted">(@Model.RealmId)</span>
+            </div>
+          </div>
+          <a class="btn btn-acento" href="/IVA/Seleccion">Continuar a Cálculo de IVA</a>
+        }
+      </div>
+    </div>
+  </div>
+</div>

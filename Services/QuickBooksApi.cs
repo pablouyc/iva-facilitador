@@ -29,11 +29,9 @@ namespace IvaFacilitador.Services
                 ? "https://sandbox-quickbooks.api.intuit.com"
                 : "https://quickbooks.api.intuit.com";
 
-            // 1) Intento directo: /companyinfo/{realmId}
             var direct = await GetCompanyNameFromCompanyInfoAsync(host, realmId, accessToken, ct);
             if (!string.IsNullOrWhiteSpace(direct)) return direct;
 
-            // 2) Fallback: query "select * from CompanyInfo"
             var viaQuery = await GetCompanyNameViaQueryAsync(host, realmId, accessToken, ct);
             if (!string.IsNullOrWhiteSpace(viaQuery)) return viaQuery;
 
@@ -106,7 +104,6 @@ namespace IvaFacilitador.Services
                 using var doc = JsonDocument.Parse(body);
                 var root = doc.RootElement;
 
-                // Esperado: { "QueryResponse": { "CompanyInfo": [ { "CompanyName": "..." } ] }, "time": "..." }
                 if (root.TryGetProperty("QueryResponse", out var qr)
                     && qr.TryGetProperty("CompanyInfo", out var arr)
                     && arr.ValueKind == JsonValueKind.Array

@@ -4,7 +4,12 @@
     ViewData["Title"] = "Empresas conectadas";
     Layout = "/Pages/Shared/_Layout.cshtml";
 }
-
+<div class="topbar mb-3 py-2">
+  <div class="container d-flex align-items-center gap-2">
+    <a class="tablink" href="/IVA/Seleccion">Cálculo</a>
+    <a class="tablink active" href="/Empresas">Empresas</a>
+  </div>
+</div>
 <div class="row justify-content-center">
   <div class="col-lg-10">
     <div class="card shadow-sm card-iva">
@@ -23,7 +28,7 @@
         @if (Model.Companies.Count == 0)
         {
             <div class="alert alert-info">No hay empresas conectadas aún.</div>
-            <a class="btn btn-primary" href="/Auth/Connect">Conectar QuickBooks</a>
+            <a class="btn btn-acento" href="/Auth/Connect">Conectar QuickBooks</a>
         }
         else
         {
@@ -45,10 +50,9 @@
                         <td class="text-muted">@c.RealmId</td>
                         <td class="text-muted">@c.ConnectedAt.ToLocalTime()</td>
                         <td>
-                            <form method="post" asp-page-handler="Disconnect" class="d-inline">
-                                <input type="hidden" name="realmId" value="@c.RealmId" />
-                                <button type="submit"
-                                        class="btn btn-outline-danger btn-sm"
+                            <form method="post" asp-page-handler="Disconnect" asp-route-realmId="@c.RealmId" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-danger btn-sm"
                                         onclick="return confirm('¿Seguro que deseas desconectar esta empresa? Se eliminarán los tokens locales.');">
                                     Desconectar
                                 </button>
@@ -60,7 +64,7 @@
               </table>
             </div>
 
-            <a class="btn btn-outline-primary" href="/Auth/Connect">Conectar otra empresa</a>
+            <a class="btn btn-acento" href="/Auth/Connect">Añadir empresa</a>
           }
       </div>
     </div>

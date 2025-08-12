@@ -1,8 +1,14 @@
-:root { --color-principal:#02343F; --color-secundario:#115E67; --color-acento:#F2A71B; --color-claro:#F0EDCC; }
-body{background-color:var(--color-claro);color:#222}.main-navbar{background-color:var(--color-principal)}
-.btn-primary{background-color:var(--color-principal);border-color:var(--color-principal)}
-.btn-primary:hover{background-color:var(--color-secundario);border-color:var(--color-secundario)}
-.btn-outline-primary{color:var(--color-principal);border-color:var(--color-principal)}
-.btn-outline-primary:hover{background-color:var(--color-principal);color:#fff}
-.btn-acento{background-color:var(--color-acento);border-color:var(--color-acento);color:#111}.btn-acento:hover{filter:brightness(.9)}
-.card-iva{border-radius:1rem}.label-required::after{content:" *";color:#b02a37}
+/* Paleta: verde corporativo, negro y blanco */
+:root{
+  --verde:#02343F;
+  --negro:#000;
+  --blanco:#fff;
+}
+a{ color: var(--verde); }
+.btn-primary{ background: var(--verde); border-color: var(--verde); }
+.btn-primary:hover{ background:#012831; border-color:#012831; }
+.btn-acento{ background: var(--verde); color:#fff; border-color: var(--verde); }
+.btn-acento:hover{ background:#012831; border-color:#012831; color:#fff; }
+.main-navbar{ background: var(--verde); }
+.card-iva{ border:1px solid #eee; border-radius:14px; }
+.label-required::after{ content:" *"; color:#c00; }

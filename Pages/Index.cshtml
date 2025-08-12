@@ -1,7 +1,17 @@
 @page
-@{ ViewData["Title"]="Inicio"; Layout="/Pages/Shared/_Layout.cshtml"; }
-<div class="row justify-content-center"><div class="col-lg-8"><div class="card shadow-sm card-iva">
-<div class="card-body p-4"><h1 class="h4 mb-3">Bienvenido</h1>
-<p class="text-secondary">Conecta QuickBooks y selecciona empresa y período (mes/año).</p>
-<div class="d-flex gap-2"><a class="btn btn-acento" href="/Auth/Connect">Conectar QuickBooks</a>
-<a class="btn btn-primary" href="/IVA/Seleccion">Seleccionar período</a></div></div></div></div></div>
+@model IvaFacilitador.Pages.IndexModel
+@{
+    ViewData["Title"] = "Inicio";
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="card shadow-sm card-iva">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Inicio</h1>
+        <p class="text-secondary">Hola, bienvenido <strong>@(User?.Identity?.Name ?? "usuario")</strong>.</p>
+        <p class="mb-0">Utiliza el menú para ir a <a href="/IVA/Seleccion">Cálculo de IVA</a> o gestiona tus <a href="/Empresas">Empresas</a>.</p>
+      </div>
+    </div>
+  </div>
+</div>
