@@ -1,0 +1,68 @@
+@page
+@model IvaFacilitador.Pages.Empresas.IndexModel
+@{
+    ViewData["Title"] = "Empresas conectadas";
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center">
+  <div class="col-lg-10">
+    <div class="card shadow-sm card-iva">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Empresas conectadas</h1>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="alert alert-success">@ok</div>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <div class="alert alert-danger">@err</div>
+        }
+
+        @if (Model.Companies.Count == 0)
+        {
+            <div class="alert alert-info">No hay empresas conectadas aún.</div>
+            <a class="btn btn-primary" href="/Auth/Connect">Conectar QuickBooks</a>
+        }
+        else
+        {
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Realm ID</th>
+                    <th>Conectada</th>
+                    <th style="width:1%"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                @foreach (var c in Model.Companies)
+                {
+                    <tr>
+                        <td class="fw-semibold">@c.Name</td>
+                        <td class="text-muted">@c.RealmId</td>
+                        <td class="text-muted">@c.ConnectedAt.ToLocalTime()</td>
+                        <td>
+                            <form method="post" asp-page-handler="Disconnect" class="d-inline">
+                                <input type="hidden" name="realmId" value="@c.RealmId" />
+                                <button type="submit"
+                                        class="btn btn-outline-danger btn-sm"
+                                        onclick="return confirm('¿Seguro que deseas desconectar esta empresa? Se eliminarán los tokens locales.');">
+                                    Desconectar
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+              </table>
+            </div>
+
+            <a class="btn btn-outline-primary" href="/Auth/Connect">Conectar otra empresa</a>
+          }
+      </div>
+    </div>
+  </div>
+</div>
