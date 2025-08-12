@@ -10,16 +10,19 @@ namespace IvaFacilitador.Pages.Auth
         private readonly IQuickBooksAuth _auth;
         private readonly ITokenStore _tokenStore;
         private readonly ICompanyStore _companyStore;
+        private readonly IQuickBooksApi _qboApi;
 
         public CallbackModel(
             IQuickBooksAuth auth,
             ITokenStore tokenStore,
-            ICompanyStore companyStore
+            ICompanyStore companyStore,
+            IQuickBooksApi qboApi
         )
         {
             _auth = auth;
             _tokenStore = tokenStore;
             _companyStore = companyStore;
+            _qboApi = qboApi;
         }
 
         [BindProperty(SupportsGet = true)] public string? code { get; set; }
@@ -30,6 +33,7 @@ namespace IvaFacilitador.Pages.Auth
 
         public string? Error { get; set; }
         public string? RealmId { get; set; }
+        public string? CompanyName { get; set; }
 
         public async Task OnGet()
         {
@@ -52,14 +56,22 @@ namespace IvaFacilitador.Pages.Auth
                 return;
             }
 
+            // Guardamos tokens
             _tokenStore.Save(realmId!, result.token);
+
+            // Leemos el nombre real de la empresa desde QBO
+            var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
+            var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
+
+            // Persistimos conexión con nombre real
             _companyStore.AddOrUpdateCompany(new CompanyConnection
             {
                 RealmId = realmId!,
-                Name = $"Empresa {realmId}"
+                Name = finalName
             });
 
             RealmId = realmId;
+            CompanyName = finalName;
         }
     }
 }
