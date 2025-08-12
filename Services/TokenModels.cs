@@ -14,15 +14,16 @@ namespace IvaFacilitador.Services
         public string access_token { get; set; } = "";
         public string refresh_token { get; set; } = "";
         public int expires_in { get; set; }
-        public int x_refresh_token_expires_in { get; set; }   // ← CAMBIO: ahora es número
+        public int x_refresh_token_expires_in { get; set; }
         public string token_type { get; set; } = "";
-        public string? id_token { get; set; }                 // opcional (si pides OpenID scopes)
+        public string? id_token { get; set; }
     }
 
     public interface ITokenStore
     {
         void Save(string realmId, TokenResponse token);
         TokenResponse? Get(string realmId);
+        void Delete(string realmId); // ← NUEVO
     }
 
     public class FileTokenStore : ITokenStore
@@ -51,6 +52,15 @@ namespace IvaFacilitador.Services
             if (!File.Exists(path)) return null;
             var json = File.ReadAllText(path);
             return System.Text.Json.JsonSerializer.Deserialize<TokenResponse>(json);
+        }
+
+        public void Delete(string realmId) // ← NUEVO
+        {
+            lock (_lock)
+            {
+                var path = Path.Combine(_folder, $"token_{realmId}.json");
+                if (File.Exists(path)) File.Delete(path);
+            }
         }
     }
 }
