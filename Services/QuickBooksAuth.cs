@@ -19,6 +19,12 @@ namespace IvaFacilitador.Services
 
         // Envoltorio de compatibilidad (devuelve null si falla)
         Task<TokenResponse?> ExchangeCodeForTokenAsync(string code, CancellationToken ct = default);
+
+        // NUEVO: revocar refresh_token en Intuit
+        Task<(bool ok, string? error)> TryRevokeRefreshTokenAsync(
+            string refreshToken,
+            CancellationToken ct = default
+        );
     }
 
     public class QuickBooksAuth : IQuickBooksAuth
@@ -56,7 +62,6 @@ namespace IvaFacilitador.Services
             CancellationToken ct = default
         )
         {
-            // Validaciones de config
             if (string.IsNullOrWhiteSpace(_settings.ClientId) || _settings.ClientId == "DUMMY")
                 return (false, null, "ClientId inválido o DUMMY (usa Production keys).");
             if (string.IsNullOrWhiteSpace(_settings.ClientSecret) || _settings.ClientSecret == "DUMMY")
@@ -125,7 +130,7 @@ namespace IvaFacilitador.Services
                 _logger.LogWarning(exJson, "[OAuth] Respuesta de token no era JSON válido. Intentando form-urlencoded…");
             }
 
-            // 2) Fallback: parsear como form-urlencoded (por si algún proxy cambió el content-type)
+            // 2) Fallback: parsear como form-urlencoded
             try
             {
                 var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -163,6 +168,59 @@ namespace IvaFacilitador.Services
         {
             var (ok, token, _) = await TryExchangeCodeForTokenAsync(code, ct);
             return ok ? token : null;
+        }
+
+        // ========= NUEVO: REVOCAR REFRESH TOKEN EN INTUIT =========
+        public async Task<(bool ok, string? error)> TryRevokeRefreshTokenAsync(
+            string refreshToken,
+            CancellationToken ct = default
+        )
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                return (false, "No hay refresh_token para revocar.");
+
+            if (string.IsNullOrWhiteSpace(_settings.ClientId) || _settings.ClientId == "DUMMY")
+                return (false, "ClientId inválido o DUMMY.");
+            if (string.IsNullOrWhiteSpace(_settings.ClientSecret) || _settings.ClientSecret == "DUMMY")
+                return (false, "ClientSecret inválido o DUMMY.");
+
+            var client = _httpFactory.CreateClient();
+            var endpoint = "https://developer.api.intuit.com/v2/oauth2/tokens/revoke";
+
+            var req = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var basic = Convert.ToBase64String(
+                System.Text.Encoding.UTF8.GetBytes($"{_settings.ClientId}:{_settings.ClientSecret}")
+            );
+            req.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
+
+            // Según Intuit: token=REFRESH_TOKEN
+            req.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["token"] = refreshToken
+            });
+
+            try
+            {
+                var resp = await client.SendAsync(req, ct);
+                var body = await resp.Content.ReadAsStringAsync(ct);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("[OAuth] Revoke falló HTTP {Code}. Body: {Body}", (int)resp.StatusCode, body);
+                    // Aunque falle, podemos continuar con borrar localmente si el usuario lo pidió.
+                    return (false, $"HTTP {(int)resp.StatusCode}: {body}");
+                }
+
+                _logger.LogInformation("[OAuth] Refresh token revocado con éxito.");
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[OAuth] Error de red al revocar token.");
+                return (false, ex.Message);
+            }
         }
     }
 }
