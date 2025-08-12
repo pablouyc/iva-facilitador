@@ -1,0 +1,39 @@
+@page
+@model IvaFacilitador.Pages.IVA.SeleccionModel
+@{ ViewData["Title"]="Seleccionar empresa y período"; Layout="/Pages/Shared/_Layout.cshtml";
+var months=System.Globalization.CultureInfo.GetCultureInfo("es-CR").DateTimeFormat.MonthNames.Where(m=>!string.IsNullOrEmpty(m)).ToArray();}
+<div class="row justify-content-center"><div class="col-lg-8"><div class="card shadow-sm card-iva"><div class="card-body p-4">
+<h1 class="h4 mb-3">Selecciona empresa y período</h1><p class="text-secondary">Paso 1: Conecta y elige la empresa de QuickBooks y el período (mes/año).</p>
+@if(TempData["Success"] is string ok){<div class="alert alert-success">@ok</div>}
+<form method="post" class="row g-3">
+  <div class="col-12">
+    <label class="form-label label-required" for="SelectedRealmId">Empresa (QuickBooks)</label>
+    <select asp-for="SelectedRealmId" class="form-select">
+      <option value="">-- Selecciona --</option>
+      @foreach(var c in Model.Companies){ <option value="@c.RealmId">@c.Name (@c.RealmId)</option> }
+    </select>
+    <span class="text-danger small" asp-validation-for="SelectedRealmId"></span>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label label-required" for="SelectedMonth">Mes</label>
+    <select asp-for="SelectedMonth" class="form-select">
+      @for(var i=1;i<=12;i++){ <option value="@i">@months[i-1].Substring(0,1).ToUpper()@months[i-1].Substring(1) (@i.ToString("00"))</option> }
+    </select>
+    <span class="text-danger small" asp-validation-for="SelectedMonth"></span>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label label-required" for="SelectedYear">Año</label>
+    <select asp-for="SelectedYear" class="form-select">
+      @foreach(var y in Model.Years){ <option value="@y">@y</option> }
+    </select>
+    <span class="text-danger small" asp-validation-for="SelectedYear"></span>
+  </div>
+  <div class="col-12 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Continuar</button>
+    <a class="btn btn-outline-primary" href="/Auth/Connect">Conectar otra empresa</a>
+  </div>
+</form>
+<hr class="my-4"/>
+<div class="alert alert-info"><strong>Nota:</strong> Tras conectar en <em>Conectar QuickBooks</em>, la empresa aparecerá aquí.</div>
+</div></div></div></div>
+@section Scripts{ <partial name="/Pages/Shared/_ValidationScriptsPartial.cshtml" /> }

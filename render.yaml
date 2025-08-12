@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: iva-facilitador
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: IntuitAuth__ClientId
+        sync: false
+      - key: IntuitAuth__ClientSecret
+        sync: false
+      - key: IntuitAuth__RedirectUri
+        value: https://REEMPLAZA.onrender.com/Auth/Callback
+      - key: IntuitAuth__Environment
+        value: production
+      - key: IntuitAuth__Scopes
+        value: com.intuit.quickbooks.accounting
