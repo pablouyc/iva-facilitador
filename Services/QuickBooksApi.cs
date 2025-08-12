@@ -1,56 +1,134 @@
+using System.Net.Http.Headers;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
 namespace IvaFacilitador.Services
 {
-    public class IntuitOAuthSettings
+    public interface IQuickBooksApi
     {
-        public string ClientId { get; set; } = "";
-        public string ClientSecret { get; set; } = "";
-        public string RedirectUri { get; set; } = "";
-        public string Environment { get; set; } = "sandbox";
-        public string Scopes { get; set; } = "com.intuit.quickbooks.accounting";
+        Task<string?> GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default);
     }
 
-    public class TokenResponse
+    public class QuickBooksApi : IQuickBooksApi
     {
-        public string access_token { get; set; } = "";
-        public string refresh_token { get; set; } = "";
-        public int expires_in { get; set; }
-        public int x_refresh_token_expires_in { get; set; }   // ← CAMBIO: ahora es número
-        public string token_type { get; set; } = "";
-        public string? id_token { get; set; }                 // opcional (si pides OpenID scopes)
-    }
+        private readonly IHttpClientFactory _http;
+        private readonly IOptions<IntuitOAuthSettings> _settings;
+        private readonly ILogger<QuickBooksApi> _logger;
 
-    public interface ITokenStore
-    {
-        void Save(string realmId, TokenResponse token);
-        TokenResponse? Get(string realmId);
-    }
-
-    public class FileTokenStore : ITokenStore
-    {
-        private readonly string _folder;
-        private readonly object _lock = new object();
-
-        public FileTokenStore(IConfiguration cfg)
+        public QuickBooksApi(IHttpClientFactory http, IOptions<IntuitOAuthSettings> settings, ILogger<QuickBooksApi> logger)
         {
-            _folder = cfg.GetSection("Data")["Folder"] ?? "App_Data";
-            Directory.CreateDirectory(_folder);
+            _http = http;
+            _settings = settings;
+            _logger = logger;
         }
 
-        public void Save(string realmId, TokenResponse token)
+        public async Task<string?> GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default)
         {
-            lock (_lock)
+            var host = (_settings.Value.Environment ?? "production").Equals("sandbox", StringComparison.OrdinalIgnoreCase)
+                ? "https://sandbox-quickbooks.api.intuit.com"
+                : "https://quickbooks.api.intuit.com";
+
+            // 1) Intento directo: /companyinfo/{realmId}
+            var direct = await GetCompanyNameFromCompanyInfoAsync(host, realmId, accessToken, ct);
+            if (!string.IsNullOrWhiteSpace(direct)) return direct;
+
+            // 2) Fallback: query "select * from CompanyInfo"
+            var viaQuery = await GetCompanyNameViaQueryAsync(host, realmId, accessToken, ct);
+            if (!string.IsNullOrWhiteSpace(viaQuery)) return viaQuery;
+
+            _logger.LogWarning("[QBO] No se logró obtener CompanyName por ninguna vía para realmId={RealmId}", realmId);
+            return null;
+        }
+
+        private async Task<string?> GetCompanyNameFromCompanyInfoAsync(string host, string realmId, string accessToken, CancellationToken ct)
+        {
+            var url = $"{host}/v3/company/{realmId}/companyinfo/{realmId}?minorversion=70";
+            var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            try
             {
-                var path = Path.Combine(_folder, $"token_{realmId}.json");
-                File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(token));
+                var client = _http.CreateClient();
+                var resp = await client.SendAsync(req, ct);
+                var body = await resp.Content.ReadAsStringAsync(ct);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("[QBO] companyinfo fallo HTTP {Code}. Body: {Body}", (int)resp.StatusCode, body);
+                    return null;
+                }
+
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("CompanyInfo", out var ci)
+                    && ci.TryGetProperty("CompanyName", out var nameProp)
+                    && nameProp.ValueKind == JsonValueKind.String)
+                {
+                    var name = nameProp.GetString();
+                    _logger.LogInformation("[QBO] CompanyInfo.CompanyName obtenido: {Name}", name);
+                    return name;
+                }
+
+                _logger.LogWarning("[QBO] companyinfo sin CompanyName. Body: {Body}", body);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[QBO] Error en companyinfo");
+                return null;
             }
         }
 
-        public TokenResponse? Get(string realmId)
+        private async Task<string?> GetCompanyNameViaQueryAsync(string host, string realmId, string accessToken, CancellationToken ct)
         {
-            var path = Path.Combine(_folder, $"token_{realmId}.json");
-            if (!File.Exists(path)) return null;
-            var json = File.ReadAllText(path);
-            return System.Text.Json.JsonSerializer.Deserialize<TokenResponse>(json);
+            var query = "select * from CompanyInfo";
+            var url = $"{host}/v3/company/{realmId}/query?query={Uri.EscapeDataString(query)}&minorversion=70";
+
+            var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            try
+            {
+                var client = _http.CreateClient();
+                var resp = await client.SendAsync(req, ct);
+                var body = await resp.Content.ReadAsStringAsync(ct);
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("[QBO] query CompanyInfo fallo HTTP {Code}. Body: {Body}", (int)resp.StatusCode, body);
+                    return null;
+                }
+
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                // Esperado: { "QueryResponse": { "CompanyInfo": [ { "CompanyName": "..." } ] }, "time": "..." }
+                if (root.TryGetProperty("QueryResponse", out var qr)
+                    && qr.TryGetProperty("CompanyInfo", out var arr)
+                    && arr.ValueKind == JsonValueKind.Array
+                    && arr.GetArrayLength() > 0)
+                {
+                    var first = arr[0];
+                    if (first.TryGetProperty("CompanyName", out var nameProp) && nameProp.ValueKind == JsonValueKind.String)
+                    {
+                        var name = nameProp.GetString();
+                        _logger.LogInformation("[QBO] Query CompanyInfo.CompanyName obtenido: {Name}", name);
+                        return name;
+                    }
+                }
+
+                _logger.LogWarning("[QBO] query CompanyInfo sin CompanyName. Body: {Body}", body);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[QBO] Error en query CompanyInfo");
+                return null;
+            }
         }
     }
 }
