@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace IvaFacilitador.Pages.Auth
 {
+    [IgnoreAntiforgeryToken] // Evita HTTP 400 por CSRF en el login
     public class LoginModel : PageModel
     {
         [BindProperty] public string? InputUser { get; set; }
@@ -19,7 +20,6 @@ namespace IvaFacilitador.Pages.Auth
             var user = (InputUser ?? "").Trim();
             var pass = InputPassword ?? "";
 
-            // Único usuario solicitado
             if (string.Equals(user, "administrador", StringComparison.OrdinalIgnoreCase)
                 && pass == "pruebasuyc123:)")
             {
