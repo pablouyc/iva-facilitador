@@ -47,3 +47,26 @@ a{ color: var(--verde); }
   color:#fff; background-color:#02343F;
 }
 @media (max-width:575.98px){ .search-wrap .search-input{ width:7rem; } }
+
+/* === ui-header-contrast-white: BEGIN === */
+/* for dark navbar: make icons, borders and text white for better contrast */
+.search-wrap{ color:#fff; border:1px solid rgba(255,255,255,.35); background:rgba(255,255,255,.06); }
+.search-wrap svg{ color:#fff; }                    /* lupa en blanco (SVG usa currentColor) */
+.search-wrap .search-input{ color:#fff; }          /* texto del input en blanco */
+.search-wrap .search-input::placeholder{ color:rgba(255,255,255,.85); opacity:1; }
+.search-wrap .search-input::-ms-input-placeholder{ color:#fff; }
+
+/* campana en blanco */
+.icon-btn{ color:#fff; }                            /* SVG hereda currentColor */
+.icon-btn:hover, .icon-btn:focus{ color:#fff; opacity:.9; }
+
+/* avatar: letra blanca y borde blanco para que se vea sobre el fondo oscuro */
+.avatar-btn .avatar-circle{
+  color:#fff;
+  background:#02343F;            /* mismo color de la barra (puedes poner transparent si prefieres) */
+  border:1px solid rgba(255,255,255,.6);
+}
+
+/* caret (triangulito) del dropdown en blanco */
+.avatar-btn.dropdown-toggle::after{ border-top-color:#fff; }
+/* === ui-header-contrast-white: END === */
