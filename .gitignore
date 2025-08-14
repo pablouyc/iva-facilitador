@@ -2,3 +2,6 @@
 obj/
 *.user
 *.suo
+*.bak
+*.bak_*
+
