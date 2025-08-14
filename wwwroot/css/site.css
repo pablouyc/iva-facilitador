@@ -1,4 +1,4 @@
-/* Paleta: verde corporativo, negro y blanco */
+﻿/* Paleta: verde corporativo, negro y blanco */
 :root{
   --verde:#02343F;
   --negro:#000;
@@ -34,3 +34,16 @@ a{ color: var(--verde); }
 }
 .top-icons .input-group .form-control[disabled]{background-color:#f8f9fa;opacity:1;}
 /* === /header-icons === */
+
+/* === UI Header (visual) === */
+.search-wrap{ border:1px solid rgba(0,0,0,.08); border-radius:20px; padding:.15rem .5rem; }
+.search-wrap .search-input{ width:12rem; }
+.icon-btn{ background:transparent; border:none; line-height:1; }
+.icon-btn svg{ display:block; }
+.avatar-btn .avatar-circle{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:50%;
+  font-weight:600; font-size:.85rem;
+  color:#fff; background-color:#02343F;
+}
+@media (max-width:575.98px){ .search-wrap .search-input{ width:7rem; } }
