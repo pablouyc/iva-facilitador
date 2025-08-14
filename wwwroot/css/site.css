@@ -12,3 +12,14 @@ a{ color: var(--verde); }
 .main-navbar{ background: var(--verde); }
 .card-iva{ border:1px solid #eee; border-radius:14px; }
 .label-required::after{ content:" *"; color:#c00; }
+
+/* ---- Topbar clean ---- */
+.avatar-circle{
+  width:32px;height:32px;border-radius:50%;
+  background:#02343F;color:#fff;display:inline-flex;
+  align-items:center;justify-content:center;
+  font-weight:700; line-height:1;
+}
+.icon-btn{ color:#6c757d }
+.icon-btn:hover{ color:#343a40 }
+.avatar-btn:focus{ box-shadow:none }

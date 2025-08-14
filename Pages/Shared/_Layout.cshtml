@@ -32,7 +32,14 @@ body{ background:var(--blanco); color:#111;}
 .card-iva{ border:1px solid #eee; border-radius:14px; }
 </style>
 </head>
-<body>
+
+@{
+    var userName = User?.Identity?.Name;
+    var initial = string.IsNullOrWhiteSpace(userName)
+        ? "U"
+        : userName.Trim().Substring(0,1).ToUpperInvariant();
+}
+
 <header class="header py-2">
   <div class="container d-flex align-items-center justify-content-between">
     <div class="d-flex align-items-center gap-3">
@@ -74,6 +81,7 @@ ov?.addEventListener('click', ()=>{ sb.classList.remove('open'); ov.classList.re
 @RenderSection("Scripts", required: false)
 </body>
 </html>
+
 
 
 
