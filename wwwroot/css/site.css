@@ -23,3 +23,14 @@ a{ color: var(--verde); }
 .icon-btn{ color:#6c757d }
 .icon-btn:hover{ color:#343a40 }
 .avatar-btn:focus{ box-shadow:none }
+
+/* === header-icons === */
+.top-icons .btn.btn-link svg { width:20px;height:20px; }
+.avatar-circle{
+  width:36px;height:36px;border-radius:50%;
+  background-color:#02343F;color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-weight:600;line-height:1;
+}
+.top-icons .input-group .form-control[disabled]{background-color:#f8f9fa;opacity:1;}
+/* === /header-icons === */
