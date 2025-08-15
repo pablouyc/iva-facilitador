@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +15,7 @@ builder.Services.AddRazorPages(options =>
 {
     // Por defecto, todo requiere login
     options.Conventions.AuthorizeFolder("/");
-    // Permitir pÃ¡ginas de autenticaciÃ³n y callback de Intuit sin login previo
+    // Permitir páginas de autenticación y callback de Intuit sin login previo
     options.Conventions.AllowAnonymousToPage("/Auth/Login");
     options.Conventions.AllowAnonymousToPage("/Auth/Callback");
 });
