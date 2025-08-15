@@ -70,3 +70,10 @@ a{ color: var(--verde); }
 /* caret (triangulito) del dropdown en blanco */
 .avatar-btn.dropdown-toggle::after{ border-top-color:#fff; }
 /* === ui-header-contrast-white: END === */
+
+/* Onboarding modal (connect -> parametrizar) */
+.onb-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:1040; }
+.onb-overlay.d-none{ display:none; }
+.onb-modal{ width:min(620px,calc(100% - 2rem)); border-radius:12px; overflow:hidden; }
+.onb-modal .card-header{ background:#0c4047; color:#fff; }
+

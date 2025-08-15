@@ -1,28 +1,43 @@
-@page
+﻿@page
 @model IvaFacilitador.Pages.Auth.CallbackModel
 @{
-    ViewData["Title"]="Conexión completada";
+    ViewData["Title"]="ConexiÃ³n completada";
     Layout="/Pages/Shared/_Layout.cshtml";
 }
 <div class="row justify-content-center">
   <div class="col-lg-8">
     <div class="card shadow-sm card-iva">
       <div class="card-body p-4">
-        <h1 class="h4 mb-3">Conexión completada</h1>
+        <h1 class="h4 mb-3">ConexiÃ³n completada</h1>
 
         @if(!string.IsNullOrEmpty(Model.Error)){
           <div class="alert alert-danger">@Model.Error</div>
         } else {
           <div class="alert alert-success">
-            <div><strong>¡Listo!</strong> Empresa conectada:</div>
+            <div><strong>Â¡Listo!</strong> Empresa conectada:</div>
             <div class="mt-2">
               <span class="fw-semibold">@Model.CompanyName</span>
               <span class="text-muted">(@Model.RealmId)</span>
             </div>
           </div>
-          <a class="btn btn-acento" href="/IVA/Seleccion">Continuar a Cálculo de IVA</a>
+          <a class="btn btn-acento" href="/IVA/Seleccion">Continuar a CÃ¡lculo de IVA</a>
         }
       </div>
     </div>
   </div>
 </div>
+
+<!-- Cookie para abrir el modal de parametrización y redirigir a /Auth/Connect -->
+<script>
+(function(){
+  try{
+    var p = new URLSearchParams(window.location.search);
+    var name = p.get("companyName") || "Empresa";
+    var realm = p.get("realmId") || "";
+    var payload = encodeURIComponent("company=" + name + "|realm=" + realm);
+    document.cookie = "onb_company=" + payload + "; Max-Age=600; path=/";
+    window.location = "/Auth/Connect";
+  }catch(e){}
+})();
+</script>
+<noscript><meta http-equiv="refresh" content="0;url=/Auth/Connect"></noscript>
