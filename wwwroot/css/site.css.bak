@@ -1,0 +1,36 @@
+/* Paleta: verde corporativo, negro y blanco */
+:root{
+  --verde:#02343F;
+  --negro:#000;
+  --blanco:#fff;
+}
+a{ color: var(--verde); }
+.btn-primary{ background: var(--verde); border-color: var(--verde); }
+.btn-primary:hover{ background:#012831; border-color:#012831; }
+.btn-acento{ background: var(--verde); color:#fff; border-color: var(--verde); }
+.btn-acento:hover{ background:#012831; border-color:#012831; color:#fff; }
+.main-navbar{ background: var(--verde); }
+.card-iva{ border:1px solid #eee; border-radius:14px; }
+.label-required::after{ content:" *"; color:#c00; }
+
+/* ---- Topbar clean ---- */
+.avatar-circle{
+  width:32px;height:32px;border-radius:50%;
+  background:#02343F;color:#fff;display:inline-flex;
+  align-items:center;justify-content:center;
+  font-weight:700; line-height:1;
+}
+.icon-btn{ color:#6c757d }
+.icon-btn:hover{ color:#343a40 }
+.avatar-btn:focus{ box-shadow:none }
+
+/* === header-icons === */
+.top-icons .btn.btn-link svg { width:20px;height:20px; }
+.avatar-circle{
+  width:36px;height:36px;border-radius:50%;
+  background-color:#02343F;color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-weight:600;line-height:1;
+}
+.top-icons .input-group .form-control[disabled]{background-color:#f8f9fa;opacity:1;}
+/* === /header-icons === */
