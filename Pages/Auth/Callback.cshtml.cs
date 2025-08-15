@@ -30,25 +30,25 @@ namespace IvaFacilitador.Pages.Auth
         public string? RealmId { get; set; }
         public string? CompanyName { get; set; }
 
-        public async Task OnGet()
+        public async Task<IActionResult> OnGet()
         {
             if (!string.IsNullOrEmpty(error))
             {
                 Error = $"{error}: {error_description}";
-                return;
+                return Page();
             }
 
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(realmId))
             {
                 Error = "No se recibieron los parámetros necesarios desde Intuit.";
-                return;
+                return Page();
             }
 
             var result = await _auth.TryExchangeCodeForTokenAsync(code!);
             if (!result.ok || result.token == null)
             {
                 Error = $"No se pudo intercambiar el código por el token. {result.error}";
-                return;
+                return Page();
             }
 
             // Guardar tokens
@@ -65,8 +65,15 @@ namespace IvaFacilitador.Pages.Auth
                 Name = finalName
             });
 
-            RealmId = realmId;
-            CompanyName = finalName;
+            // Cookie para onboarding rápido
+            var cookieValue = $"company={Uri.EscapeDataString(finalName)}|realm={Uri.EscapeDataString(realmId!)}";
+            Response.Cookies.Append("onb_company", cookieValue, new CookieOptions
+            {
+                Path = "/",
+                Expires = DateTimeOffset.UtcNow.AddMinutes(10)
+            });
+
+            return Redirect("/Auth/Connect");
         }
     }
 }
