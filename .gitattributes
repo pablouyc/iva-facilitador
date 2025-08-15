@@ -1,0 +1,4 @@
+# Ensure UTF-8 encoding for C# and Razor files
+*.cs     text working-tree-encoding=UTF-8
+*.cshtml text working-tree-encoding=UTF-8
+
