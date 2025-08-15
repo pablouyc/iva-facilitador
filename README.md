@@ -7,6 +7,5 @@ Incluye:
 - Modal de parametrización rápida tras el callback.
 - Wizard de onboarding para tarifas y datos generales.
 
-
 ## Build
 Requiere .NET 8.0 SDK. Ejecuta `dotnet build` para compilar.
