@@ -48,10 +48,13 @@ namespace IvaFacilitador.Services
 
         public TokenResponse? Get(string realmId)
         {
-            var path = Path.Combine(_folder, $"token_{realmId}.json");
-            if (!File.Exists(path)) return null;
-            var json = File.ReadAllText(path);
-            return System.Text.Json.JsonSerializer.Deserialize<TokenResponse>(json);
+            lock (_lock)
+            {
+                var path = Path.Combine(_folder, $"token_{realmId}.json");
+                if (!File.Exists(path)) return null;
+                var json = File.ReadAllText(path);
+                return System.Text.Json.JsonSerializer.Deserialize<TokenResponse>(json);
+            }
         }
 
         public void Delete(string realmId) // ← NUEVO
