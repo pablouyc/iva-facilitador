@@ -77,3 +77,7 @@ a{ color: var(--verde); }
 .onb-modal{ width:min(620px,calc(100% - 2rem)); border-radius:12px; overflow:hidden; }
 .onb-modal .card-header{ background:#0c4047; color:#fff; }
 
+/* Onboarding overlay base hidden until cookie triggers */
+#onb-overlay{ display:none; }
+#onb-overlay .onb-modal{ background:#fff; }
+
