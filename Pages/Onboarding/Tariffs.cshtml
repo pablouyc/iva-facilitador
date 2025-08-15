@@ -1,0 +1,12 @@
+@page
+@model IvaFacilitador.Pages.Onboarding.TariffsModel
+@{ ViewData["Title"] = "Tarifas"; Layout = "/Pages/Shared/_Layout.cshtml"; }
+<h1 class="h4 mb-3">Tarifas de venta</h1>
+<form method="post" asp-page="SaveTariffs">
+  <input type="hidden" name="RealmId" value="@Model.RealmId" />
+  <div class="mb-3">
+    <label class="form-label">Tarifas detectadas (separadas por coma)</label>
+    <input type="text" class="form-control" asp-for="TariffsCsv" />
+  </div>
+  <button type="submit" class="btn btn-primary">Guardar</button>
+</form>
