@@ -1,0 +1,50 @@
+@page
+@model IvaFacilitador.Pages.Onboarding.TariffsModel
+@{ ViewData["Title"] = "Tarifas"; Layout = "/Pages/Shared/_Layout.cshtml"; }
+
+<h1 class="h4 mb-3">Tarifas de venta</h1>
+
+<form method="post" asp-page="SaveTariffs">
+  <input type="hidden" name="RealmId" value="@Model.RealmId" />
+  @foreach (var t in Model.DetectedTariffs)
+  {
+    <input type="hidden" name="DetectedTariffs" value="@t" />
+  }
+
+  <p class="mb-3">Se detectó que vendes a: <strong>@Model.DetectedTariffsDisplay</strong></p>
+
+  <div class="mb-3">
+    <label class="form-label">¿Vendes a alguna tarifa adicional?</label>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" id="add-no" name="HasAdditionalTariffs" value="false" checked>
+      <label class="form-check-label" for="add-no">No</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" id="add-yes" name="HasAdditionalTariffs" value="true">
+      <label class="form-check-label" for="add-yes">Sí</label>
+    </div>
+  </div>
+
+  <div id="extra-tariffs" class="mb-3" style="display:none;">
+    <label class="form-label">Selecciona tarifas</label>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="AdditionalTariffs" value="13%" id="t13"><label class="form-check-label" for="t13">13%</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="AdditionalTariffs" value="4%" id="t4"><label class="form-check-label" for="t4">4%</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="AdditionalTariffs" value="2%" id="t2"><label class="form-check-label" for="t2">2%</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="AdditionalTariffs" value="1% (MEIC/CBT)" id="t1"><label class="form-check-label" for="t1">1% (MEIC/CBT)</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" name="AdditionalTariffs" value="0%/Exenta" id="t0"><label class="form-check-label" for="t0">0%/Exenta</label></div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Continuar</button>
+</form>
+
+<script>
+  (function(){
+    var yes = document.getElementById('add-yes');
+    var no = document.getElementById('add-no');
+    var box = document.getElementById('extra-tariffs');
+    function toggle(){ box.style.display = yes.checked ? 'block' : 'none'; }
+    yes.addEventListener('change', toggle);
+    no.addEventListener('change', toggle);
+    toggle();
+  })();
+</script>
