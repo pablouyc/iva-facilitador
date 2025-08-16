@@ -1,3 +1,8 @@
+using System;
+using System.Linq;
+using IvaFacilitador.Data;
+using Microsoft.EntityFrameworkCore;
+
 namespace IvaFacilitador.Services
 {
     public class IntuitOAuthSettings
@@ -63,6 +68,66 @@ namespace IvaFacilitador.Services
             {
                 var path = Path.Combine(_folder, $"token_{realmId}.json");
                 if (File.Exists(path)) File.Delete(path);
+            }
+        }
+    }
+
+    public class EfTokenStore : ITokenStore
+    {
+        private readonly AppDbContext _db;
+
+        public EfTokenStore(AppDbContext db)
+        {
+            _db = db;
+        }
+
+        public void Save(string realmId, TokenResponse token)
+        {
+            var expiresAt = DateTime.UtcNow.AddSeconds(token.expires_in);
+            var entity = _db.QboTokens.SingleOrDefault(t => t.RealmId == realmId);
+            if (entity == null)
+            {
+                entity = new QboToken
+                {
+                    RealmId = realmId,
+                    AccessToken = token.access_token,
+                    RefreshToken = token.refresh_token,
+                    ExpiresAtUtc = expiresAt,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _db.QboTokens.Add(entity);
+            }
+            else
+            {
+                entity.AccessToken = token.access_token;
+                entity.RefreshToken = token.refresh_token;
+                entity.ExpiresAtUtc = expiresAt;
+                entity.UpdatedAt = DateTime.UtcNow;
+            }
+            _db.SaveChanges();
+        }
+
+        public TokenResponse? Get(string realmId)
+        {
+            var entity = _db.QboTokens.AsNoTracking().SingleOrDefault(t => t.RealmId == realmId);
+            if (entity == null) return null;
+            var remaining = (int)(entity.ExpiresAtUtc - DateTime.UtcNow).TotalSeconds;
+            return new TokenResponse
+            {
+                access_token = entity.AccessToken,
+                refresh_token = entity.RefreshToken,
+                expires_in = remaining,
+                token_type = "bearer"
+            };
+        }
+
+        public void Delete(string realmId)
+        {
+            var entity = _db.QboTokens.SingleOrDefault(t => t.RealmId == realmId);
+            if (entity != null)
+            {
+                _db.QboTokens.Remove(entity);
+                _db.SaveChanges();
             }
         }
     }

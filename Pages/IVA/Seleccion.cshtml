@@ -1,5 +1,6 @@
 @page
 @model IvaFacilitador.Pages.IVA.SeleccionModel
+@using System.Net
 @{
     ViewData["Title"] = "Cálculo de IVA";
     Layout = "/Pages/Shared/_Layout.cshtml";
@@ -23,7 +24,7 @@
             <label class="form-label label-required" for="SelectedRealmId">Empresa (QuickBooks)</label>
             <select asp-for="SelectedRealmId" class="form-select">
               <option value="">-- Selecciona --</option>
-              @foreach(var c in Model.Companies){ <option value="@c.RealmId">@c.Name (@c.RealmId)</option> }
+              @foreach(var c in Model.Companies){ <option value="@c.RealmId">@WebUtility.UrlDecode(c.Name) (@c.RealmId)</option> }
             </select>
             <span class="text-danger small" asp-validation-for="SelectedRealmId"></span>
           </div>

@@ -1,5 +1,6 @@
 @page
 @model IvaFacilitador.Pages.Empresas.IndexModel
+@using System.Net
 @{
     ViewData["Title"] = "Empresas conectadas";
     Layout = "/Pages/Shared/_Layout.cshtml";
@@ -46,7 +47,7 @@
                 @foreach (var c in Model.Companies)
                 {
                     <tr>
-                        <td class="fw-semibold">@c.Name</td>
+                        <td class="fw-semibold">@WebUtility.UrlDecode(c.Name)</td>
                         <td class="text-muted">@c.RealmId</td>
                         <td class="text-muted">@c.ConnectedAt.ToLocalTime()</td>
                         <td>
