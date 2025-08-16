@@ -14,13 +14,13 @@ namespace IvaFacilitador.Pages.Onboarding
         [BindProperty]
         public string RealmId { get; set; } = "";
         [BindProperty]
-        public bool UsesProrrata { get; set; }
+        public bool? HasProrata { get; set; }
 
         public async Task<IActionResult> OnPostAsync()
         {
             var realm = string.IsNullOrWhiteSpace(RealmId) ? "global" : RealmId;
             var profile = await _profiles.LoadAsync(realm) ?? new CompanyProfile { RealmId = realm };
-            profile.UsesProrrata = UsesProrrata;
+            profile.HasProrata = HasProrata;
             await _profiles.SaveAsync(profile);
             return RedirectToPage("Publish", new { realmId = realm });
         }

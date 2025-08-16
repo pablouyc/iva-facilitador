@@ -4,9 +4,9 @@
 <h1 class="h4 mb-3">Datos generales</h1>
 <form method="post" asp-page="SaveGeneral">
   <input type="hidden" name="RealmId" value="@Model.RealmId" />
-  <div class="mb-3 form-check">
-    <input type="checkbox" class="form-check-input" id="UsesProrrata" asp-for="UsesProrrata" />
-    <label class="form-check-label" for="UsesProrrata">Usa prorrata</label>
-  </div>
+    <div class="mb-3 form-check">
+      <input type="checkbox" class="form-check-input" id="HasProrata" asp-for="HasProrata" />
+      <label class="form-check-label" for="HasProrata">Usa prorrata</label>
+    </div>
   <button type="submit" class="btn btn-primary">Guardar</button>
 </form>

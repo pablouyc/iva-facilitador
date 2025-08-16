@@ -14,7 +14,7 @@ namespace IvaFacilitador.Pages.Onboarding
         public string RealmId { get; set; } = "";
 
         [BindProperty]
-        public bool UsesProrrata { get; set; }
+        public bool? HasProrata { get; set; }
 
         public async Task OnGetAsync()
         {
@@ -23,7 +23,7 @@ namespace IvaFacilitador.Pages.Onboarding
                 var profile = await _profiles.LoadAsync(RealmId);
                 if (profile != null)
                 {
-                    UsesProrrata = profile.UsesProrrata;
+                    HasProrata = profile.HasProrata;
                 }
             }
         }

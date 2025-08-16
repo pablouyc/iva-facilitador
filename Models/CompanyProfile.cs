@@ -7,30 +7,38 @@ namespace IvaFacilitador.Models
     {
         public string RealmId { get; set; } = "";
 
-        // Tariffs detected from QuickBooks
+        // PASO 1 — Tarifas
         public List<string> SalesTariffs { get; set; } = new();
         public DateTimeOffset? TariffsReviewedAt { get; set; }
 
-        // Datáfonos (card terminals) accounts
-        public List<QboAccount> DatafonoAccounts { get; set; } = new();
+        // PASO 2 — General
+        public bool HasCardTerminals { get; set; }
 
-        // Whether the company operates under MEIC or MAG certificates
-        public bool UsesMeic { get; set; }
-        public bool UsesMag { get; set; }
+        // Cuentas de datáfonos (visibles solo si HasCardTerminals == true)
+        public string? CardRetencionRentaAccount { get; set; }
+        public string? CardRetencionIvaAccount { get; set; }
+        public string? CardComisionesAccount { get; set; }
 
-        // Prorrata settings
-        public bool UsesProrrata { get; set; }
+        public bool IsMEICRegistered { get; set; }
+        public bool IsMAGRegistered { get; set; }
 
-        // IVA related accounts
-        public QboAccount? IvaVentasAccount { get; set; }
-        public QboAccount? IvaComprasAccount { get; set; }
-        public QboAccount? IvaGastoAccount { get; set; }
+        // Prorrata (solo si aplica)
+        public bool? HasProrata { get; set; }
+        public decimal? ProrataPercent { get; set; }
+        public string? ProrataCalcMode { get; set; }
 
-        // Additional flags
-        public bool HandlesExports { get; set; }
-        public bool HandlesCapitalRentals { get; set; }
-        public bool HasNonDeductibleExpenses { get; set; }
-        public bool HasExonerations { get; set; }
+        // *** TRES CUENTAS DE IVA (todas requeridas) ***
+        public string IvaControlAccount { get; set; } = "";
+        public string IvaPorPagarAccount { get; set; } = "";
+        public string IvaAFavorAccount { get; set; } = "";
+
+        public bool DoesExports { get; set; }
+        public bool HasCapitalRentals { get; set; }
+
+        public string? NonDeductibleExpensesAccount { get; set; }
+
+        public bool InExemptionZone { get; set; }
+        public string? ExemptionNotes { get; set; }
 
         public DateTimeOffset? PublishedAt { get; set; }
     }
