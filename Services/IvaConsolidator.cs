@@ -13,13 +13,18 @@ namespace IvaFacilitador.Services
             IEnumerable<JsonElement> taxCodes,
             IEnumerable<JsonElement> taxRates)
         {
-            var rateMap = new Dictionary<string, JsonElement>();
+            var rateInfo = new Dictionary<string, (string? Name, decimal Rate)>();
             foreach (var rate in taxRates)
             {
                 if (rate.TryGetProperty("Id", out var id) && id.ValueKind == JsonValueKind.String)
-                    rateMap[id.GetString()!] = rate;
+                {
+                    var name = rate.TryGetProperty("Name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() : null;
+                    var rateValue = rate.TryGetProperty("RateValue", out var rv) && rv.ValueKind == JsonValueKind.Number ? rv.GetDecimal() : 0m;
+                    rateInfo[id.GetString()!] = (name, rateValue);
+                }
             }
 
+            var codeInfo = new Dictionary<string, string?>();
             var codeToRates = new Dictionary<string, List<string>>();
             foreach (var code in taxCodes)
             {
@@ -40,6 +45,9 @@ namespace IvaFacilitador.Services
                             }
                         }
                     }
+
+                    var name = code.TryGetProperty("Name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String ? nameEl.GetString() : null;
+                    codeInfo[id.GetString()!] = name;
                     codeToRates[id.GetString()!] = list;
                 }
             }
@@ -133,10 +141,14 @@ namespace IvaFacilitador.Services
 
                         if (!result.TryGetValue(key, out var tu))
                         {
+                            rateInfo.TryGetValue(rateId, out var rInfo);
                             tu = new TarifaUsada
                             {
-                                TaxCode = codeId,
-                                TaxRate = rateId,
+                                TaxCodeId = codeId,
+                                TaxCodeName = codeInfo.GetValueOrDefault(codeId),
+                                TaxRateId = rateId,
+                                TaxRateName = rInfo.Name,
+                                Porcentaje = rInfo.Rate,
                                 CountTransacciones = 0,
                                 SumBase = 0,
                                 SumImpuesto = 0,
@@ -170,10 +182,7 @@ namespace IvaFacilitador.Services
                     {
                         if (processed.Contains((codeId, rateId)))
                             continue;
-                        if (!rateMap.TryGetValue(rateId, out var rateEl))
-                            continue;
-                        var rateValue = rateEl.TryGetProperty("RateValue", out var rv) && rv.ValueKind == JsonValueKind.Number ? rv.GetDecimal() : -1m;
-                        if (rateValue != 0m)
+                        if (!rateInfo.TryGetValue(rateId, out var info) || info.Rate != 0m)
                             continue;
 
                         var key = (codeId, rateId);
@@ -181,8 +190,11 @@ namespace IvaFacilitador.Services
                         {
                             tu = new TarifaUsada
                             {
-                                TaxCode = codeId,
-                                TaxRate = rateId,
+                                TaxCodeId = codeId,
+                                TaxCodeName = codeInfo.GetValueOrDefault(codeId),
+                                TaxRateId = rateId,
+                                TaxRateName = info.Name,
+                                Porcentaje = info.Rate,
                                 CountTransacciones = 0,
                                 SumBase = 0,
                                 SumImpuesto = 0,

@@ -4,8 +4,11 @@ namespace IvaFacilitador.Models
 {
     public class TarifaUsada
     {
-        public string? TaxCode { get; set; }
-        public string? TaxRate { get; set; }
+        public string? TaxCodeId { get; set; }
+        public string? TaxCodeName { get; set; }
+        public string? TaxRateId { get; set; }
+        public string? TaxRateName { get; set; }
+        public decimal Porcentaje { get; set; }
         public int CountTransacciones { get; set; }
         public decimal SumBase { get; set; }
         public decimal SumImpuesto { get; set; }

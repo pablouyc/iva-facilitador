@@ -1,0 +1,71 @@
+@page
+@model IvaFacilitador.Pages.IVA.ParametrizacionModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Parametrización de IVA";
+}
+
+<h1 class="mb-4">Tarifas de IVA detectadas</h1>
+
+@if (Model.Tarifas.Count == 1)
+{
+    var t = Model.Tarifas[0];
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">@t.TaxCodeName – @t.TaxRateName (@t.Porcentaje%)</h5>
+            <p class="card-text">Usos: @t.CountTransacciones<br />IVA: @t.SumImpuesto</p>
+            <form method="post" asp-page-handler="Guardar">
+                <input type="hidden" name="Seleccionadas" value="@($"{t.TaxCodeId}|{t.TaxRateId}")" />
+                <input type="hidden" name="TarifasJson" value='@JsonSerializer.Serialize(Model.Tarifas)' />
+                <button type="submit" class="btn btn-primary me-2">Confirmar</button>
+                <a asp-page="/IVA/Seleccion" class="btn btn-secondary">Cambiar</a>
+            </form>
+        </div>
+    </div>
+}
+else if (Model.Tarifas.Count > 1)
+{
+    <form method="post" asp-page-handler="Guardar">
+        <input type="hidden" name="TarifasJson" value='@JsonSerializer.Serialize(Model.Tarifas)' />
+        <div class="mb-3">
+            @for (var i = 0; i < Model.Tarifas.Count; i++)
+            {
+                var t = Model.Tarifas[i];
+                var key = $"{t.TaxCodeId}|{t.TaxRateId}";
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="Seleccionadas" value="@key" id="t_@i" />
+                    <label class="form-check-label" for="t_@i">
+                        @t.TaxCodeName – @t.TaxRateName (@t.Porcentaje%) · Usos: @t.CountTransacciones · IVA: @t.SumImpuesto
+                    </label>
+                </div>
+            }
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar selección</button>
+    </form>
+}
+else
+{
+    <p>No se detectaron tarifas.</p>
+}
+
+@if (TempData["Toast"] != null)
+{
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div class="toast show text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">@TempData["Toast"]</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        var toastEl = document.querySelector('.toast');
+        if (toastEl) {
+            new bootstrap.Toast(toastEl).show();
+        }
+    </script>
+}
+
