@@ -2,3 +2,11 @@
 obj/
 *.user
 *.suo
+
+# Backups locales
+_backup_*/
+*_backup*/
+
+# Backups locales
+_backup_*/
+*_backup*/
