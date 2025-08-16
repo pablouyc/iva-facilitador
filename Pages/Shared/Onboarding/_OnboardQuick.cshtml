@@ -31,8 +31,8 @@
   if(c){
     var map = {};
     c.split('|').forEach(function(p){ var i=p.indexOf('='); if(i>0){ map[p.substring(0,i)] = p.substring(i+1); }});
-    if(map['company']) document.getElementById('onb-company').value = map['company'];
-    if(map['realm']) document.getElementById('onb-realm').value = map['realm'];
+    if(map['company']) document.getElementById('onb-company').value = decodeURIComponent(map['company']);
+    if(map['realm']) document.getElementById('onb-realm').value = decodeURIComponent(map['realm']);
     document.getElementById('onb-overlay').style.display = 'flex';
     document.cookie = 'onb_company=; Max-Age=0; path=/';
   }

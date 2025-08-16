@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.EntityFrameworkCore;
 using IvaFacilitador.Services;
+using IvaFacilitador.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,13 +37,16 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 // ===== Stores y servicios =====
-builder.Services.AddSingleton<ICompanyStore, FileCompanyStore>();
-builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
+var connStr = builder.Configuration["POSTGRES_URL"] ?? "Host=localhost;Database=iva;Username=postgres;Password=postgres";
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connStr));
+builder.Services.AddScoped<ICompanyStore, CompanyStoreEf>();
+builder.Services.AddScoped<ITokenStore, EfTokenStore>();
 builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
-builder.Services.AddSingleton<ICompanyProfileStore, CompanyProfileStore>();
+builder.Services.AddScoped<ICompanyProfileStore, CompanyProfileStoreEf>();
 builder.Services.AddSingleton<IQuickBooksTariffDetector, QuickBooksTariffDetector>();
 builder.Services.AddSingleton<IQuickBooksCatalog, QuickBooksCatalog>();
+builder.Services.AddScoped<ParametrizacionRepository>();
 
 var app = builder.Build();
 

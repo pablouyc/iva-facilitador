@@ -1,5 +1,6 @@
 @page
 @model IvaFacilitador.Pages.Auth.CallbackModel
+@using System.Net
 @{
     ViewData["Title"]="Conexión completada";
     Layout="/Pages/Shared/_Layout.cshtml";
@@ -16,7 +17,7 @@
           <div class="alert alert-success">
             <div><strong>¡Listo!</strong> Empresa conectada:</div>
             <div class="mt-2">
-              <span class="fw-semibold">@Model.CompanyName</span>
+              <span class="fw-semibold">@WebUtility.UrlDecode(Model.CompanyName)</span>
               <span class="text-muted">(@Model.RealmId)</span>
             </div>
           </div>
