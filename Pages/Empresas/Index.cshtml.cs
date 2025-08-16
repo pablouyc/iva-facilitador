@@ -5,6 +5,7 @@ using IvaFacilitador.Models;
 
 namespace IvaFacilitador.Pages.Empresas
 {
+    [ValidateAntiForgeryToken] // ← movido al nivel de clase
     public class IndexModel : PageModel
     {
         private readonly ICompanyStore _companyStore;
@@ -25,7 +26,7 @@ namespace IvaFacilitador.Pages.Empresas
             Companies = _companyStore.GetCompaniesForUser().OrderBy(c => c.Name).ToList();
         }
 
-        [ValidateAntiForgeryToken]
+        // [ValidateAntiForgeryToken] ← eliminado del método
         public async Task<IActionResult> OnPostDisconnect(string realmId)
         {
             if (string.IsNullOrWhiteSpace(realmId))
