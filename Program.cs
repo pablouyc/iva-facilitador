@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Authorization;
@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton<CompanyProfileStore>();
 
 // ===== App settings =====
 builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitAuth"));
@@ -15,7 +16,7 @@ builder.Services.AddRazorPages(options =>
 {
     // Por defecto, todo requiere login
     options.Conventions.AuthorizeFolder("/");
-    // Permitir páginas de autenticación y callback de Intuit sin login previo
+    // Permitir pÃ¡ginas de autenticaciÃ³n y callback de Intuit sin login previo
     options.Conventions.AllowAnonymousToPage("/Auth/Login");
     options.Conventions.AllowAnonymousToPage("/Auth/Callback");
 });
@@ -39,9 +40,6 @@ builder.Services.AddSingleton<ICompanyStore, FileCompanyStore>();
 builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
 builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
-builder.Services.AddSingleton<ICompanyProfileStore, CompanyProfileStore>();
-builder.Services.AddSingleton<IQuickBooksTariffDetector, QuickBooksTariffDetector>();
-builder.Services.AddSingleton<IQuickBooksCatalog, QuickBooksCatalog>();
 
 var app = builder.Build();
 
@@ -64,4 +62,6 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 app.Run();
+
+
 

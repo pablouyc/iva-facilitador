@@ -9,31 +9,31 @@ namespace IvaFacilitador.Services
     public class CompanyProfileStore
     {
         private readonly string _basePath;
-        private readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web){ WriteIndented = true };
+        private static readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
         public CompanyProfileStore(IWebHostEnvironment env)
         {
-            _basePath = Path.Combine(env.ContentRootPath, "App_Data");
+            _basePath = Path.Combine(env.ContentRootPath, "App_Data", "companies");
             Directory.CreateDirectory(_basePath);
-            Directory.CreateDirectory(Path.Combine(_basePath, "companies"));
         }
+
+        private string PathFor(string realmId) => Path.Combine(_basePath, realmId, "profile.json");
 
         public async Task<CompanyProfile?> LoadAsync(string realmId)
         {
             if (string.IsNullOrWhiteSpace(realmId)) return null;
-            var path = Path.Combine(_basePath, "companies", realmId, "profile.json");
-            if (!File.Exists(path)) return null;
-            using var fs = File.OpenRead(path);
+            var file = PathFor(realmId);
+            if (!File.Exists(file)) return null;
+            await using var fs = File.OpenRead(file);
             return await JsonSerializer.DeserializeAsync<CompanyProfile>(fs, _json);
         }
 
         public async Task SaveAsync(CompanyProfile profile)
         {
             if (profile == null || string.IsNullOrWhiteSpace(profile.RealmId)) return;
-            var dir = Path.Combine(_basePath, "companies", profile.RealmId);
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, "profile.json");
-            using var fs = File.Create(path);
+            var file = PathFor(profile.RealmId);
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            await using var fs = File.Create(file);
             await JsonSerializer.SerializeAsync(fs, profile, _json);
         }
     }

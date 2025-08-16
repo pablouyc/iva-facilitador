@@ -25,13 +25,18 @@
     var m = document.cookie.match(new RegExp('(?:^|; )' + n.replace(/([.$?*|{}()\\[\\]\\/+^])/g, '\\\\$1') + '=([^;]*)'));
     return m ? decodeURIComponent(m[1]) : null;
   }
+  // Usamos cualquiera de estas cookies
   var c = getCookie('onb_company') || getCookie('onb_connect');
   if(c){
     var mp = {};
-    c.split('|').forEach(function(p){ var i=p.indexOf('='); if(i>0){ mp[p.substring(0,i)] = p.substring(i+1); }});
+    c.split('|').forEach(function(p){
+      var i=p.indexOf('=');
+      if(i>0){ mp[p.substring(0,i)] = p.substring(i+1); }
+    });
     if (mp['company']) document.getElementById('onb-company').textContent = mp['company'];
     if (mp['realm'])   document.getElementById('onb-realm').value = mp['realm'];
     document.getElementById('onb-overlay').classList.remove('d-none');
+    // limpia para que no reabra
     document.cookie = 'onb_company=; Max-Age=0; path=/';
     document.cookie = 'onb_connect=; Max-Age=0; path=/';
   }

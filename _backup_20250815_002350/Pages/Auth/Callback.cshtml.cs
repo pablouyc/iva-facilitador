@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using IvaFacilitador.Services;
 using IvaFacilitador.Models;
@@ -33,11 +32,6 @@ namespace IvaFacilitador.Pages.Auth
 
         public async Task OnGet()
         {
-            var _realm = Request.Query["realmId"].ToString();
-            var _name  = Request.Query["companyName"].ToString();
-            var _payload = $"company={_name}|realm={_realm}";
-            Response.Cookies.Append("onb_company", _payload, new CookieOptions{ Path="/", Expires=DateTimeOffset.UtcNow.AddMinutes(10)});
-
             if (!string.IsNullOrEmpty(error))
             {
                 Error = $"{error}: {error_description}";
@@ -46,14 +40,14 @@ namespace IvaFacilitador.Pages.Auth
 
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(realmId))
             {
-                Error = "No se recibieron los parÃ¡metros necesarios desde Intuit.";
+                Error = "No se recibieron los parámetros necesarios desde Intuit.";
                 return;
             }
 
             var result = await _auth.TryExchangeCodeForTokenAsync(code!);
             if (!result.ok || result.token == null)
             {
-                Error = $"No se pudo intercambiar el cÃ³digo por el token. {result.error}";
+                Error = $"No se pudo intercambiar el código por el token. {result.error}";
                 return;
             }
 
@@ -64,7 +58,7 @@ namespace IvaFacilitador.Pages.Auth
             var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
             var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
 
-            // Persistir conexiÃ³n
+            // Persistir conexión
             _companyStore.AddOrUpdateCompany(new CompanyConnection
             {
                 RealmId = realmId!,
@@ -76,4 +70,3 @@ namespace IvaFacilitador.Pages.Auth
         }
     }
 }
-
