@@ -14,6 +14,20 @@ namespace IvaFacilitador.Models
         public List<string> SalesTariffs { get; set; } = new();
         public DateTimeOffset? TariffsReviewedAt { get; set; }
 
+        /// <summary>
+        /// CSV representation for backward compatibility.
+        /// </summary>
+        public string TariffsCsv
+        {
+            get => string.Join(",", SalesTariffs);
+            set
+            {
+                SalesTariffs = string.IsNullOrWhiteSpace(value)
+                    ? new List<string>()
+                    : new List<string>(value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
+        }
+
         // PASO 2 — General
         public bool HasCardTerminals { get; set; }
 
