@@ -10,3 +10,5 @@ Incluye:
 
 ## Build
 Requiere .NET 8.0 SDK. Instala dependencias y ejecuta `dotnet build` para compilar el proyecto.
+
+Antes de conectar con QuickBooks, define `ClientId`, `ClientSecret` y `RedirectUri` en la sección `IntuitAuth` del archivo `appsettings.json` o mediante variables de entorno.
