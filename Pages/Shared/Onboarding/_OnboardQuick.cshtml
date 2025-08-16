@@ -29,7 +29,14 @@
   var c = getCookie('onb_company');
     if(c){
       var map = {};
-      c.split('|').forEach(function(p){ var i=p.indexOf('='); if(i>0){ map[p.substring(0,i)] = p.substring(i+1); }});
+      c.split('|').forEach(function(p){
+        var i = p.indexOf('=');
+        if(i > 0){
+          var key = p.substring(0,i);
+          var val = p.substring(i+1);
+          map[key] = decodeURIComponent(val);
+        }
+      });
       if(map['company']) document.getElementById('onb-company').value = map['company'];
       if(map['realm']){
         document.getElementById('onb-realm').value = map['realm'];

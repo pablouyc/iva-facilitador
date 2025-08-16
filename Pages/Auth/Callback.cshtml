@@ -27,18 +27,5 @@
   </div>
 </div>
 
-<!-- Cookie para abrir el modal de parametrización y redirigir a /Auth/Connect -->
-<script>
-(function(){
-  try{
-    var p = new URLSearchParams(window.location.search);
-    var name = p.get("companyName") || "Empresa";
-    var realm = p.get("realmId") || "";
-    var payload = encodeURIComponent("company=" + name + "|realm=" + realm);
-    document.cookie = "onb_company=" + payload + "; Max-Age=600; path=/";
-    window.location = "/Auth/Connect";
-  }catch(e){}
-})();
-</script>
-<noscript><meta http-equiv="refresh" content="0;url=/Auth/Connect"></noscript>
+<!-- Página mostrada solo si ocurre un error en la conexión; el flujo normal redirige desde el método OnGet -->
 
