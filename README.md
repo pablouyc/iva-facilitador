@@ -6,6 +6,7 @@ Incluye:
 - Conexión OAuth con QuickBooks.
 - Modal de parametrización rápida tras el callback.
 - Wizard de onboarding para tarifas y datos generales.
+- Persistencia del perfil de empresa en archivos JSON por `realmId`.
 - Servicios stub para catálogo y detección de tarifas de QuickBooks.
 
 ## Build
