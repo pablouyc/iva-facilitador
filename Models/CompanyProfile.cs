@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace IvaFacilitador.Models
 {
+    /// <summary>
+    /// Stores company configuration captured during onboarding.
+    /// </summary>
     public class CompanyProfile
     {
         public string RealmId { get; set; } = "";

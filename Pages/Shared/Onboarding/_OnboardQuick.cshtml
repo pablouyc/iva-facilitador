@@ -11,13 +11,14 @@
           <input type="text" id="onb-company" class="form-control" readonly />
         </div>
         <input type="hidden" name="RealmId" id="onb-realm" />
-        <div class="d-flex gap-2 justify-content-end">
-          <button type="submit" class="btn btn-primary">Listo</button>
-        </div>
-      </form>
+          <div class="d-flex gap-2 justify-content-end">
+            <a id="onb-configure" class="btn btn-secondary" href="#">Configurar ahora</a>
+            <button type="submit" class="btn btn-primary">Listo</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</div>
 
 <script>
 (function(){
@@ -26,13 +27,16 @@
     return m ? decodeURIComponent(m[1]) : null;
   }
   var c = getCookie('onb_company');
-  if(c){
-    var map = {};
-    c.split('|').forEach(function(p){ var i=p.indexOf('='); if(i>0){ map[p.substring(0,i)] = p.substring(i+1); }});
-    if(map['company']) document.getElementById('onb-company').value = map['company'];
-    if(map['realm']) document.getElementById('onb-realm').value = map['realm'];
-    document.getElementById('onb-overlay').style.display = 'flex';
-    document.cookie = 'onb_company=; Max-Age=0; path=/';
-  }
-})();
+    if(c){
+      var map = {};
+      c.split('|').forEach(function(p){ var i=p.indexOf('='); if(i>0){ map[p.substring(0,i)] = p.substring(i+1); }});
+      if(map['company']) document.getElementById('onb-company').value = map['company'];
+      if(map['realm']){
+        document.getElementById('onb-realm').value = map['realm'];
+        document.getElementById('onb-configure').href = '/Onboarding/Tariffs?realmId=' + encodeURIComponent(map['realm']);
+      }
+      document.getElementById('onb-overlay').style.display = 'flex';
+      document.cookie = 'onb_company=; Max-Age=0; path=/';
+    }
+  })();
 </script>

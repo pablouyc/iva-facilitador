@@ -8,4 +8,4 @@ Incluye:
 - Wizard de onboarding para tarifas y datos generales.
 
 ## Build
-Requiere .NET 8.0 SDK. Ejecuta `dotnet build` para compilar.
+Requiere .NET 8.0 SDK. Instala dependencias y ejecuta `dotnet build` para compilar el proyecto.

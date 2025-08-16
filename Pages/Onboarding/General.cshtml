@@ -4,9 +4,84 @@
 <h1 class="h4 mb-3">Datos generales</h1>
 <form method="post" asp-page="SaveGeneral">
   <input type="hidden" name="RealmId" value="@Model.RealmId" />
-    <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="HasProrata" asp-for="HasProrata" />
-      <label class="form-check-label" for="HasProrata">Usa prorrata</label>
-    </div>
+
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="HasCardTerminals" asp-for="HasCardTerminals" />
+    <label class="form-check-label" for="HasCardTerminals">¿Cuenta con datáfonos?</label>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="CardRetencionRentaAccount">Cuenta retención renta</label>
+    <input type="text" class="form-control" id="CardRetencionRentaAccount" asp-for="CardRetencionRentaAccount" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="CardRetencionIvaAccount">Cuenta retención IVA</label>
+    <input type="text" class="form-control" id="CardRetencionIvaAccount" asp-for="CardRetencionIvaAccount" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="CardComisionesAccount">Cuenta comisiones</label>
+    <input type="text" class="form-control" id="CardComisionesAccount" asp-for="CardComisionesAccount" />
+  </div>
+
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="IsMEICRegistered" asp-for="IsMEICRegistered" />
+    <label class="form-check-label" for="IsMEICRegistered">Inscrito en MEIC</label>
+  </div>
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="IsMAGRegistered" asp-for="IsMAGRegistered" />
+    <label class="form-check-label" for="IsMAGRegistered">Inscrito en MAG</label>
+  </div>
+
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="HasProrata" asp-for="HasProrata" />
+    <label class="form-check-label" for="HasProrata">Usa prorrata</label>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="ProrataPercent">Porcentaje de prorrata</label>
+    <input type="number" step="0.01" class="form-control" id="ProrataPercent" asp-for="ProrataPercent" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="ProrataCalcMode">Modo de cálculo</label>
+    <select class="form-select" id="ProrataCalcMode" asp-for="ProrataCalcMode">
+      <option value="">Manual</option>
+      <option value="mensual">Mensual</option>
+      <option value="trimestral">Trimestral</option>
+      <option value="anual">Anual</option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="IvaControlAccount">Cuenta IVA control</label>
+    <input type="text" class="form-control" id="IvaControlAccount" asp-for="IvaControlAccount" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="IvaPorPagarAccount">Cuenta IVA por pagar</label>
+    <input type="text" class="form-control" id="IvaPorPagarAccount" asp-for="IvaPorPagarAccount" />
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="IvaAFavorAccount">Cuenta IVA a favor</label>
+    <input type="text" class="form-control" id="IvaAFavorAccount" asp-for="IvaAFavorAccount" />
+  </div>
+
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="DoesExports" asp-for="DoesExports" />
+    <label class="form-check-label" for="DoesExports">Realiza exportaciones</label>
+  </div>
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="HasCapitalRentals" asp-for="HasCapitalRentals" />
+    <label class="form-check-label" for="HasCapitalRentals">Alquileres de bienes de capital</label>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="NonDeductibleExpensesAccount">Cuenta de gastos no deducibles</label>
+    <input type="text" class="form-control" id="NonDeductibleExpensesAccount" asp-for="NonDeductibleExpensesAccount" />
+  </div>
+  <div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="InExemptionZone" asp-for="InExemptionZone" />
+    <label class="form-check-label" for="InExemptionZone">¿Zona exonerada?</label>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="ExemptionNotes">Notas de exoneración</label>
+    <textarea class="form-control" id="ExemptionNotes" asp-for="ExemptionNotes"></textarea>
+  </div>
+
   <button type="submit" class="btn btn-primary">Guardar</button>
 </form>
