@@ -162,6 +162,8 @@ namespace IvaFacilitador.Services
                             dynamic dyn = new ExpandoObject();
                             var dict = (IDictionary<string, object?>)dyn;
 
+                            dict["Entity"] = entity;
+
                             if (item.TryGetProperty("Id", out var id) && id.ValueKind == JsonValueKind.String)
                                 dict["Id"] = id.GetString();
                             if (item.TryGetProperty("TxnDate", out var txnDate) && txnDate.ValueKind == JsonValueKind.String)
