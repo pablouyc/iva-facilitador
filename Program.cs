@@ -39,6 +39,9 @@ builder.Services.AddSingleton<ICompanyStore, FileCompanyStore>();
 builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
 builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
+builder.Services.AddSingleton<ICompanyProfileStore, CompanyProfileStore>();
+builder.Services.AddSingleton<IQuickBooksTariffDetector, QuickBooksTariffDetector>();
+builder.Services.AddSingleton<IQuickBooksCatalog, QuickBooksCatalog>();
 
 var app = builder.Build();
 

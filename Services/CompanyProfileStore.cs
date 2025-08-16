@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using IvaFacilitador.Models;
@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace IvaFacilitador.Services
 {
-    public class CompanyProfileStore
+    public class CompanyProfileStore : ICompanyProfileStore
     {
         private readonly string _basePath;
         private static readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
