@@ -10,3 +10,5 @@ Incluye:
 
 ## Build
 Requiere .NET 8.0 SDK. Instala dependencias y ejecuta `dotnet build` para compilar el proyecto.
+
+Configura `IntuitAuth` en appsettings.json con tus credenciales de QuickBooks para habilitar el flujo OAuth.
