@@ -12,14 +12,14 @@ namespace IvaFacilitador.Services
     {
         private readonly AppDbContext _db;
 
-        public CompanyStoreEf(AppDbContext db)
-        {
-            _db = db;
-        }
+        public CompanyStoreEf(AppDbContext db) => _db = db;
 
         public IReadOnlyList<CompanyConnection> GetCompaniesForUser(string userId = "demo-user")
         {
-            return _db.CompanyConnections.AsNoTracking().OrderBy(c => c.Name).ToList();
+            return _db.CompanyConnections
+                      .AsNoTracking()
+                      .OrderBy(c => c.Name)
+                      .ToList();
         }
 
         public void AddOrUpdateCompany(CompanyConnection company, string userId = "demo-user")

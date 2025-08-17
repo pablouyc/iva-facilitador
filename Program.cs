@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 using IvaFacilitador.Data;
-using IvaFacilitador.Models;
+using IvaFacilitador.Models;   // Para CompanyConnection en import-companies
 using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,16 +21,14 @@ builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection
 // ===== MVC / Razor =====
 builder.Services.AddRazorPages(options =>
 {
-    // Por defecto, todo requiere login
     options.Conventions.AuthorizeFolder("/");
-    // Permitir páginas de autenticación y callback de Intuit sin login previo
     options.Conventions.AllowAnonymousToPage("/Auth/Login");
     options.Conventions.AllowAnonymousToPage("/Auth/Callback");
 });
 
 builder.Services.AddHttpClient();
 
-// ===== Auth por cookies (login propio) =====
+// ===== Auth por cookies =====
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -43,7 +41,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 // ===== Stores y servicios =====
-var connStr = builder.Configuration["POSTGRES_URL"] ?? "Host=localhost;Database=iva;Username=postgres;Password=postgres";
+var connStr = builder.Configuration["POSTGRES_URL"]
+    ?? "Host=localhost;Database=iva;Username=postgres;Password=postgres";
+
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connStr));
 builder.Services.AddScoped<ICompanyStore, CompanyStoreEf>();
 builder.Services.AddScoped<ITokenStore, EfTokenStore>();
@@ -93,12 +93,9 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 });
 
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
-
 app.Run();
