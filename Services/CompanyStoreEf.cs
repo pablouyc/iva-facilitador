@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
+
 using IvaFacilitador.Data;
 using IvaFacilitador.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace IvaFacilitador.Services
 {

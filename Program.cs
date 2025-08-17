@@ -1,16 +1,18 @@
+using System.Collections.Generic;
 using System.Globalization;
-using System.Text.Json;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
+using System.Text.Json;
+
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
-using IvaFacilitador.Services;
+
 using IvaFacilitador.Data;
 using IvaFacilitador.Models;
+using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,4 +103,3 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 app.Run();
-
