@@ -1,0 +1,47 @@
+@page
+@model IvaFacilitador.Pages.Empresas.ParametrizadorModel
+@{
+    ViewData["Title"] = "Parametrizador";
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}
+<h1 class="h4 mb-3">Parametrizador de empresa</h1>
+<form method="post">
+  <div class="mb-3">
+    <label class="form-label">Empresa</label>
+    <input type="text" class="form-control" value="@Model.CompanyName" disabled />
+  </div>
+  <div class="mb-3">
+    <label class="form-label">RealmId</label>
+    <input type="text" class="form-control" value="@Model.RealmId" disabled />
+  </div>
+  <div class="mb-3">
+    <label asp-for="Input.Moneda" class="form-label"></label>
+    <input asp-for="Input.Moneda" class="form-control" />
+    <span asp-validation-for="Input.Moneda" class="text-danger"></span>
+  </div>
+  <div class="mb-3">
+    <label asp-for="Input.Pais" class="form-label"></label>
+    <input asp-for="Input.Pais" class="form-control" />
+    <span asp-validation-for="Input.Pais" class="text-danger"></span>
+  </div>
+  <div class="mb-3">
+    <label asp-for="Input.PeriodoIva" class="form-label"></label>
+    <input asp-for="Input.PeriodoIva" class="form-control" />
+    <span asp-validation-for="Input.PeriodoIva" class="text-danger"></span>
+  </div>
+  <div class="mb-3">
+    <label asp-for="Input.PorcentajeIvaDefault" class="form-label"></label>
+    <input asp-for="Input.PorcentajeIvaDefault" class="form-control" />
+    <span asp-validation-for="Input.PorcentajeIvaDefault" class="text-danger"></span>
+  </div>
+  <div class="mb-3">
+    <label asp-for="Input.MetodoRedondeo" class="form-label"></label>
+    <input asp-for="Input.MetodoRedondeo" class="form-control" />
+    <span asp-validation-for="Input.MetodoRedondeo" class="text-danger"></span>
+  </div>
+  <button type="submit" asp-page-handler="Listo" class="btn btn-success btn-acento">Listo</button>
+  <button type="submit" asp-page-handler="Cancelar" class="btn btn-outline-secondary ms-2">Cancelar</button>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

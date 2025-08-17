@@ -1,0 +1,15 @@
+@page "{id:int}"
+@model IvaFacilitador.Pages.Empresas.DetalleModel
+@{
+    ViewData["Title"] = "Detalle";
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}
+<h1 class="h4 mb-3">@Model.Empresa.CompanyName</h1>
+<ul class="list-unstyled">
+  <li><strong>RealmId:</strong> @Model.Empresa.RealmId</li>
+  <li><strong>Moneda:</strong> @Model.Empresa.Moneda</li>
+  <li><strong>País:</strong> @Model.Empresa.Pais</li>
+  <li><strong>Periodo IVA:</strong> @Model.Empresa.PeriodoIva</li>
+  <li><strong>% IVA:</strong> @Model.Empresa.PorcentajeIvaDefault</li>
+  <li><strong>Método Redondeo:</strong> @Model.Empresa.MetodoRedondeo</li>
+</ul>

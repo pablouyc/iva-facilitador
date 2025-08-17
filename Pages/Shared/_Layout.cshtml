@@ -62,9 +62,12 @@ body{ background:var(--blanco); color:#111;}
 </div>
 <div id="overlay" class="overlay"></div>
 
-<main class="container my-4">
-  @RenderBody()
-</main>
+  <main class="container my-4">
+    @if(TempData["Ok"] is string ok){<div class="alert alert-success">@ok</div>}
+    @if(TempData["Warn"] is string warn){<div class="alert alert-warning">@warn</div>}
+    @if(TempData["Info"] is string info){<div class="alert alert-info">@info</div>}
+    @RenderBody()
+  </main>
 
 <footer class="border-top py-3 mt-5">
   <div class="container text-muted small">

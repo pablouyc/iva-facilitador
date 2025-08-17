@@ -1,44 +1,35 @@
 using System.Globalization;
+using IvaFacilitador.Data;
+using IvaFacilitador.Services;
+using IvaFacilitador.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using IvaFacilitador.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ===== App settings =====
-builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitAuth"));
+builder.Services.AddRazorPages();
 
-// ===== MVC / Razor =====
-builder.Services.AddRazorPages(options =>
-{
-    // Por defecto, todo requiere login
-    options.Conventions.AuthorizeFolder("/");
-    // Permitir páginas de autenticación y callback de Intuit sin login previo
-    options.Conventions.AllowAnonymousToPage("/Auth/Login");
-    options.Conventions.AllowAnonymousToPage("/Auth/Callback");
-});
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=app.db"));
 
-builder.Services.AddHttpClient();
+builder.Services.AddDataProtection();
+builder.Services.AddSession();
+builder.Services.AddHttpContextAccessor();
 
-// ===== Auth por cookies (login propio) =====
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Auth/Login";
-        options.AccessDeniedPath = "/Auth/Login";
         options.Cookie.Name = "IVA.Auth";
-        options.SlidingExpiration = true;
     });
 
 builder.Services.AddAuthorization();
 
-// ===== Stores y servicios =====
-builder.Services.AddSingleton<ICompanyStore, FileCompanyStore>();
-builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
-builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
-builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
+builder.Services.AddScoped<IQboAuthService, QboAuthService>();
+builder.Services.AddScoped<IQboCompanyInfoService, QboCompanyInfoService>();
+builder.Services.AddScoped<ISessionPendingCompanyService, SessionPendingCompanyService>();
+builder.Services.AddScoped<ICryptoProtector, CryptoProtector>();
 
 var app = builder.Build();
 
@@ -55,9 +46,13 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseSession();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
 
 app.Run();
+
+public partial class Program { }

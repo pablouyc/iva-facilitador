@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace IvaFacilitador.Pages.IVA;
+namespace IvaFacilitador.Pages.Inicio;
 
 [Authorize]
-public class SeleccionModel : PageModel
+public class IndexModel : PageModel
 {
     public void OnGet()
     {

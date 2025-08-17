@@ -1,0 +1,10 @@
+@page
+@model IvaFacilitador.Pages.Empresas.NuevaModel
+@{
+    ViewData["Title"] = "Nueva Empresa";
+    Layout = "/Pages/Shared/_Layout.cshtml";
+}
+<h1 class="h4 mb-3">Conectar Empresa (Preliminar)</h1>
+<form method="post">
+  <button type="submit" asp-page-handler="ConectarPreliminar" class="btn btn-primary btn-acento">Conectar con QuickBooks (Preliminar)</button>
+</form>

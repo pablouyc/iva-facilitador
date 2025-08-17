@@ -1,1 +1,0 @@
-using Microsoft.AspNetCore.Mvc.RazorPages; namespace IvaFacilitador.Pages.Auth; public class DisconnectModel:PageModel{ public void OnGet(){} }
