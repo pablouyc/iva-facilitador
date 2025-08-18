@@ -5,7 +5,6 @@ using IvaFacilitador.Models;
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
-using System.Text.Json;
 namespace IvaFacilitador.Pages.Auth
 {
     public class CallbackModel : PageModel
@@ -30,66 +29,41 @@ namespace IvaFacilitador.Pages.Auth
         [BindProperty(SupportsGet = true)] public string? error_description { get; set; }
 
         public string? Error { get; set; }
-        public string? RealmId { get; set; }
-        public string? CompanyName { get; set; }
 
         public async Task<IActionResult> OnGet()
-{
-    if (!string.IsNullOrEmpty(error))
-    {
-        Error = $"{error}: {error_description}";
-        return Page();
-    }
-
-    if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(realmId))
-    {
-        Error = "No se recibieron los parámetros necesarios desde Intuit.";
-        return Page();
-    }
-
-    var result = await _auth.TryExchangeCodeForTokenAsync(code!);
-    if (!result.ok || result.token == null)
-    {
-        Error = $"No se pudo intercambiar el código por el token. {result.error}";
-        return Page();
-    }
-
-    // Guardar tokens en el store
-    _tokenStore.Save(realmId!, result.token);
-
-    // Obtener nombre de empresa
-    var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
-    var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
-
-    
+        {
+            if (!string.IsNullOrEmpty(error))
+            {
+                Error = $"{error}: {error_description}";
+                return Page();
+            }
 
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(realmId))
             {
-                Error = "No se recibieron los parÃ¡metros necesarios desde Intuit.";
-                return;
+                Error = "No se recibieron los parámetros necesarios desde Intuit.";
+                return Page();
             }
 
             var result = await _auth.TryExchangeCodeForTokenAsync(code!);
             if (!result.ok || result.token == null)
             {
-                Error = $"No se pudo intercambiar el cÃ³digo por el token. {result.error}";
-                return;
+                Error = $"No se pudo intercambiar el código por el token. {result.error}";
+                return Page();
             }
 
-            // Guardar tokens
+            // Guardar tokens en el store
             _tokenStore.Save(realmId!, result.token);
 
-            // Obtener nombre real de la empresa
+            // Obtener nombre de empresa
             var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
             var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
 
-            // Persistir conexiÃ³n
-            
+            // Guardar en sesión como 'PendingCompany' (temporal)
+            var pending = new CompanyConnection { RealmId = realmId!, Name = finalName };
+            HttpContext.Session.SetString("PendingCompany", JsonSerializer.Serialize(pending));
+
+            // Redirigir a pantalla de parametrización
+            return RedirectToPage("/Empresas/Parametrizacion");
+        }
     }
 }
-
-
-
-
-
-
