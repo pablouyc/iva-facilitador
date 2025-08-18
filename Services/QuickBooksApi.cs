@@ -136,12 +136,12 @@ namespace IvaFacilitador.Services
             }
         }
 
-    public async Task<List<string>> DetectSalesTariffsAsync(string realmId, string accessToken, DateTime from, DateTime to, CancellationToken ct = default)
-        {
-            // TODO: Implementar lectura de Invoice y SalesReceipt (últimos 6 meses) y normalización de tasas
-            await Task.CompletedTask;
-            return new List<string>();
-        }
+    public async Task<List<string>> DetectSalesTariffsAsync(string realmId, string accessToken, DateTime from, DateTime to, System.Threading.CancellationToken ct = default)
+{
+    _logger.LogInformation("[QBO] DetectSalesTariffsAsync TEST realmId={RealmId} from={From} to={To}", realmId, from, to);
+    // MOCK: devolvemos tarifas para probar el render
+    return new List<string> { "13%", "0%/Exenta" };
+}
 
         public async Task<List<string>> ListAvailableSalesTaxLabelsAsync(string realmId, string accessToken, CancellationToken ct = default)
         {
@@ -151,6 +151,7 @@ namespace IvaFacilitador.Services
         }
     }
 }
+
 
 
 
