@@ -29,6 +29,8 @@ namespace IvaFacilitador.Pages.Auth
         [BindProperty(SupportsGet = true)] public string? error_description { get; set; }
 
         public string? Error { get; set; }
+        public string? RealmId { get; set; }
+        public string? CompanyName { get; set; }
 
         public async Task<IActionResult> OnGet()
         {
@@ -58,10 +60,11 @@ namespace IvaFacilitador.Pages.Auth
             var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
             var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
 
-            
-    CompanyName = finalName;
-    RealmId = realmId;
-// Guardar en sesión como 'PendingCompany' (temporal)
+            // Exponer datos a la vista (por si se renderiza la página)
+            CompanyName = finalName;
+            RealmId = realmId;
+
+            // Guardar en sesión como 'PendingCompany' (temporal)
             var pending = new CompanyConnection { RealmId = realmId!, Name = finalName };
             HttpContext.Session.SetString("PendingCompany", JsonSerializer.Serialize(pending));
 
@@ -70,4 +73,3 @@ namespace IvaFacilitador.Pages.Auth
         }
     }
 }
-
