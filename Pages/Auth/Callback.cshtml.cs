@@ -58,7 +58,10 @@ namespace IvaFacilitador.Pages.Auth
             var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
             var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
 
-            // Guardar en sesión como 'PendingCompany' (temporal)
+            
+    CompanyName = finalName;
+    RealmId = realmId;
+// Guardar en sesión como 'PendingCompany' (temporal)
             var pending = new CompanyConnection { RealmId = realmId!, Name = finalName };
             HttpContext.Session.SetString("PendingCompany", JsonSerializer.Serialize(pending));
 
@@ -67,3 +70,4 @@ namespace IvaFacilitador.Pages.Auth
         }
     }
 }
+
