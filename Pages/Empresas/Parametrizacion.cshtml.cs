@@ -1,4 +1,7 @@
 ﻿using System.Text.Json;
+using System.Linq;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Http;
@@ -9,6 +12,15 @@ namespace IvaFacilitador.Pages.Empresas
 {
     public class ParametrizacionModel : PageModel
     {
+        // === Parametrización: Tarifas de ventas ===
+        public List<string> DetectedSalesTariffs { get; set; } = new();
+        public List<string> AvailableSalesTaxLabels { get; set; } = new();
+
+        [BindProperty]
+        public bool? TariffsAreCorrect { get; set; }
+
+        [BindProperty]
+        public List<string> ExtraTariffs { get; set; } = new();
         private readonly ICompanyStore _companyStore;
         private readonly ITokenStore _tokenStore;
         private readonly IQuickBooksAuth _auth;
@@ -102,3 +114,5 @@ namespace IvaFacilitador.Pages.Empresas
         }
     }
 }
+
+

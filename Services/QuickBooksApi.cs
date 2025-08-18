@@ -1,5 +1,12 @@
+﻿using System;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -8,7 +15,8 @@ namespace IvaFacilitador.Services
     public interface IQuickBooksApi
     {
         Task<string?> GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default);
-    }
+            Task<List<string>> DetectSalesTariffsAsync(string realmId, string accessToken, DateTime from, DateTime to, CancellationToken ct = default);
+        Task<List<string>> ListAvailableSalesTaxLabelsAsync(string realmId, string accessToken, CancellationToken ct = default);}
 
     public class QuickBooksApi : IQuickBooksApi
     {
@@ -35,7 +43,7 @@ namespace IvaFacilitador.Services
             var viaQuery = await GetCompanyNameViaQueryAsync(host, realmId, accessToken, ct);
             if (!string.IsNullOrWhiteSpace(viaQuery)) return viaQuery;
 
-            _logger.LogWarning("[QBO] No se logró obtener CompanyName por ninguna vía para realmId={RealmId}", realmId);
+            _logger.LogWarning("[QBO] No se logrÃ³ obtener CompanyName por ninguna vÃ­a para realmId={RealmId}", realmId);
             return null;
         }
 
@@ -127,5 +135,23 @@ namespace IvaFacilitador.Services
                 return null;
             }
         }
+
+    public async Task<List<string>> DetectSalesTariffsAsync(string realmId, string accessToken, DateTime from, DateTime to, CancellationToken ct = default)
+        {
+            // TODO: Implementar lectura de Invoice y SalesReceipt (últimos 6 meses) y normalización de tasas
+            await Task.CompletedTask;
+            return new List<string>();
+        }
+
+        public async Task<List<string>> ListAvailableSalesTaxLabelsAsync(string realmId, string accessToken, CancellationToken ct = default)
+        {
+            // TODO: Consultar TaxCodes/TaxRates (catálogo) para poblar el selector
+            await Task.CompletedTask;
+            return new List<string> { "13%", "4%", "2%", "1% (MEIC/CBT)", "0%/Exenta" };
+        }
     }
 }
+
+
+
+

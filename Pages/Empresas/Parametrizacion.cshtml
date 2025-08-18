@@ -25,8 +25,78 @@
 
         <div class="d-flex gap-3 justify-content-center">
           <form method="post" asp-page-handler="Confirm">
-            <button type="submit" class="btn btn-primary px-4">Listo</button>
-          </form>
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Tarifas de impuestos (ventas)</h2>
+
+    @if (Model.DetectedSalesTariffs?.Count > 0)
+    {
+        <div class="mb-2"><strong>Detectadas (últimos 6 meses):</strong></div>
+        <ul class="mb-3">
+        @foreach (var t in Model.DetectedSalesTariffs) { <li>@t</li> }
+        </ul>
+    }
+    else
+    {
+        <div class="text-muted mb-3">No se detectaron tarifas recientes.</div>
+    }
+
+    <div class="mb-2"><strong>¿Son correctas?</strong></div>
+    <div class="form-check">
+      <input class="form-check-input" type="radio" asp-for="TariffsAreCorrect" value="true" id="tariffsYes">
+      <label class="form-check-label" for="tariffsYes">Sí</label>
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="radio" asp-for="TariffsAreCorrect" value="false" id="tariffsNo">
+      <label class="form-check-label" for="tariffsNo">No, tengo otras tarifas</label>
+    </div>
+
+    <div id="extraTariffsBlock" class="mb-3" style="display:none">
+      <div class="mb-2"><strong>Selecciona las tarifas adicionales que usas:</strong></div>
+      @if (Model.AvailableSalesTaxLabels?.Count > 0)
+      {
+        @foreach (var lab in Model.AvailableSalesTaxLabels)
+        {
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="ExtraTariffs" value="@lab" id="lab_@lab.Replace(" ","_")">
+            <label class="form-check-label" for="lab_@lab.Replace(" ","_")">@lab</label>
+          </div>
+        }
+      }
+      else
+      {
+        <div class="text-muted">No hay etiquetas disponibles.</div>
+      }
+    </div>
+
+    <div class="mt-3">
+      <button class="btn btn-primary me-2" type="submit">Guardar</button>
+      <a class="btn btn-outline-secondary" href="/Empresas/Index">Cancelar</a>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+(function() {
+  function toggleExtra() {
+    var yes = document.getElementById('tariffsYes');
+    var no  = document.getElementById('tariffsNo');
+    var blk = document.getElementById('extraTariffsBlock');
+    if (no && no.checked) { blk.style.display = 'block'; }
+    else { blk.style.display = 'none'; }
+  }
+  document.addEventListener('change', function(ev){
+    if (ev.target && (ev.target.id === 'tariffsYes' || ev.target.id === 'tariffsNo')) {
+      toggleExtra();
+    }
+  });
+  // init on load
+  toggleExtra();
+})();
+</script>
+}
+</form>
           <form method="post" asp-page-handler="Cancel">
             <button type="submit" class="btn btn-outline-danger px-4">Cancelar</button>
           </form>
@@ -34,3 +104,4 @@
       }
   </div>
 </div>
+

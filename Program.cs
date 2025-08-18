@@ -41,6 +41,8 @@ builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
 
 
+
+builder.Services.AddSingleton<ICompanyProfileStore, FileCompanyProfileStore>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -69,6 +71,8 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 app.Run();
+
+
 
 
 
