@@ -33,13 +33,35 @@ namespace IvaFacilitador.Pages.Auth
         public string? RealmId { get; set; }
         public string? CompanyName { get; set; }
 
-        public async Task OnGet()
-        {
-            if (!string.IsNullOrEmpty(error))
-            {
-                Error = $"{error}: {error_description}";
-                return;
-            }
+        public async Task<IActionResult> OnGet()
+{
+    if (!string.IsNullOrEmpty(error))
+    {
+        Error = $"{error}: {error_description}";
+        return Page();
+    }
+
+    if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(realmId))
+    {
+        Error = "No se recibieron los parámetros necesarios desde Intuit.";
+        return Page();
+    }
+
+    var result = await _auth.TryExchangeCodeForTokenAsync(code!);
+    if (!result.ok || result.token == null)
+    {
+        Error = $"No se pudo intercambiar el código por el token. {result.error}";
+        return Page();
+    }
+
+    // Guardar tokens en el store
+    _tokenStore.Save(realmId!, result.token);
+
+    // Obtener nombre de empresa
+    var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
+    var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
+
+    
 
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(realmId))
             {
@@ -62,18 +84,12 @@ namespace IvaFacilitador.Pages.Auth
             var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
 
             // Persistir conexiÃ³n
-            // Guardar en sesión como 'PendingCompany' (temporal)
-HttpContext.Session.SetString(""PendingCompany"", JsonSerializer.Serialize(new CompanyConnection
-{
-    RealmId = realmId!,
-    Name = finalName
-}));
-
-// Redirigir a pantalla de Parametrización
-Response.Redirect(""/Empresas/Parametrizacion"");
-return;}
+            
     }
 }
+
+
+
 
 
 
