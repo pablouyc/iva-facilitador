@@ -13,3 +13,5 @@ obj/
 *.bak
 *.bak_*
 
+
+appsettings.Development.local.json
