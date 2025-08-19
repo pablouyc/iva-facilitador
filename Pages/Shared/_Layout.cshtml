@@ -74,9 +74,7 @@ body{ background:var(--blanco); color:#111;}
         if (pos >= 0)
         {
             var start = pos + marker.Length;
-            // Substring desde el final de "empresa "
             var tail = autoMsg.Substring(start).TrimStart();
-            // Primer token (hasta espacio o puntuación)
             var endIdx = tail.IndexOfAny(new[] { ' ', ',', '.', ';', ':' });
             var firstWord = endIdx > 0 ? tail.Substring(0, endIdx) : tail;
             if (!string.IsNullOrWhiteSpace(firstWord))
@@ -102,7 +100,7 @@ body{ background:var(--blanco); color:#111;}
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
   </div>
-  <script type="text/javascript">
+    <script type="text/javascript">
   //<![CDATA[
     (function(){
       setTimeout(function(){
@@ -120,22 +118,7 @@ body{ background:var(--blanco); color:#111;}
     })();
   //]]>
   </script>
-}catch(e) {
-          el.classList.remove('show');
-          el.remove();
-        }
-      }
-    }, 15000);
-  </script>
-}catch(e) {
-          el.classList.remove('show');
-          el.remove();
-        }
-      }
-    }, 15000);
-  </script>
-}
-<main class="container my-4">
+}<main class="container my-4">
   @RenderBody()
 </main>
 
