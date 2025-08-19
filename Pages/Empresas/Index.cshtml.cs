@@ -5,7 +5,8 @@ using IvaFacilitador.Models;
 
 namespace IvaFacilitador.Pages.Empresas
 {
-    public class IndexModel : PageModel
+    [ValidateAntiForgeryToken]
+public class IndexModel : PageModel
     {
         private readonly ICompanyStore _companyStore;
         private readonly ITokenStore _tokenStore;
@@ -25,7 +26,7 @@ namespace IvaFacilitador.Pages.Empresas
             Companies = _companyStore.GetCompaniesForUser().OrderBy(c => c.Name).ToList();
         }
 
-        [ValidateAntiForgeryToken]
+
         public async Task<IActionResult> OnPostDisconnect(string realmId)
         {
             if (string.IsNullOrWhiteSpace(realmId))
