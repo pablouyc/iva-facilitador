@@ -66,12 +66,24 @@ body{ background:var(--blanco); color:#111;}
 @{
     var autoMsg = TempData["AutoDisconnected"] as string;
     string toastInitial = null;
+
     if (!string.IsNullOrWhiteSpace(autoMsg))
     {
-        var words = autoMsg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length > 0)
+        // Buscar "empresa " y tomar la primera letra del siguiente token
+        var marker = "empresa ";
+        var pos = autoMsg.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (pos >= 0)
         {
-            toastInitial = words[words.Length > 1 ? 1 : 0].Substring(0,1).ToUpperInvariant();
+            var start = pos + marker.Length;
+            // Substring desde el final de "empresa "
+            var tail = autoMsg.Substring(start).TrimStart();
+            // Primer token (hasta espacio o puntuación)
+            var endIdx = tail.IndexOfAny(new[] { ' ', ',', '.', ';', ':' });
+            var firstWord = endIdx > 0 ? tail.Substring(0, endIdx) : tail;
+            if (!string.IsNullOrWhiteSpace(firstWord))
+            {
+                toastInitial = firstWord.Substring(0,1).ToUpperInvariant();
+            }
         }
     }
 }
@@ -91,14 +103,25 @@ body{ background:var(--blanco); color:#111;}
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
   </div>
-  <script>
-    setTimeout(function(){
-      var el = document.getElementById('autoDisconnectToast');
-      if (el) {
-        try {
-          var alert = bootstrap.Alert.getOrCreateInstance(el);
-          alert.close();
-        } catch(e) {
+  <script type="text/javascript">
+  //<![CDATA[
+    (function(){
+      setTimeout(function(){
+        var el = document.getElementById('autoDisconnectToast');
+        if (el) {
+          try {
+            var alert = bootstrap.Alert.getOrCreateInstance(el);
+            alert.close();
+          } catch(e) {
+            el.classList.remove('show');
+            el.remove();
+          }
+        }
+      }, 15000);
+    })();
+  //]]>
+  </script>
+}catch(e) {
           el.classList.remove('show');
           el.remove();
         }
