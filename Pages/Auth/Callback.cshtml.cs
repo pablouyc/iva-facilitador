@@ -1,8 +1,11 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using IvaFacilitador.Services;
 using IvaFacilitador.Models;
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
 
+using System.Text.Json;
 namespace IvaFacilitador.Pages.Auth
 {
     public class CallbackModel : PageModel
@@ -40,14 +43,14 @@ namespace IvaFacilitador.Pages.Auth
 
             if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(realmId))
             {
-                Error = "No se recibieron los parámetros necesarios desde Intuit.";
+                Error = "No se recibieron los parÃ¡metros necesarios desde Intuit.";
                 return;
             }
 
             var result = await _auth.TryExchangeCodeForTokenAsync(code!);
             if (!result.ok || result.token == null)
             {
-                Error = $"No se pudo intercambiar el código por el token. {result.error}";
+                Error = $"No se pudo intercambiar el cÃ³digo por el token. {result.error}";
                 return;
             }
 
@@ -58,15 +61,19 @@ namespace IvaFacilitador.Pages.Auth
             var fetchedName = await _qboApi.GetCompanyNameAsync(realmId!, result.token.access_token);
             var finalName = string.IsNullOrWhiteSpace(fetchedName) ? $"Empresa {realmId}" : fetchedName;
 
-            // Persistir conexión
-            _companyStore.AddOrUpdateCompany(new CompanyConnection
-            {
-                RealmId = realmId!,
-                Name = finalName
-            });
+            // Persistir conexiÃ³n
+            // Guardar en sesión como 'PendingCompany' (temporal)
+HttpContext.Session.SetString(""PendingCompany"", JsonSerializer.Serialize(new CompanyConnection
+{
+    RealmId = realmId!,
+    Name = finalName
+}));
 
-            RealmId = realmId;
-            CompanyName = finalName;
-        }
+// Redirigir a pantalla de Parametrización
+Response.Redirect(""/Empresas/Parametrizacion"");
+return;}
     }
 }
+
+
+

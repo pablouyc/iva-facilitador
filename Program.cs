@@ -40,6 +40,30 @@ builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
 builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
 
+options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+
+options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
 var app = builder.Build();
 
 // ===== Cultura es-CR =====
@@ -54,10 +78,14 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 app.UseStaticFiles();
 
 app.UseRouting();
-
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
 
 app.Run();
+
+
+
+
