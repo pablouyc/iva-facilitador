@@ -1,107 +1,99 @@
-﻿@page
+﻿@@page
 @model IvaFacilitador.Pages.Empresas.ParametrizacionModel
 @{
-    ViewData["Title"] = "Parametrización de empresa";
-    Layout = "/Pages/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Parametrización de Empresa";
+    var comunes = new[] { "Tarifa general 13", "Tarifa reducida 4", "Tarifa reducida 2", "Tarifa reducida 1", "0%/Exento/No sujeto" };
+    var opciones = (Model.AvailableSalesTaxLabels ?? new List<string>())
+                   .Concat(comunes)
+                   .Distinct(StringComparer.OrdinalIgnoreCase)
+                   .ToList();
 }
 
-<div class="container d-flex align-items-center justify-content-center" style="min-height:60vh;">
-  <div class="text-center" style="max-width:600px;">
-    <h1 class="h3 mb-4">Parametrización de empresa</h1>
+<h2>Parametrización</h2>
 
-    @if (Model.PendingCompany is null)
-    {
-        <div class="alert alert-warning">No hay empresa pendiente de confirmar.</div>
-        <a class="btn btn-secondary" href="/Empresas">Volver</a>
-    }
-    else
-    {
-        <div class="card shadow-sm mb-4">
-          <div class="card-body">
-            <div class="mb-2 fw-bold">@Model.PendingCompany.Name</div>
-            <div class="text-muted small">@Model.PendingCompany.RealmId</div>
-          </div>
+@if (TempData["Error"] is string e) { <div class="alert alert-danger">@e</div> }
+@if (TempData["Success"] is string s) { <div class="alert alert-success">@s</div> }
+
+@if (Model.PendingCompany is null)
+{
+    <div class="alert alert-warning">No hay empresa pendiente.</div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Empresa</h5>
+            <div><strong>RealmId:</strong> @Model.PendingCompany.RealmId</div>
+            <div><strong>Nombre:</strong> @Model.PendingCompany.Name</div>
         </div>
-
-        <div class="d-flex gap-3 justify-content-center">
-          <form method="post" asp-page-handler="Confirm">
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <h2 class="h5 mb-3">Tarifas de impuestos (ventas)</h2>
-
-    @if (Model.DetectedSalesTariffs?.Count > 0)
-    {
-        <div class="mb-2"><strong>Detectadas (últimos 6 meses):</strong></div>
-        <ul class="mb-3">
-        @foreach (var t in Model.DetectedSalesTariffs) { <li>@t</li> }
-        </ul>
-    }
-    else
-    {
-        <div class="text-muted mb-3">No se detectaron tarifas recientes.</div>
-    }
-
-    <div class="mb-2"><strong>¿Son correctas?</strong></div>
-    <div class="form-check">
-      <input class="form-check-input" type="radio" asp-for="TariffsAreCorrect" value="true" id="tariffsYes">
-      <label class="form-check-label" for="tariffsYes">Sí</label>
-    </div>
-    <div class="form-check mb-3">
-      <input class="form-check-input" type="radio" asp-for="TariffsAreCorrect" value="false" id="tariffsNo">
-      <label class="form-check-label" for="tariffsNo">No, tengo otras tarifas</label>
     </div>
 
-    <div id="extraTariffsBlock" class="mb-3" style="display:none">
-      <div class="mb-2"><strong>Selecciona las tarifas adicionales que usas:</strong></div>
-      @if (Model.AvailableSalesTaxLabels?.Count > 0)
-      {
-        @foreach (var lab in Model.AvailableSalesTaxLabels)
+    <div class="mb-3">
+        <h5>Tarifas detectadas automáticamente (últimos 90 días)</h5>
+        @if (Model.DetectedSalesTariffs?.Count > 0)
         {
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="ExtraTariffs" value="@lab" id="lab_@lab.Replace(" ","_")">
-            <label class="form-check-label" for="lab_@lab.Replace(" ","_")">@lab</label>
-          </div>
+            <ul>
+            @foreach (var t in Model.DetectedSalesTariffs) { <li>@t</li> }
+            </ul>
         }
-      }
-      else
-      {
-        <div class="text-muted">No hay etiquetas disponibles.</div>
-      }
+        else
+        {
+            <div class="text-muted">No se detectaron tarifas en documentos recientes. Puedes seleccionarlas manualmente abajo.</div>
+        }
     </div>
 
-    <div class="mt-3">
-      <button class="btn btn-primary me-2" type="submit">Guardar</button>
-      <a class="btn btn-outline-secondary" href="/Empresas/Index">Cancelar</a>
-    </div>
-  </div>
-</div>
-
-@section Scripts {
-<script>
-(function() {
-  function toggleExtra() {
-    var yes = document.getElementById('tariffsYes');
-    var no  = document.getElementById('tariffsNo');
-    var blk = document.getElementById('extraTariffsBlock');
-    if (no && no.checked) { blk.style.display = 'block'; }
-    else { blk.style.display = 'none'; }
-  }
-  document.addEventListener('change', function(ev){
-    if (ev.target && (ev.target.id === 'tariffsYes' || ev.target.id === 'tariffsNo')) {
-      toggleExtra();
-    }
-  });
-  // init on load
-  toggleExtra();
-})();
-</script>
-}
-</form>
-          
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label d-block">¿Estas tarifas detectadas son correctas?</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input"
+                       type="radio"
+                       id="ok-si"
+                       name="TariffsAreCorrect"
+                       value="true"
+                       @(Model.TariffsAreCorrect == true ? "checked" : "") />
+                <label class="form-check-label" for="ok-si">Sí</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input"
+                       type="radio"
+                       id="ok-no"
+                       name="TariffsAreCorrect"
+                       value="false"
+                       @(Model.TariffsAreCorrect == false ? "checked" : "") />
+                <label class="form-check-label" for="ok-no">No, tengo otras</label>
+            </div>
         </div>
-      }
-  </div>
-</div>
 
+        <div class="mb-3">
+            <label class="form-label">Selecciona las tarifas adicionales que usas</label>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-2">
+            @foreach (var label in opciones)
+            {
+                var selected = (Model.ExtraTariffs?.Contains(label, StringComparer.OrdinalIgnoreCase) ?? false)
+                               || (Model.DetectedSalesTariffs?.Contains(label, StringComparer.OrdinalIgnoreCase) ?? false);
+                <div class="col">
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="chk_@label.GetHashCode()"
+                               name="ExtraTariffs"
+                               value="@label"
+                               @(selected ? "checked" : "") />
+                        <label class="form-check-label" for="chk_@label.GetHashCode()">@label</label>
+                    </div>
+                </div>
+            }
+            </div>
+            <div class="form-text">
+                Si no ves tu tarifa, puedes agregarla luego en QuickBooks; aquí solo homologamos a etiquetas estándar.
+            </div>
+        </div>
 
+        <div class="d-flex gap-2">
+            <button type="submit" formaction="?handler=Confirm" class="btn btn-primary">Confirmar</button>
+            <button type="submit" formaction="?handler=Cancel"  class="btn btn-outline-danger">Cancelar</button>
+        </div>
+    </form>
+}
 
