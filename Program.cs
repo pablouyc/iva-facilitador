@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
@@ -63,26 +64,26 @@ app.Use(async (context, next) =>
 {
     var path = context.Request.Path.Value ?? string.Empty;
 
-    // Si existe cookie ""must_param_realm""
-    if (context.Request.Cookies.TryGetValue(""must_param_realm"", out var realmId) && !string.IsNullOrEmpty(realmId))
+    // Si existe cookie "must_param_realm"
+    if (context.Request.Cookies.TryGetValue("must_param_realm", out var realmId) && !string.IsNullOrEmpty(realmId))
     {
         // Rutas permitidas sin parametrizar
         var allowed = new[]
         {
-            ""/Parametrizador"",
-            ""/Auth/Callback"",
-            ""/Auth/Disconnect""
+            "/Parametrizador",
+            "/Auth/Callback",
+            "/Auth/Disconnect"
         };
 
-        bool esEstatico = path.StartsWith(""/css"", StringComparison.OrdinalIgnoreCase)
-                       || path.StartsWith(""/js"", StringComparison.OrdinalIgnoreCase)
-                       || path.StartsWith(""/lib"", StringComparison.OrdinalIgnoreCase)
-                       || path.StartsWith(""/images"", StringComparison.OrdinalIgnoreCase);
+        bool esEstatico = path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/lib", StringComparison.OrdinalIgnoreCase)
+                       || path.StartsWith("/images", StringComparison.OrdinalIgnoreCase);
 
         if (!allowed.Any(a => path.StartsWith(a, StringComparison.OrdinalIgnoreCase)) && !esEstatico)
         {
             // Redirigir a Disconnect forzado
-            context.Response.Redirect($""/Auth/Disconnect?realmId={realmId}&reason=guard"");
+            context.Response.Redirect($"/Auth/Disconnect?realmId={realmId}&reason=guard");
             return;
         }
     }
