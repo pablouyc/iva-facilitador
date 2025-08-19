@@ -65,13 +65,13 @@ body{ background:var(--blanco); color:#111;}
 
 @{
     var autoMsg = TempData["AutoDisconnected"] as string;
-    string initial = null;
+    string toastInitial = null;
     if (!string.IsNullOrWhiteSpace(autoMsg))
     {
-        var words = autoMsg.Split(' ');
+        var words = autoMsg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (words.Length > 0)
         {
-            initial = words[words.Length > 1 ? 1 : 0].Substring(0,1).ToUpper();
+            toastInitial = words[words.Length > 1 ? 1 : 0].Substring(0,1).ToUpperInvariant();
         }
     }
 }
@@ -79,13 +79,13 @@ body{ background:var(--blanco); color:#111;}
   <div class="position-fixed" style="top:1rem; right:1rem; z-index:1080; max-width:420px;">
     <div id="autoDisconnectToast" class="alert alert-light border alert-dismissible fade show shadow" role="alert">
       <div class="d-flex align-items-start">
-        <div class="me-2 rounded-circle bg-dark text-white d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px;font-weight:700;">@initial</div>
+        <div class="me-2 rounded-circle bg-dark text-white d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px;font-weight:700;">@toastInitial</div>
         <div class="flex-grow-1">
           <div class="fw-semibold">¡Atención!</div>
           <div>@autoMsg</div>
         </div>
         <div class="ms-2 d-flex align-items-start">
-          <span class="fs-4 text-dark" aria-hidden="true">!</span>
+          <span class="fs-4 text-dark fw-bold" aria-hidden="true">!</span>
         </div>
       </div>
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -99,6 +99,13 @@ body{ background:var(--blanco); color:#111;}
           var alert = bootstrap.Alert.getOrCreateInstance(el);
           alert.close();
         } catch(e) {
+          el.classList.remove('show');
+          el.remove();
+        }
+      }
+    }, 15000);
+  </script>
+}catch(e) {
           el.classList.remove('show');
           el.remove();
         }
