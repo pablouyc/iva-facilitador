@@ -20,7 +20,16 @@
               <span class="text-muted">(@Model.RealmId)</span>
             </div>
           </div>
-          <a class="btn btn-acento" href="/IVA/Seleccion">Continuar a Cálculo de IVA</a>
+
+          <div class="alert alert-warning mt-3">
+            <strong>Importante:</strong> La empresa está conectada, pero para poder usarla es <u>obligatorio parametrizarla</u>.
+            Si no parametriza ahora, la conexión será cancelada.
+          </div>
+
+          <div class="d-flex gap-2 mt-2">
+            <a class="btn btn-acento" href="/Parametrizador">Continuar a parametrización</a>
+            <a class="btn btn-outline-secondary" href="/Auth/Disconnect">Cancelar</a>
+          </div>
         }
       </div>
     </div>
