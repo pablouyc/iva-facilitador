@@ -67,6 +67,18 @@ namespace IvaFacilitador.Pages.Auth
 
             RealmId = realmId;
             CompanyName = finalName;
+
+            // Marcar que la empresa requiere parametrización (cookie de control)
+            Response.Cookies.Append(
+                "must_param_realm",
+                realmId!,
+                new Microsoft.AspNetCore.Http.CookieOptions {
+                    HttpOnly = false,
+                    SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax,
+                    IsEssential = true,
+                    Expires = DateTimeOffset.UtcNow.AddMinutes(30)
+                }
+            );
         }
     }
 }
