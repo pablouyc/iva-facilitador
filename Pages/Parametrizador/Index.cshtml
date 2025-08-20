@@ -16,7 +16,7 @@
         <div class="card-body">
           <p class="text-muted">Completa la información para preparar el IVA de Costa Rica.</p>
 
-          <form method="post" asp-page-handler="Save" class="card p-3 shadow-sm">
+          <form method="post" class="card p-3 shadow-sm">
             <input type="hidden" asp-for="RealmId" />
             <div class="mb-3">
               <label class="form-label fw-semibold">Empresa (QBO)</label>
@@ -41,7 +41,11 @@
     Guardar
   </button>
 </div>
-          </form>
+          <div class="d-flex gap-2">
+  <button type="submit" name="handler" value="Save" class="btn btn-primary">Guardar</button>
+  <button type="submit" name="handler" value="Cancel" class="btn btn-outline-secondary" formnovalidate>Cancelar</button>
+</div>
+</form>
         </div>
       </div>
     </div>
