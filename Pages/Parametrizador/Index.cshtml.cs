@@ -60,36 +60,35 @@ namespace IvaFacilitador.Pages.Parametrizador
             return Page();
         }
 
+        // ---- Guardar: persiste perfil, NO notifica salida, vuelve a /Empresas/Index
         public IActionResult OnPostSave()
         {
             if (string.IsNullOrWhiteSpace(RealmId))
             {
                 TempData["Error"] = "Falta RealmId para guardar la parametrización.";
-                return RedirectToPage("/Index");
+                return RedirectToPage("/Empresas/Index");
             }
 
-            // Persistir perfil
             Input.RealmId = RealmId;
             _profiles.Upsert(Input);
 
-            // Guardando: NO queremos mostrar el toast de salida
-            try { TempData.Remove("AutoDisconnected"); } catch { }
+            try { TempData.Remove("AutoDisconnected"); } catch {}
 
             TempData["Success"] = "Parametrización guardada.";
-            return Redirect("/IVA/Seleccion");
+            return RedirectToPage("/Empresas/Index");
         }
 
+        // ---- Cancelar: desconecta, notifica salida, vuelve a /Empresas/Index
         public IActionResult OnPostCancel()
         {
             if (string.IsNullOrWhiteSpace(RealmId))
             {
-                return Redirect("/IVA/Seleccion");
+                return RedirectToPage("/Empresas/Index");
             }
 
             string companyName = _companies.GetCompaniesForUser()
                 .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
 
-            // Intentar desconectar (si el store lo expone)
             try
             {
                 var method = _companies.GetType().GetMethod("Disconnect");
@@ -100,14 +99,13 @@ namespace IvaFacilitador.Pages.Parametrizador
             }
             catch { /* noop */ }
 
-            try { Response.Cookies.Delete("must_param_realm"); } catch { }
+            try { Response.Cookies.Delete("must_param_realm"); } catch {}
+            try { TempData.Remove("Success"); } catch {}
 
-            // Cancelando: NO mostrar "guardada", SÍ mostrar toast de salida
-            try { TempData.Remove("Success"); } catch { }
             TempData["AutoDisconnected"] =
                 $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
 
-            return Redirect("/IVA/Seleccion");
+            return RedirectToPage("/Empresas/Index");
         }
     }
 }
