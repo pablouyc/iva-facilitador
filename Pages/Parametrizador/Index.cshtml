@@ -2,41 +2,42 @@
 @model IvaFacilitador.Pages.Parametrizador.IndexModel
 @{
     ViewData["Title"] = "Parametrización";
-    var titleName = string.IsNullOrWhiteSpace(Model.CompanyName) ? "—" : Model.CompanyName;
 }
 
-<div class="container my-3">
+<div class="container my-4">
   <div class="card shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center">
-      <div class="fw-semibold">PARAMETRIZACIÓN @titleName</div>
-      <div class="text-muted small">RealmId: @Model.RealmId</div>
+    <div class="card-header">
+      <div class="h5 mb-0">PARAMETRIZACIÓN @Model.CompanyName</div>
+      <small class="text-muted">RealmId: @Model.RealmId</small>
     </div>
 
-    <div class="card-body">
-      <form method="post" asp-page-handler="Save">
-        <input type="hidden" asp-for="RealmId" />
+    <form method="post" asp-page-handler="Save" class="card-body">
+      <input type="hidden" asp-for="RealmId" />
 
-        <div class="mb-3">
-          <label class="form-label fw-semibold">Empresa (QBO)</label>
-          <input class="form-control" value="@Model.CompanyName" disabled />
-        </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Empresa (QBO)</label>
+        <input class="form-control" value="@Model.CompanyName" disabled />
+      </div>
 
-        <div class="alert alert-info">
-          <div class="fw-semibold mb-1">Próximo paso</div>
-          Vamos a ir agregando cada sección (Tarifas de ventas, Datáfonos, MEIC/MAG, Prorrata, Cuentas IVA, etc.).
-        </div>
+      <div class="alert alert-info mb-4">
+        <div class="fw-semibold">Próximo paso</div>
+        Vamos a ir agregando cada sección (Tarifas de ventas, Datáfonos, MEIC/MAG, Prorrata, Cuentas IVA, etc.).
+      </div>
 
-        <div class="d-flex justify-content-end gap-2 mt-2">
-          <button type="submit" class="btn btn-outline-secondary"
-                  formaction="?handler=Cancel" formmethod="post" formnovalidate>
-            Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            Guardar
-          </button>
-        </div>
-      </form>
-    </div>
+      <div class="d-flex justify-content-end gap-2">
+        <button type="submit"
+                class="btn btn-outline-secondary"
+                formaction="?handler=Cancel"
+                formmethod="post"
+                formnovalidate>
+          Cancelar
+        </button>
+
+        <button type="submit" class="btn btn-primary">
+          Guardar
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 

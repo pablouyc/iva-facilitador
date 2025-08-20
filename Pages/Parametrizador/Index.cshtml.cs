@@ -62,12 +62,19 @@ namespace IvaFacilitador.Pages.Parametrizador
 
         // ---- Guardar: persiste perfil, NO notifica salida, vuelve a /Empresas/Index
         public IActionResult OnPostSave()
-        {
-            if (string.IsNullOrWhiteSpace(RealmId))
-            {
-                TempData["Error"] = "Falta RealmId para guardar la parametrización.";
-                return RedirectToPage("/Empresas/Index");
-            }
+{
+    if (string.IsNullOrWhiteSpace(RealmId))
+    {
+        TempData["Error"] = "Falta RealmId para guardar la parametrización.";
+        return RedirectToPage("/Empresas/Index");
+    }
+
+    Input.RealmId = RealmId;
+    _profiles.Upsert(Input);
+
+    TempData["Success"] = "Parametrización guardada.";
+    return RedirectToPage("/Empresas/Index");
+}
 
             Input.RealmId = RealmId;
             _profiles.Upsert(Input);
@@ -80,11 +87,30 @@ namespace IvaFacilitador.Pages.Parametrizador
 
         // ---- Cancelar: desconecta, notifica salida, vuelve a /Empresas/Index
         public IActionResult OnPostCancel()
+{
+    if (string.IsNullOrWhiteSpace(RealmId))
+    {
+        return RedirectToPage("/Empresas/Index");
+    }
+
+    var companyName = _companies.GetCompaniesForUser()
+        .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
+
+    try
+    {
+        var method = _companies.GetType().GetMethod("Disconnect");
+        if (method != null && method.GetParameters().Length == 1)
         {
-            if (string.IsNullOrWhiteSpace(RealmId))
-            {
-                return RedirectToPage("/Empresas/Index");
-            }
+            method.Invoke(_companies, new object?[] { RealmId });
+        }
+    }
+    catch { }
+
+    try { Response.Cookies.Delete("must_param_realm"); } catch {}
+
+    TempData["AutoDisconnected"] = $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
+    return RedirectToPage("/Empresas/Index");
+}
 
             string companyName = _companies.GetCompaniesForUser()
                 .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
