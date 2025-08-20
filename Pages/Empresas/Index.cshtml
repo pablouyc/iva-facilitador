@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model IvaFacilitador.Pages.Empresas.IndexModel
 @{
     ViewData["Title"] = "Empresas conectadas";
@@ -6,7 +6,7 @@
 }
 <div class="topbar mb-3 py-2">
   <div class="container d-flex align-items-center gap-2">
-    <a class="tablink" href="/IVA/Seleccion">Cálculo</a>
+    <a class="tablink" href="/IVA/Seleccion">CÃ¡lculo</a>
     <a class="tablink active" href="/Empresas">Empresas</a>
   </div>
 </div>
@@ -27,7 +27,7 @@
 
         @if (Model.Companies.Count == 0)
         {
-            <div class="alert alert-info">No hay empresas conectadas aún.</div>
+            <div class="alert alert-info">No hay empresas conectadas aÃºn.</div>
             <a class="btn btn-acento" href="/Auth/Connect">Conectar QuickBooks</a>
         }
         else
@@ -53,7 +53,7 @@
                             <form method="post" asp-page-handler="Disconnect" asp-route-realmId="@c.RealmId" class="d-inline">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-outline-danger btn-sm"
-                                        onclick="return confirm('¿Seguro que deseas desconectar esta empresa? Se eliminarán los tokens locales.');">
+                                        onclick="return confirm('Â¿Seguro que deseas desconectar esta empresa? Se eliminarÃ¡n los tokens locales.');">
                                     Desconectar
                                 </button>
                             </form>
@@ -64,9 +64,137 @@
               </table>
             </div>
 
-            <a class="btn btn-acento" href="/Auth/Connect">Añadir empresa</a>
+            <a class="btn btn-acento" href="/Auth/Connect">AÃ±adir empresa</a>
           }
       </div>
     </div>
   </div>
 </div>
+
+<!-- Modal Parámetros -->
+<div class="modal fade" id="paramModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Parámetros — <span id="pmCompany"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="border rounded p-3">
+              <div class="fw-semibold mb-2">Tarifas de ventas</div>
+              <div id="pmSalesTariffs" class="text-muted">—</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <div class="fw-semibold mb-2">Datáfonos (POS)</div>
+              <div id="pmPos" class="text-muted">—</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <div class="fw-semibold mb-2">MEIC/MAG</div>
+              <div id="pmMeicMag" class="text-muted">—</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="border rounded p-3">
+              <div class="fw-semibold mb-2">Prorrata</div>
+              <div id="pmProrrata" class="text-muted">—</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="border rounded p-3">
+              <div class="fw-semibold mb-2">Cuentas de IVA</div>
+              <div id="pmIvaAccounts" class="text-muted">—</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <div class="fw-semibold mb-2">Exportaciones</div>
+              <div id="pmExports" class="text-muted">—</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <div class="fw-semibold mb-2">Alquileres de bienes de capital</div>
+              <div id="pmCapitalRentals" class="text-muted">—</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="border rounded p-3">
+              <div class="fw-semibold mb-2">Gastos no deducibles</div>
+              <div id="pmNonDeductible" class="text-muted">—</div>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="border rounded p-3">
+              <div class="fw-semibold mb-2">Exoneraciones</div>
+              <div id="pmExemptions" class="text-muted">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a id="pmEditLink" class="btn btn-primary">Editar</a>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+@section Scripts{
+<script>
+  (function(){
+    const modalEl = document.getElementById('paramModal');
+    window.paramModal = modalEl ? new bootstrap.Modal(modalEl) : null;
+  })();
+
+  function setText(id, text){
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
+  function openParams(realmId, companyName){
+    if (!window.paramModal) return;
+
+    document.getElementById('pmCompany').textContent = companyName || realmId;
+    document.getElementById('pmEditLink').href = '/Parametrizador?RealmId=' + encodeURIComponent(realmId);
+
+    const blanks = ['pmSalesTariffs','pmPos','pmMeicMag','pmProrrata','pmIvaAccounts','pmExports','pmCapitalRentals','pmNonDeductible','pmExemptions'];
+    blanks.forEach(id => setText(id, '—'));
+
+    fetch(?handler=Profile&realmId=, { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(p => {
+        setText('pmSalesTariffs', (p.salesTariffs && p.salesTariffs.length) ? p.salesTariffs.join(', ') : '—');
+        setText('pmPos', p.usesPos ? Sí · Renta:  · IVA:  · Comisiones:  : 'No');
+        setText('pmMeicMag', p.isMeicMag ? 'Sí' : 'No');
+        setText('pmProrrata', p.usesProrrata ? Sí · % ·  · Frecuencia:  : 'No');
+        setText('pmIvaAccounts', Control:  · Pagar:  · Cobrar: );
+        setText('pmExports', p.hasExports ? 'Sí' : 'No');
+        setText('pmCapitalRentals', p.hasCapitalRentals ? 'Sí' : 'No');
+        setText('pmNonDeductible', (p.nonDeductible && p.nonDeductible.length) ? p.nonDeductible.join(', ') : '—');
+
+        if (p.exemptions && p.exemptions.length){
+          const ex = p.exemptions.map(e =>
+            ${e.type || 'Exención'} · %
+          );
+          setText('pmExemptions', ex.join(' | '));
+        } else {
+          setText('pmExemptions', '—');
+        }
+
+        window.paramModal.show();
+      })
+      .catch(_ => window.paramModal.show());
+  }
+</script>
+}

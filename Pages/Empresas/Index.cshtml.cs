@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using IvaFacilitador.Services;
 using IvaFacilitador.Models;
+using System.Linq;
 
 namespace IvaFacilitador.Pages.Empresas
 {
@@ -10,19 +11,27 @@ namespace IvaFacilitador.Pages.Empresas
         private readonly ICompanyStore _companyStore;
         private readonly ITokenStore _tokenStore;
         private readonly IQuickBooksAuth _auth;
+        private readonly ICompanyProfileStore _profiles;
 
-        public IndexModel(ICompanyStore companyStore, ITokenStore tokenStore, IQuickBooksAuth auth)
+        public IndexModel(
+            ICompanyStore companyStore,
+            ITokenStore tokenStore,
+            IQuickBooksAuth auth,
+            ICompanyProfileStore profiles)
         {
             _companyStore = companyStore;
             _tokenStore = tokenStore;
             _auth = auth;
+            _profiles = profiles;
         }
 
         public List<CompanyConnection> Companies { get; private set; } = new();
 
         public void OnGet()
         {
-            Companies = _companyStore.GetCompaniesForUser().OrderBy(c => c.Name).ToList();
+            Companies = _companyStore.GetCompaniesForUser()
+                                     .OrderBy(c => c.Name)
+                                     .ToList();
         }
 
         [ValidateAntiForgeryToken]
@@ -59,6 +68,33 @@ namespace IvaFacilitador.Pages.Empresas
             }
 
             return RedirectToPage();
+        }
+
+        // Handler JSON para el modal "Parámetros"
+        public JsonResult OnGetProfile(string realmId)
+        {
+            var p = _profiles.Get(realmId) ?? new CompanyProfile { RealmId = realmId };
+            return new JsonResult(new
+            {
+                realmId = p.RealmId,
+                salesTariffs = p.SalesTariffs,
+                usesPos = p.UsesPos,
+                posIncome = p.PosWithholdingIncomeAccountId,
+                posVat = p.PosWithholdingVatAccountId,
+                posFees = p.PosFeesAccountId,
+                isMeicMag = p.IsMeicMag,
+                usesProrrata = p.UsesProrrata,
+                prorrataPercent = p.ProrrataPercent,
+                computeProrrataAutomatically = p.ComputeProrrataAutomatically,
+                prorrataFrequency = p.ProrrataFrequency,
+                ivaControl = p.IvaControlAccountId,
+                ivaPayable = p.IvaPayableAccountId,
+                ivaReceivable = p.IvaReceivableAccountId,
+                hasExports = p.HasExports,
+                hasCapitalRentals = p.HasCapitalRentals,
+                nonDeductible = p.NonDeductibleExpenseAccountIds,
+                exemptions = p.Exemptions?.Select(e => new { e.Type, e.Percent, e.ValidUntil, e.CertificateNumber })
+            });
         }
     }
 }
