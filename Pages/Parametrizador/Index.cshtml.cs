@@ -79,4 +79,30 @@ namespace IvaFacilitador.Pages.Parametrizador
             return Redirect("/IVA/Seleccion");
         }
     }
+
+        public IActionResult OnPostCancel()
+        {
+            if (string.IsNullOrWhiteSpace(RealmId))
+            {
+                return Redirect("/IVA/Seleccion");
+            }
+
+            string companyName = _companies.GetCompaniesForUser()
+                .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
+
+            try
+            {
+                var method = _companies.GetType().GetMethod("Disconnect");
+                if (method != null && method.GetParameters().Length == 1)
+                {
+                    method.Invoke(_companies, new object?[] { RealmId });
+                }
+            }
+            catch { /* noop */ }
+
+            try { Response.Cookies.Delete("must_param_realm"); } catch {}
+
+            TempData["AutoDisconnected"] = $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
+            return Redirect("/IVA/Seleccion");
+        }
 }
