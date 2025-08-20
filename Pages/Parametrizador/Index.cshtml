@@ -1,6 +1,7 @@
 @page "/Parametrizador"
 @model IvaFacilitador.Pages.Parametrizador.IndexModel
 @{
+    Layout = "_Layout";
     ViewData["Title"] = "Parametrización";
     var titleName = string.IsNullOrWhiteSpace(Model.CompanyName) ? "—" : Model.CompanyName;
 }
@@ -15,7 +16,7 @@
         <div class="card-body">
           <p class="text-muted">Completa la información para preparar el IVA de Costa Rica.</p>
 
-          <form method="post" asp-antiforgery="true">
+          <form method="post" asp-page-handler="Save" class="card p-3 shadow-sm">
             <input type="hidden" asp-for="RealmId" />
             <div class="mb-3">
               <label class="form-label fw-semibold">Empresa (QBO)</label>
@@ -28,12 +29,12 @@
             </div>
 
             <div class="d-flex gap-2">
-              <button type="submit" class="btn btn-primary" formaction="?handler=Save">Guardar</button>
-              <button type="submit" class="btn btn-outline-danger" formaction="?handler=Cancel"
-                      title="Cancelar desconecta la empresa y vuelve a Selección de IVA">
-                Cancelar
-              </button>
-            </div>
+  <button type="submit" class="btn btn-primary">Guardar</button>
+  <button type="submit" class="btn btn-outline-secondary"
+          formaction="?handler=Cancel" formmethod="post" formnovalidate>
+    Cancelar
+  </button>
+</div>
           </form>
         </div>
       </div>

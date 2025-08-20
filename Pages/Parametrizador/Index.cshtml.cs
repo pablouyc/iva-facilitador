@@ -23,17 +23,19 @@ namespace IvaFacilitador.Pages.Parametrizador
 
         public string? CompanyName { get; set; }
 
-        // DTO mínimo por ahora; lo ampliaremos con los campos de cada sección
         [BindProperty]
         public CompanyProfile Input { get; set; } = new CompanyProfile();
 
         public IActionResult OnGet()
         {
-            // Resolver realmId: prioridad querystring, luego cookie del guard
+            // Resolver RealmId: querystring o cookie del guard
             if (string.IsNullOrWhiteSpace(RealmId))
             {
-                if (Request.Cookies.TryGetValue("must_param_realm", out var cookieRealm) && !string.IsNullOrWhiteSpace(cookieRealm))
+                if (Request.Cookies.TryGetValue("must_param_realm", out var cookieRealm) &&
+                    !string.IsNullOrWhiteSpace(cookieRealm))
+                {
                     RealmId = cookieRealm;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(RealmId))
@@ -42,11 +44,11 @@ namespace IvaFacilitador.Pages.Parametrizador
                 return RedirectToPage("/Index");
             }
 
-            // Nombre visible
+            // Nombre visible (si no se encuentra, mostramos el RealmId)
             CompanyName = _companies.GetCompaniesForUser()
                 .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
 
-            // Cargar perfil si existe
+            // Cargar perfil existente o preparar uno nuevo
             var existing = _profiles.Get(RealmId);
             if (existing != null)
             {
@@ -54,7 +56,7 @@ namespace IvaFacilitador.Pages.Parametrizador
             }
             else
             {
-                Input.RealmId = RealmId;
+                Input.RealmId = RealmId!;
             }
 
             return Page();
@@ -68,41 +70,44 @@ namespace IvaFacilitador.Pages.Parametrizador
                 return RedirectToPage("/Index");
             }
 
-            // Asegurar RealmId en el objeto de entrada
-            Input.RealmId = RealmId;
-
-            // Validación mínima (se ampliará por sección)
-            // Por ahora, guardamos tal cual.
+            Input.RealmId = RealmId!;
             _profiles.Upsert(Input);
 
             TempData["Success"] = "Parametrización guardada.";
             return Redirect("/IVA/Seleccion");
         }
-    }
 
         public IActionResult OnPostCancel()
         {
+            // Si no sabemos la empresa, simplemente volvemos
             if (string.IsNullOrWhiteSpace(RealmId))
-            {
                 return Redirect("/IVA/Seleccion");
-            }
 
+            // Intentar obtener nombre legible
             string companyName = _companies.GetCompaniesForUser()
-                .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
+                .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId!;
 
+            // Intentar desconectar por reflexión (si existe ICompanyStore.Disconnect(string))
             try
             {
-                var method = _companies.GetType().GetMethod("Disconnect");
-                if (method != null && method.GetParameters().Length == 1)
+                var mi = _companies.GetType().GetMethod("Disconnect", new Type[] { typeof(string) });
+                if (mi != null)
                 {
-                    method.Invoke(_companies, new object?[] { RealmId });
+                    mi.Invoke(_companies, new object?[] { RealmId });
                 }
             }
-            catch { /* noop */ }
+            catch
+            {
+                // noop: si no existe o falla, no detenemos el flujo
+            }
 
+            // Limpiar cookie del guard
             try { Response.Cookies.Delete("must_param_realm"); } catch {}
 
-            TempData["AutoDisconnected"] = $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
+            TempData["AutoDisconnected"] =
+                $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
+
             return Redirect("/IVA/Seleccion");
         }
+    }
 }
