@@ -76,7 +76,7 @@ namespace IvaFacilitador.Pages.Parametrizador
             _profiles.Upsert(Input);
 
             TempData["Success"] = "Parametrización guardada.";
-            return RedirectToPage("/Parametrizador/Index", new { RealmId });
+            return Redirect("/IVA/Seleccion");
         }
     }
 }
