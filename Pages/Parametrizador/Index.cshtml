@@ -7,56 +7,54 @@
 
 <div class="container my-4">
 
-  <div class="d-flex align-items-center justify-content-between mb-3">
-    <div>
-      <h2 class="mb-0">Parametrización <span class="text-muted">@titleName</span></h2>
-      <div class="text-muted small">RealmId: @Model.RealmId</div>
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="fw-semibold">
+        PARAMETRIZACIÓN <span class="text-muted">@titleName</span>
+      </div>
+      <small class="text-muted">RealmId: @Model.RealmId</small>
     </div>
-    <a class="btn btn-link" href="/Empresas/Index">Volver a empresas</a>
-  </div>
 
-  <form method="post" asp-page-handler="Save" class="card shadow-sm border-0">
-    <div class="card-body p-4">
-      <input type="hidden" asp-for="RealmId" />
+    <div class="card-body">
+      <p class="text-muted mb-4">Completa la información para preparar el IVA de Costa Rica.</p>
 
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Empresa (QBO)</label>
-        <input class="form-control" value="@Model.CompanyName" disabled />
-        <div class="form-text">Los cambios se guardan por empresa.</div>
-      </div>
+      <form method="post" asp-page-handler="Save">
+        <input type="hidden" asp-for="RealmId" />
 
-      <div class="alert alert-info d-flex align-items-start">
-        <div class="me-2 fw-bold" aria-hidden="true">i</div>
-        <div>
-          <div class="fw-semibold">Configuración inicial</div>
-          <div>Agregaremos cada sección (Tarifas de ventas, Datáfonos, MEIC/MAG, Prorrata, Cuentas IVA, etc.).</div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Empresa (QBO)</label>
+          <input class="form-control" value="@Model.CompanyName" disabled />
         </div>
-      </div>
 
-      @* Placeholder de secciones venideras; mantiene estética *@
-      <div class="row g-3">
-        <div class="col-12">
-          <div class="card card-iva p-3">
-            <div class="fw-semibold mb-2">1) Tarifas de impuestos (ventas)</div>
-            <p class="text-muted small mb-0">Próximamente…</p>
+        <div class="alert alert-info">
+          <div class="fw-semibold mb-1">Próximo paso</div>
+          <div>Vamos a ir agregando cada sección (Tarifas de ventas, Datáfonos, MEIC/MAG, Prorrata, Cuentas IVA, etc.).</div>
+        </div>
+
+        <!-- Espacio para las próximas secciones -->
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="card border-0 p-3 bg-light">
+              <div class="fw-semibold mb-2">1) Tarifas de impuestos (ventas)</div>
+              <p class="text-muted small mb-0">Próximamente…</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="d-flex justify-content-end gap-2 mt-3">
-        <button type="submit"
-                class="btn btn-outline-secondary"
-                formaction="?handler=Cancel"
-                formmethod="post"
-                formnovalidate>
-          Cancelar
-        </button>
-        <button type="submit" class="btn btn-primary">
-          Guardar
-        </button>
-      </div>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button type="submit"
+                  class="btn btn-outline-secondary"
+                  formaction="?handler=Cancel"
+                  formmethod="post"
+                  formnovalidate>
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
+
 </div>
 
 @section Scripts {
