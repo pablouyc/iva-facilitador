@@ -64,6 +64,7 @@ namespace IvaFacilitador.Pages.Parametrizador
 
         public IActionResult OnPostSave()
         {
+            TempData.Remove("AutoDisconnected");
             if (string.IsNullOrWhiteSpace(RealmId))
             {
                 TempData["Error"] = "Falta RealmId para guardar la parametrización.";
