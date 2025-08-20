@@ -62,7 +62,7 @@ body{ background:var(--blanco); color:#111;}
 <div id="overlay" class="overlay"></div>
 
 
-@{ var autoMsg = TempData["AutoDisconnected"] as string; });
+@{ var autoMsg = TempData["AutoDisconnected"] as string; }
             
 @if(!string.IsNullOrWhiteSpace(autoMsg)){
   <div class="position-fixed" style="top:1rem; right:1rem; z-index:1080; max-width:420px;">
@@ -80,19 +80,20 @@ body{ background:var(--blanco); color:#111;}
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
   </div>
-    <script type="text/javascript">
-  //<![CDATA[
-    (function(){
-      setTimeout(function(){
-        var el = document.getElementById('autoDisconnectToast');
-        if (el) {
-          try {
-            var alert = bootstrap.Alert.getOrCreateInstance(el);
-            alert.close();
-          
+      <script type="text/javascript">
+    (function () {
+      setTimeout(function () {
+        var el = document.getElementById("autoDisconnectToast");
+        if (!el) return;
+        try {
+          var alert = bootstrap.Alert.getOrCreateInstance(el);
+          alert.close();
+        } catch (e) {
+          try { el.classList.remove("show"); } catch {}
+          try { el.remove(); } catch {}
+        }
       }, 15000);
     })();
-  //]]>
   </script>
 }<main class="container my-4">
   @RenderBody()
@@ -116,16 +117,3 @@ ov?.addEventListener('click', ()=>{ sb.classList.remove('open'); ov.classList.re
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
