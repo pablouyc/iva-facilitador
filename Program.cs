@@ -37,6 +37,7 @@ builder.Services.AddAuthorization();
 
 // ===== Stores y servicios =====
 builder.Services.AddSingleton<ICompanyStore, FileCompanyStore>();
+builder.Services.AddSingleton<ICompanyProfileStore, FileCompanyProfileStore>();
 builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
 builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
