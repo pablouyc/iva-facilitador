@@ -1,5 +1,6 @@
 @page "/Parametrizador"
 @model IvaFacilitador.Pages.Parametrizador.IndexModel
+@{ Layout = "_Layout"; }
 @{
     ViewData["Title"] = "Parametrización";
     var titleName = string.IsNullOrWhiteSpace(Model.CompanyName) ? "—" : Model.CompanyName;
