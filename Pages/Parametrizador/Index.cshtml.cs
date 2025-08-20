@@ -31,17 +31,14 @@ namespace IvaFacilitador.Pages.Parametrizador
             // Resolver RealmId desde querystring o cookie
             if (string.IsNullOrWhiteSpace(RealmId))
             {
-                if (Request.Cookies.TryGetValue("must_param_realm", out var cookieRealm) &&
-                    !string.IsNullOrWhiteSpace(cookieRealm))
-                {
+                if (Request.Cookies.TryGetValue("must_param_realm", out var cookieRealm) && !string.IsNullOrWhiteSpace(cookieRealm))
                     RealmId = cookieRealm;
-                }
             }
 
             if (string.IsNullOrWhiteSpace(RealmId))
             {
                 TempData["Error"] = "No se identificó la empresa a parametrizar.";
-                return RedirectToPage("/Index");
+                return RedirectToPage("/Empresas/Index");
             }
 
             CompanyName = _companies.GetCompaniesForUser()
@@ -49,68 +46,36 @@ namespace IvaFacilitador.Pages.Parametrizador
 
             var existing = _profiles.Get(RealmId);
             if (existing != null)
-            {
                 Input = existing;
-            }
             else
-            {
                 Input.RealmId = RealmId;
-            }
 
             return Page();
         }
 
-        // ---- Guardar: persiste perfil, NO notifica salida, vuelve a /Empresas/Index
+        // Guardar -> vuelve a Empresas (sin aviso de desconexión)
         public IActionResult OnPostSave()
-{
-    if (string.IsNullOrWhiteSpace(RealmId))
-    {
-        TempData["Error"] = "Falta RealmId para guardar la parametrización.";
-        return RedirectToPage("/Empresas/Index");
-    }
-
-    Input.RealmId = RealmId;
-    _profiles.Upsert(Input);
-
-    TempData["Success"] = "Parametrización guardada.";
-    return RedirectToPage("/Empresas/Index");
-}
+        {
+            if (string.IsNullOrWhiteSpace(RealmId))
+            {
+                TempData["Error"] = "Falta RealmId para guardar la parametrización.";
+                return RedirectToPage("/Empresas/Index");
+            }
 
             Input.RealmId = RealmId;
             _profiles.Upsert(Input);
 
-            try { TempData.Remove("AutoDisconnected"); } catch {}
+            try { Response.Cookies.Delete("must_param_realm"); } catch {}
 
             TempData["Success"] = "Parametrización guardada.";
             return RedirectToPage("/Empresas/Index");
         }
 
-        // ---- Cancelar: desconecta, notifica salida, vuelve a /Empresas/Index
+        // Cancelar -> desconecta + aviso + vuelve a Empresas
         public IActionResult OnPostCancel()
-{
-    if (string.IsNullOrWhiteSpace(RealmId))
-    {
-        return RedirectToPage("/Empresas/Index");
-    }
-
-    var companyName = _companies.GetCompaniesForUser()
-        .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
-
-    try
-    {
-        var method = _companies.GetType().GetMethod("Disconnect");
-        if (method != null && method.GetParameters().Length == 1)
         {
-            method.Invoke(_companies, new object?[] { RealmId });
-        }
-    }
-    catch { }
-
-    try { Response.Cookies.Delete("must_param_realm"); } catch {}
-
-    TempData["AutoDisconnected"] = $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
-    return RedirectToPage("/Empresas/Index");
-}
+            if (string.IsNullOrWhiteSpace(RealmId))
+                return RedirectToPage("/Empresas/Index");
 
             string companyName = _companies.GetCompaniesForUser()
                 .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
@@ -126,11 +91,8 @@ namespace IvaFacilitador.Pages.Parametrizador
             catch { /* noop */ }
 
             try { Response.Cookies.Delete("must_param_realm"); } catch {}
-            try { TempData.Remove("Success"); } catch {}
 
-            TempData["AutoDisconnected"] =
-                $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
-
+            TempData["AutoDisconnected"] = $"Al salirse sin parametrizar, la empresa {companyName} fue desconectada.";
             return RedirectToPage("/Empresas/Index");
         }
     }
