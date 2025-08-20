@@ -75,20 +75,22 @@ namespace IvaFacilitador.Pages.Parametrizador
         public IActionResult OnPostCancel()
         {
             if (string.IsNullOrWhiteSpace(RealmId))
+            {
                 return RedirectToPage("/Empresas/Index");
+            }
 
             string companyName = _companies.GetCompaniesForUser()
                 .FirstOrDefault(c => c.RealmId == RealmId)?.Name ?? RealmId;
 
             try
             {
-                var method = _companies.GetType().GetMethod("Disconnect");
-                if (method != null && method.GetParameters().Length == 1)
-                {
-                    method.Invoke(_companies, new object?[] { RealmId });
-                }
+                // El FileCompanyStore expone RemoveCompany(realmId)
+                _companies.RemoveCompany(RealmId);
             }
-            catch { /* noop */ }
+            catch
+            {
+                // noop
+            }
 
             try { Response.Cookies.Delete("must_param_realm"); } catch {}
 
