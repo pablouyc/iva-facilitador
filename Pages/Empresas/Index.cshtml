@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model IvaFacilitador.Pages.Empresas.IndexModel
 <style>
   /* Respaldo por si ms-2 no aplica en tu tema */
@@ -184,7 +184,7 @@
     }
     setText('pmCompany', companyName || realmId);
     var edit = document.getElementById('pmEditLink');
-    if (edit) edit.href = '/Parametrizador?RealmId=' + encodeURIComponent(realmId);
+    if (edit) edit.href = '/Parametrizador?RealmId=' + encodeURIComponent(realmId) + '&mode=edit';
 
     // Limpiar placeholders
     ['pmSalesTariffs','pmPos','pmMeicMag','pmProrrata','pmIvaAccounts','pmExports','pmCapitalRentals','pmNonDeductible','pmExemptions']

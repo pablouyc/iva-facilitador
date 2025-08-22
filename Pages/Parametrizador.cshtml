@@ -1,0 +1,6 @@
+﻿
+@* Cancelar seguro en modo edición *@
+@if (string.Equals(Context.Request.Query["mode"], "edit", StringComparison.OrdinalIgnoreCase))
+{
+    <a class="btn btn-secondary" href="/Empresas">Cancelar</a>
+}
