@@ -15,7 +15,7 @@
   </div>
 </div>
 <div class="row justify-content-center">
-  <div class="col-lg-10">
+  <div class="col-12">
     <div class="card shadow-sm card-iva">
       <div class="card-body p-4">
         <h1 class="h4 mb-3">Empresas conectadas</h1>
@@ -53,7 +53,7 @@
         <td class="fw-semibold">@c.Name</td>
         <td class="text-muted">@c.RealmId</td>
         <td class="text-muted">@c.ConnectedAt.ToLocalTime()</td>
-        <td class="text-end">
+        <td class="text-end text-nowrap">
             <form method="post" asp-page-handler="Disconnect" asp-route-realmId="@c.RealmId" class="d-inline">
                 @Html.AntiForgeryToken()
                 <button type="submit"
@@ -162,49 +162,66 @@
 </div>
 @section Scripts{
 <script>
-  (function(){
-    const modalEl = document.getElementById('paramModal');
-    window.paramModal = modalEl ? new bootstrap.Modal(modalEl) : null;
-  })();
-
-  function setText(id, text){
-    const el = document.getElementById(id);
+  function setText(id, text) {
+    var el = document.getElementById(id);
     if (el) el.textContent = text;
   }
 
-  function openParams(realmId, companyName){
-    if (!window.paramModal) return;
+  // Inicializar el modal al cargar
+  document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('paramModal');
+    if (el && typeof bootstrap !== 'undefined') {
+      window.paramModal = new bootstrap.Modal(el);
+    }
+  });
 
-    document.getElementById('pmCompany').textContent = companyName || realmId;
-    document.getElementById('pmEditLink').href = '/Parametrizador?RealmId=' + encodeURIComponent(realmId);
+  function openParams(realmId, companyName) {
+    // Asegurar modal y mostrarlo de inmediato
+    if (!window.paramModal) {
+      var el = document.getElementById('paramModal');
+      if (!el || typeof bootstrap === 'undefined') return;
+      window.paramModal = new bootstrap.Modal(el);
+    }
+    setText('pmCompany', companyName || realmId);
+    var edit = document.getElementById('pmEditLink');
+    if (edit) edit.href = '/Parametrizador?RealmId=' + encodeURIComponent(realmId);
 
-    const blanks = ['pmSalesTariffs','pmPos','pmMeicMag','pmProrrata','pmIvaAccounts','pmExports','pmCapitalRentals','pmNonDeductible','pmExemptions'];
-    blanks.forEach(id => setText(id, '—'));
+    // Limpiar placeholders
+    ['pmSalesTariffs','pmPos','pmMeicMag','pmProrrata','pmIvaAccounts','pmExports','pmCapitalRentals','pmNonDeductible','pmExemptions']
+      .forEach(function (id) { setText(id, '—'); });
 
-    fetch(?handler=Profile&realmId=, { credentials: 'same-origin' })
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(p => {
+    // Mostrar ya el modal
+    window.paramModal.show();
+
+    // Cargar datos (si falla, dejamos placeholders)
+    fetch('?handler=Profile&realmId=' + encodeURIComponent(realmId), { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (p) {
         setText('pmSalesTariffs', (p.salesTariffs && p.salesTariffs.length) ? p.salesTariffs.join(', ') : '—');
-        setText('pmPos', p.usesPos ? Sí · Renta:  · IVA:  · Comisiones:  : 'No');
+        setText('pmPos', p.usesPos
+          ? ('Sí · Renta: ' + (p.posIncome || '—') + ' · IVA: ' + (p.posVat || '—') + ' · Comisiones: ' + (p.posFees || '—'))
+          : 'No');
         setText('pmMeicMag', p.isMeicMag ? 'Sí' : 'No');
-        setText('pmProrrata', p.usesProrrata ? Sí · % ·  · Frecuencia:  : 'No');
-        setText('pmIvaAccounts', Control:  · Pagar:  · Cobrar: );
+        setText('pmProrrata', p.usesProrrata
+          ? ('Sí · ' + ((p.prorrataPercent ?? '—')) + '% · ' + (p.computeProrrataAutomatically ? 'Automática' : 'Manual') + ' · Frecuencia: ' + (p.prorrataFrequency || '—'))
+          : 'No');
+        setText('pmIvaAccounts', 'Control: ' + (p.ivaControl || '—') + ' · Pagar: ' + (p.ivaPayable || '—') + ' · Cobrar: ' + (p.ivaReceivable || '—'));
         setText('pmExports', p.hasExports ? 'Sí' : 'No');
         setText('pmCapitalRentals', p.hasCapitalRentals ? 'Sí' : 'No');
         setText('pmNonDeductible', (p.nonDeductible && p.nonDeductible.length) ? p.nonDeductible.join(', ') : '—');
 
-        if (p.exemptions && p.exemptions.length){
-          const ex = p.exemptions.map(e =>
-            ${e.type || 'Exención'} · %
-          );
+        if (p.exemptions && p.exemptions.length) {
+          var ex = p.exemptions.map(function (e) {
+            return (e.type || 'Exención') + ' · ' + ((e.percent ?? '—')) + '%' +
+                   (e.validUntil ? (' · vence ' + (new Date(e.validUntil)).toLocaleDateString()) : '') +
+                   (e.certificateNumber ? (' · Cert. ' + e.certificateNumber) : '');
+          });
           setText('pmExemptions', ex.join(' | '));
         } else {
           setText('pmExemptions', '—');
         }
-
-        window.paramModal.show();
       })
-      .catch(_ => window.paramModal.show());
+      .catch(function () { /* dejamos placeholders */ });
   }
 </script>
 }

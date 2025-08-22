@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using IvaFacilitador.Services;
 using IvaFacilitador.Models;
@@ -33,8 +33,6 @@ namespace IvaFacilitador.Pages.Empresas
                                      .OrderBy(c => c.Name)
                                      .ToList();
         }
-
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> OnPostDisconnect(string realmId)
         {
             if (string.IsNullOrWhiteSpace(realmId))
@@ -75,26 +73,27 @@ namespace IvaFacilitador.Pages.Empresas
         {
             var p = _profiles.Get(realmId) ?? new CompanyProfile { RealmId = realmId };
             return new JsonResult(new
-            {
-                realmId = p.RealmId,
-                salesTariffs = p.SalesTariffs,
-                usesPos = p.UsesPos,
-                posIncome = p.PosWithholdingIncomeAccountId,
-                posVat = p.PosWithholdingVatAccountId,
-                posFees = p.PosFeesAccountId,
-                isMeicMag = p.IsMeicMag,
-                usesProrrata = p.UsesProrrata,
-                prorrataPercent = p.ProrrataPercent,
-                computeProrrataAutomatically = p.ComputeProrrataAutomatically,
-                prorrataFrequency = p.ProrrataFrequency,
-                ivaControl = p.IvaControlAccountId,
-                ivaPayable = p.IvaPayableAccountId,
-                ivaReceivable = p.IvaReceivableAccountId,
-                hasExports = p.HasExports,
-                hasCapitalRentals = p.HasCapitalRentals,
-                nonDeductible = p.NonDeductibleExpenseAccountIds,
-                exemptions = p.Exemptions?.Select(e => new { e.Type, e.Percent, e.ValidUntil, e.CertificateNumber })
-            });
+{
+    realmId = p.RealmId,
+    salesTariffs = p.SalesTariffs ?? new List<string>(),
+    usesPos = p.UsesPos,
+    posIncome = p.PosWithholdingIncomeAccountId,
+    posVat = p.PosWithholdingVatAccountId,
+    posFees = p.PosFeesAccountId,
+    isMeicMag = p.IsMeicMag,
+    usesProrrata = p.UsesProrrata,
+    prorrataPercent = p.ProrrataPercent,
+    computeProrrataAutomatically = p.ComputeProrrataAutomatically,
+    prorrataFrequency = p.ProrrataFrequency,
+    ivaControl = p.IvaControlAccountId,
+    ivaPayable = p.IvaPayableAccountId,
+    ivaReceivable = p.IvaReceivableAccountId,
+    hasExports = p.HasExports,
+    hasCapitalRentals = p.HasCapitalRentals,
+    nonDeductible = p.NonDeductibleExpenseAccountIds ?? new List<string>(),
+    exemptions = (p.Exemptions ?? new List<CompanyProfile.Exemption>())
+        .Select(e => new { e.Type, e.Percent, e.ValidUntil, e.CertificateNumber })
+});
         }
     }
 }
