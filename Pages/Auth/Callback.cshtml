@@ -1,0 +1,37 @@
+@page
+@model IvaFacilitador.Pages.Auth.CallbackModel
+@{
+    ViewData["Title"]="Conexión completada";
+    Layout="/Pages/Shared/_Layout.cshtml";
+}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm card-iva">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Conexión completada</h1>
+
+        @if(!string.IsNullOrEmpty(Model.Error)){
+          <div class="alert alert-danger">@Model.Error</div>
+        } else {
+          <div class="alert alert-success">
+            <div><strong>¡Listo!</strong> Empresa conectada:</div>
+            <div class="mt-2">
+              <span class="fw-semibold">@Model.CompanyName</span>
+              <span class="text-muted">(@Model.RealmId)</span>
+            </div>
+          </div>
+
+          <div class="alert alert-warning mt-3">
+            <strong>Importante:</strong> La empresa está conectada, pero para poder usarla es <u>obligatorio parametrizarla</u>.
+            Si no parametriza ahora, la conexión será cancelada.
+          </div>
+
+          <div class="d-flex gap-2 mt-2">
+            <a class="btn btn-acento" href="/Parametrizador">Continuar a parametrización</a>
+            <a class="btn btn-outline-secondary" href="/Auth/Disconnect?realmId=@Model.RealmId">Cancelar</a>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

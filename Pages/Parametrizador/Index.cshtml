@@ -1,0 +1,64 @@
+@page "/Parametrizador"
+@model IvaFacilitador.Pages.Parametrizador.IndexModel
+@{ Layout = "_Layout"; }
+@{
+    ViewData["Title"] = "Parametrización";
+    var titleName = string.IsNullOrWhiteSpace(Model.CompanyName) ? "—" : Model.CompanyName;
+}
+
+<div class="container my-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h2 class="mb-0">PARAMETRIZACIÓN <span class="text-muted">@titleName</span></h2>
+      <div class="text-muted small">RealmId: @Model.RealmId</div>
+    </div>
+    <a class="btn btn-link" href="/Empresas/Index">Volver a empresas</a>
+  </div>
+
+  <form method="post" asp-page-handler="Save" class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <input type="hidden" asp-for="RealmId" />
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Empresa (QBO)</label>
+        <input class="form-control" value="@Model.CompanyName" disabled />
+        <div class="form-text">Los cambios se guardan por empresa.</div>
+      </div>
+
+      <div class="alert alert-info d-flex align-items-start">
+        <div class="me-2 fw-bold" aria-hidden="true">i</div>
+        <div>
+          <div class="fw-semibold">Próximo paso</div>
+          <div>Vamos a ir agregando cada sección (Tarifas de ventas, Datáfonos, MEIC/MAG, Prorrata, Cuentas IVA, etc.).</div>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-12">
+          <div class="card p-3">
+            <div class="fw-semibold mb-2">1) Tarifas de impuestos (ventas)</div>
+            <p class="text-muted small mb-0">Próximamente…</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <button type="submit"
+                class="btn btn-outline-secondary"
+                formaction="?handler=Cancel"
+                formmethod="post"
+                formnovalidate>
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-primary">
+          Guardar
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,8 @@
+using Microsoft.AspNetCore.Mvc.RazorPages;
+namespace IvaFacilitador.Pages.Auth
+{
+    public class ConnectModel : PageModel
+    {
+        public void OnGet() { }
+    }
+}

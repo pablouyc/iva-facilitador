@@ -1,0 +1,15 @@
+﻿bin/
+obj/
+*.user
+*.suo
+*.bak
+*.bak_*
+
+
+*.bak
+*.bak_*
+
+
+*.bak
+*.bak_*
+
