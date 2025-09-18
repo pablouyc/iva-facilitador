@@ -58,6 +58,7 @@ body{ background:var(--blanco); color:#111;}
 
 <div id="sidebar" class="sidebar">
   <div class="title">Menú</div>
+  <a href="/Payroll" class="payroll-link">Planilla (RRHH)</a>
   
 @if (string.Equals(Configuration["Features:PAYROLL_FEATURE"], "true", System.StringComparison.OrdinalIgnoreCase))
 {
@@ -124,5 +125,6 @@ ov?.addEventListener('click', ()=>{ sb.classList.remove('open'); ov.classList.re
 
 </body>
 </html>
+
 
 
