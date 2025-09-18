@@ -1,37 +1,86 @@
-@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@* Topbar contextual (mock, sin datos reales) *@
 @{
-    // Solo mostrar si el feature está activado
-    var enabled = string.Equals(Configuration["Features:PAYROLL_FEATURE"], "true", System.StringComparison.OrdinalIgnoreCase);
+    // Fechas por defecto: primer y último día del mes actual
+    var today  = DateTime.Today;
+    var first  = new DateTime(today.Year, today.Month, 1);
+    var last   = first.AddMonths(1).AddDays(-1);
+
+    // Valores en formato ISO para <input type="date">
+    var vFirst = first.ToString("yyyy-MM-dd");
+    var vLast  = last.ToString("yyyy-MM-dd");
 }
-@if (enabled)
-{
-    <div class="card mb-3">
-        <div class="card-body d-flex align-items-center gap-3 flex-wrap">
-            <div class="d-flex align-items-center gap-2">
-                <label class="form-label mb-0 me-2">Empresa</label>
-                <select class="form-select form-select-sm" aria-label="Empresa">
-                    <option selected>Seleccionar...</option>
-                    <option>Empresa A</option>
-                    <option>Empresa B</option>
-                </select>
-            </div>
 
-            <div class="d-flex align-items-center gap-2">
-                <label class="form-label mb-0 me-2">Periodo</label>
-                <select class="form-select form-select-sm" aria-label="Periodo">
-                    <option selected>2025-08</option>
-                    <option>2025-07</option>
-                    <option>2025-06</option>
-                </select>
-            </div>
+<div class="card shadow-sm mb-3">
+  <div class="card-body d-flex flex-wrap align-items-center gap-3">
 
-            <span class="badge text-bg-secondary">Estado: Borrador</span>
-
-            <div class="ms-auto d-flex gap-2">
-                <button type="button" class="btn btn-sm btn-secondary" disabled>Calcular</button>
-                <button type="button" class="btn btn-sm btn-secondary" disabled>Aprobar</button>
-                <button type="button" class="btn btn-sm btn-secondary" disabled>Publicar QBO</button>
-            </div>
-        </div>
+    <!-- Empresa -->
+    <div class="me-2">
+      <label class="form-label mb-1 small text-muted d-block">Empresa</label>
+      <select class="form-select form-select-sm" style="min-width: 220px;">
+        <option selected>Seleccionar…</option>
+        <option>Empresa A (demo)</option>
+        <option>Empresa B (demo)</option>
+      </select>
     </div>
-}
+
+    <!-- Periodo (rango de fechas) -->
+    <div class="me-2">
+      <label class="form-label mb-1 small text-muted d-block">Desde</label>
+      <input id="rngDesde" type="date" class="form-control form-control-sm" style="min-width: 180px;" value="@vFirst" />
+    </div>
+
+    <div class="me-2">
+      <label class="form-label mb-1 small text-muted d-block">Hasta</label>
+      <input id="rngHasta" type="date" class="form-control form-control-sm" style="min-width: 180px;" value="@vLast" />
+    </div>
+
+    <!-- Estado -->
+    <div class="me-auto">
+      <label class="form-label mb-1 small text-muted d-block">Estado</label>
+      <span class="badge text-bg-secondary">Borrador</span>
+    </div>
+
+    <!-- Pestañas / acciones (mock, deshabilitadas) -->
+    <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="acciones planilla">
+      <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Principal</button>
+      <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Planilla total</button>
+      <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Deducciones</button>
+      <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Extras</button>
+      <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Reportes</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const d = document;
+  const desde = d.getElementById('rngDesde');
+  const hasta = d.getElementById('rngHasta');
+
+  // Permite escribir DD/MM/AAAA o DD-MM-AAAA y lo convierte a YYYY-MM-DD
+  function toIsoFromDMY(el) {
+    if (!el || !el.value) return;
+    const m = el.value.trim().match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m) {
+      const dd = m[1].padStart(2, '0');
+      const mm = m[2].padStart(2, '0');
+      const yyyy = m[3];
+      el.value = `${yyyy}-${mm}-${dd}`;
+    }
+  }
+
+  // Garantiza que Hasta >= Desde
+  function clamp() {
+    if (!desde.value || !hasta.value) return;
+    if (hasta.value < desde.value) {
+      hasta.value = desde.value;
+    }
+  }
+
+  ['change', 'blur'].forEach(ev => {
+    desde.addEventListener(ev, () => { toIsoFromDMY(desde); clamp(); });
+    hasta.addEventListener(ev, () => { toIsoFromDMY(hasta); clamp(); });
+  });
+})();
+</script>
