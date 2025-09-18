@@ -1,6 +1,6 @@
 @* Topbar contextual (mock, sin datos reales) *@
 @{
-    var currentPage = (ViewContext.RouteData.Values["page"] as string) ?? ""; var isIndex = currentPage.EndsWith("/Index", System.StringComparison.OrdinalIgnoreCase); // Fechas por defecto: primer y último día del mes actual
+    // Fechas por defecto: primer y último día del mes actual
     var today  = DateTime.Today;
     var first  = new DateTime(today.Year, today.Month, 1);
     var last   = first.AddMonths(1).AddDays(-1);
@@ -16,7 +16,7 @@
     <!-- Empresa -->
     <div class="me-2">
       <label class="form-label mb-1 small text-muted d-block">Empresa</label>
-      <select class="form-select form-select-sm" style="min-width: 220px;" id="payroll-company">
+      <select class="form-select form-select-sm" style="min-width: 220px;">
         <option selected>Seleccionar…</option>
         <option>Empresa A (demo)</option>
         <option>Empresa B (demo)</option>
@@ -42,7 +42,7 @@
 
     <!-- Pestañas / acciones (mock, deshabilitadas) -->
     <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="acciones planilla">
-      <a asp-area="Payroll" asp-page="/Index" class="btn btn-outline-secondary btn-sm">Principal</a>
+      <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Principal</button>
       <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Planilla total</button>
       <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Deducciones</button>
       <button type="button" class="btn btn-outline-secondary" disabled title="Próximamente">Extras</button>
@@ -84,6 +84,4 @@
   });
 })();
 </script>
-
-
 
