@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Planilla (RRHH)";
 }
-<h1>Planilla (RRHH)</h1>
+<h1>Principal</h1>
 <p><div id="rrhh-dashboard" class="mb-4">
   <style>
     .rrhh-wrap{display:grid;grid-template-columns:360px 1fr;gap:16px}
@@ -142,3 +142,125 @@
 
 
 
+
+@section Scripts {
+<script>
+// ===== Utilidades de fechas =====
+function parseDMY(str) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((str||'').trim());
+  if (!m) return null;
+  return new Date(+m[3], +m[2]-1, +m[1], 12,0,0,0);
+}
+function fmtDMY(d) {
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return ${dd}//;
+}
+function clampDate(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12); }
+function* daysBetween(from, toIncl){
+  let d = clampDate(from), end = clampDate(toIncl);
+  while (d <= end) { yield new Date(d); d.setDate(d.getDate()+1); }
+}
+// ===== PRNG determinístico =====
+function mulberry32(a){ return function(){var t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
+function seedFrom(company, from) {
+  const base = (company||'').includes('Empresa B') ? 987654321 : 123456789;
+  return (base ^ (from.getFullYear()*100 + (from.getMonth()+1))) >>> 0;
+}
+// ===== Generador mock =====
+function generateMockEvents(company, from, to){
+  const rnd = mulberry32(seedFrom(company, from));
+  const evts = [];
+  const inPeriod = [
+    { text: "Verificar marcaciones", area:"RRHH" },
+    { text: "Aprobar horas extra",   area:"Jefaturas" },
+    { text: "Cargar ausencias",      area:"RRHH" },
+    { text: "Revisión vacaciones",   area:"RRHH" },
+    { text: "Control incapacidades", area:"RRHH" }
+  ];
+  const nextTpl = [
+    { text: "Pago planilla",      area:"Tesorería" },
+    { text: "Reporte patronales", area:"Contabilidad" },
+    { text: "Pago CCSS",          area:"Tesorería" }
+  ];
+  const feriados = [
+    { mm:1,  dd:1,  text:"Año Nuevo" },
+    { mm:4,  dd:11, text:"Juan Santamaría" },
+    { mm:5,  dd:1,  text:"Día del Trabajador" },
+    { mm:7,  dd:25, text:"Anexión de Nicoya" },
+    { mm:8,  dd:15, text:"Día de la Madre" },
+    { mm:9,  dd:15, text:"Independencia" },
+    { mm:12, dd:25, text:"Navidad" }
+  ];
+  for (const f of feriados) {
+    const fd = new Date(from.getFullYear(), f.mm-1, f.dd, 12);
+    if (fd >= from && fd <= to) evts.push({ date: fd, text: "Feriado: "+f.text, area:"Ley", type:"period" });
+  }
+  const days = Array.from(daysBetween(from, to));
+  const cnt  = 6 + Math.floor(rnd()*5);
+  for (let i=0;i<cnt;i++){
+    const d = days[Math.floor(rnd()*days.length)];
+    const t = inPeriod[Math.floor(rnd()*inPeriod.length)];
+    evts.push({ date:d, text:t.text, area:t.area, type:"period" });
+  }
+  const nextCount = 5 + Math.floor(rnd()*3);
+  for (let i=0;i<nextCount;i++){
+    const offset = 1 + Math.floor(rnd()*20);
+    const d = new Date(to); d.setDate(d.getDate()+offset);
+    const t = nextTpl[Math.floor(rnd()*nextTpl.length)];
+    evts.push({ date:d, text:t.text, area:t.area, type:"next" });
+  }
+  evts.sort((a,b)=>a.date-b.date);
+  return evts;
+}
+// ===== Render =====
+function renderEvents(company, from, to){
+  const panel = document.getElementById('events-panel');
+  const label = document.getElementById('evt-period-label');
+  if (!panel || !label) return;
+  if (!company || !from || !to){
+    panel.innerHTML = '<div class="text-muted">Selecciona empresa y periodo.</div>';
+    label.textContent = '';
+    return;
+  }
+  label.textContent = ${fmtDMY(from)} – ;
+  const all = generateMockEvents(company, from, to);
+  const period = all.filter(e=>e.type==='period' && e.date>=from && e.date<=to);
+  const next   = all.filter(e=>e.type==='next');
+  function section(title, items){
+    const lis = (items.length?items:[{text:'Sin eventos', area:'', date:from}]).map(e=>
+      <li class="list-group-item d-flex justify-content-between align-items-start">
+        <div class="ms-2 me-auto">
+          <div class="fw-semibold"></div>
+          <small class="text-muted"></small>
+        </div>
+        <small class="text-muted"></small>
+      </li>).join('');
+    return <div class="mb-3">
+      <div class="fw-semibold mb-2"></div>
+      <ul class="list-group list-group-flush border rounded"></ul>
+    </div>;
+  }
+  panel.innerHTML = section("Del período seleccionado", period) + section("Próximos", next);
+}
+// ===== Enlaces con Topbar =====
+function getTopbar(){
+  const company = document.getElementById('payroll-company')?.value || "";
+  const fromStr = document.getElementById('payroll-from')?.value || "";
+  const toStr   = document.getElementById('payroll-to')?.value || "";
+  return { company, from: parseDMY(fromStr), to: parseDMY(toStr) };
+}
+function setupPayrollDashboard(){
+  ['payroll-company','payroll-from','payroll-to'].forEach(id=>{
+    document.getElementById(id)?.addEventListener('change', ()=>{
+      const {company, from, to} = getTopbar();
+      renderEvents(company, from, to);
+    });
+  });
+  const {company, from, to} = getTopbar();
+  renderEvents(company, from, to);
+}
+document.addEventListener('DOMContentLoaded', setupPayrollDashboard);
+</script>
+}
