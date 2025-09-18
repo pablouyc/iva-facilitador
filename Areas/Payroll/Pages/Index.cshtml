@@ -1,5 +1,8 @@
 @page "/Payroll"
 @section Styles {
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
@@ -7,30 +10,8 @@
     ViewData["Title"] = "Principal";
 }
 <h1>Principal</h1>
-<p><div id="rrhh-dashboard" class="mb-4">
-  <style>
-    .rrhh-wrap{display:grid;grid-template-columns:360px 1fr;gap:16px}
-    .rrhh-card{border:1px solid #e5e7eb;border-radius:14px;background:#fff}
-    .rrhh-card .hdr{padding:10px 14px;border-bottom:1px solid #eef0f2;font-weight:600}
-    .rrhh-card .body{padding:12px 14px}
-    .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .cal-nav button{border:0;background:#02343F;color:#fff;width:28px;height:28px;border-radius:6px}
-    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-    .cal-dow{font-size:12px;opacity:.6;text-align:center;margin-bottom:6px}
-    .cal-cell{height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
-    .cal-cell:hover{background:#f0f6f7}
-    .cal-today{outline:2px solid #02343F;outline-offset:2px}
-    .cal-selected{background:#02343F;color:#fff}
-    .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
-    .kpi{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fff}
-    .kpi .lbl{font-size:12px;opacity:.7;margin-bottom:4px}
-    .kpi .val{font-size:18px;font-weight:700}
-    .evt{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f2f4f6}
-    .evt:last-child{border-bottom:0}
-    .evt-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:#02343F}
-    .evt small{opacity:.7}
-    @@media(max-width:1024px){.rrhh-wrap{grid-template-columns:1fr}}
-  </style>
+<p><div id="rrhh-dashboard" class="payroll-scope mb-4">
+  
 
   <div class="rrhh-wrap">
     <div class="rrhh-card">
@@ -142,6 +123,8 @@
 })();
 </script>
 }</p>
+
+
 
 
 

@@ -1,9 +1,9 @@
 @* Topbar contextual (UI) *@
-<div class="card shadow-sm mb-3">
+<div class="card shadow-sm mb-3 topbar">
   <div class="card-body">
 
     <!-- FILA 1: Navegación entre secciones -->
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <div class="btn-group btn-group-sm segmented flex-wrap mb-3" role="group" aria-label="Navegación Payroll">
       <a asp-area="Payroll" asp-page="/Index" class="btn btn-outline-secondary btn-sm">Principal</a>
       <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Planilla total</button>
       <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Deducciones</button>
@@ -14,7 +14,7 @@
     </div>
 
     <!-- FILA 2: Filtros (Empresa / Desde / Hasta / Estado) -->
-    <div class="row g-3 align-items-end">
+    <div class="row g-3 align-items-end payroll-filters">
       <!-- Empresa -->
       <div class="col-12 col-sm-6 col-md-4 col-lg-3">
         <label class="form-label mb-1 small text-muted d-block">Empresa</label>
@@ -48,3 +48,4 @@
 
   </div>
 </div>
+
