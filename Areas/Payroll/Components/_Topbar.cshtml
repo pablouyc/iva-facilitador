@@ -1,3 +1,4 @@
+@{ var section = (ViewData["PayrollSection"] as string) ?? "Other"; }
 @* Topbar contextual (UI) *@
 <div class="card shadow-sm mb-3 topbar">
   <div class="card-body">
@@ -25,17 +26,15 @@
         </select>
       </div>
 
-      <!-- Desde -->
-      <div class="col-6 col-sm-3 col-md-2 col-lg-2">
+      @if (section != "Principal") { <div class="col-6 col-sm-3 col-md-2 col-lg-2">
         <label class="form-label mb-1 small text-muted d-block">Desde</label>
         <input type="date" class="form-control form-control-sm"/>
-      </div>
+      </div> }
 
-      <!-- Hasta -->
-      <div class="col-6 col-sm-3 col-md-2 col-lg-2">
+      @if (section != "Principal") { <div class="col-6 col-sm-3 col-md-2 col-lg-2">
         <label class="form-label mb-1 small text-muted d-block">Hasta</label>
         <input type="date" class="form-control form-control-sm"/>
-      </div>
+      </div> }
 
       <!-- Estado (alineado a la derecha en pantallas grandes) -->
       <div class="col-12 col-md-4 col-lg-5 d-flex justify-content-md-end">
@@ -48,4 +47,6 @@
 
   </div>
 </div>
+
+
 

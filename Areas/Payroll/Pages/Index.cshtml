@@ -5,7 +5,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="~/css/payroll.css" asp-append-version="true" />
 }
-@await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
+@{ ViewData["PayrollSection"] = "Principal"; }
+
 @{
     ViewData["Title"] = "Principal";
 }
@@ -188,3 +189,4 @@
 
 
 <!-- bump: 2025-09-18T13:05:56 -->
+
