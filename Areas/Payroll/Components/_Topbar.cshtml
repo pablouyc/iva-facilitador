@@ -1,1 +1,37 @@
-<!-- Topbar Payroll -->
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+@{
+    // Solo mostrar si el feature está activado
+    var enabled = string.Equals(Configuration["Features:PAYROLL_FEATURE"], "true", System.StringComparison.OrdinalIgnoreCase);
+}
+@if (enabled)
+{
+    <div class="card mb-3">
+        <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 me-2">Empresa</label>
+                <select class="form-select form-select-sm" aria-label="Empresa">
+                    <option selected>Seleccionar...</option>
+                    <option>Empresa A</option>
+                    <option>Empresa B</option>
+                </select>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-label mb-0 me-2">Periodo</label>
+                <select class="form-select form-select-sm" aria-label="Periodo">
+                    <option selected>2025-08</option>
+                    <option>2025-07</option>
+                    <option>2025-06</option>
+                </select>
+            </div>
+
+            <span class="badge text-bg-secondary">Estado: Borrador</span>
+
+            <div class="ms-auto d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-secondary" disabled>Calcular</button>
+                <button type="button" class="btn btn-sm btn-secondary" disabled>Aprobar</button>
+                <button type="button" class="btn btn-sm btn-secondary" disabled>Publicar QBO</button>
+            </div>
+        </div>
+    </div>
+}
