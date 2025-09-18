@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -55,8 +56,14 @@ body{ background:var(--blanco); color:#111;}
 </header>
 
 <div id="sidebar" class="sidebar">
-  <div class="title">Menú</div>
-  <a href="/">Inicio</a>
+  <div class="title">Menú
+  <a href="/Payroll">Planilla (RRHH)</a></div>
+  
+@if (string.Equals(Configuration["Features:PAYROLL_FEATURE"], "true", System.StringComparison.OrdinalIgnoreCase))
+{
+    <a asp-area="Payroll" asp-page="/Index">Planilla (RRHH)</a>
+}
+<a href="/">Inicio</a>
   <a href="/IVA/Seleccion">Cálculo de IVA</a>
 </div>
 <div id="overlay" class="overlay"></div>
@@ -117,3 +124,4 @@ ov?.addEventListener('click', ()=>{ sb.classList.remove('open'); ov.classList.re
 
 </body>
 </html>
+
