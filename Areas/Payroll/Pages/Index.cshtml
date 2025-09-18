@@ -4,5 +4,140 @@
     ViewData["Title"] = "Planilla (RRHH)";
 }
 <h1>Planilla (RRHH)</h1>
-<p>Sección en construcción.</p>
+<p><div id="rrhh-dashboard" class="mb-4">
+  <style>
+    .rrhh-wrap{display:grid;grid-template-columns:360px 1fr;gap:16px}
+    .rrhh-card{border:1px solid #e5e7eb;border-radius:14px;background:#fff}
+    .rrhh-card .hdr{padding:10px 14px;border-bottom:1px solid #eef0f2;font-weight:600}
+    .rrhh-card .body{padding:12px 14px}
+    .cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .cal-nav button{border:0;background:#02343F;color:#fff;width:28px;height:28px;border-radius:6px}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+    .cal-dow{font-size:12px;opacity:.6;text-align:center;margin-bottom:6px}
+    .cal-cell{height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .cal-cell:hover{background:#f0f6f7}
+    .cal-today{outline:2px solid #02343F;outline-offset:2px}
+    .cal-selected{background:#02343F;color:#fff}
+    .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+    .kpi{border:1px solid #e5e7eb;border-radius:12px;padding:12px;background:#fff}
+    .kpi .lbl{font-size:12px;opacity:.7;margin-bottom:4px}
+    .kpi .val{font-size:18px;font-weight:700}
+    .evt{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f2f4f6}
+    .evt:last-child{border-bottom:0}
+    .evt-dot{width:8px;height:8px;border-radius:50%;margin-top:6px;background:#02343F}
+    .evt small{opacity:.7}
+    @media(max-width:1024px){.rrhh-wrap{grid-template-columns:1fr}}
+  </style>
+
+  <div class="rrhh-wrap">
+    <div class="rrhh-card">
+      <div class="hdr">Calendario</div>
+      <div class="body">
+        <div class="cal-head">
+          <div id="cal-title" class="fw-semibold"></div>
+          <div class="cal-nav d-flex gap-1">
+            <button type="button" id="cal-prev" aria-label="Anterior">&lt;</button>
+            <button type="button" id="cal-today" class="btn btn-light btn-sm ms-2">Hoy</button>
+            <button type="button" id="cal-next" aria-label="Siguiente">&gt;</button>
+          </div>
+        </div>
+        <div class="cal-dow d-grid" style="grid-template-columns:repeat(7,1fr);gap:4px;">
+          <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+        </div>
+        <div id="cal-grid" class="cal-grid"></div>
+        <div class="mt-3 small text-muted">Arrastra para seleccionar un rango.</div>
+      </div>
+    </div>
+
+    <div class="rrhh-card">
+      <div class="hdr d-flex justify-content-between align-items-center">
+        <span>Eventos</span>
+        <span class="small text-muted" id="evt-range-label"></span>
+      </div>
+      <div class="body">
+        <div class="mb-3">
+          <div class="fw-semibold mb-2">Del período seleccionado</div>
+          <div id="evt-current"></div>
+        </div>
+        <div>
+          <div class="fw-semibold mb-2">Próximos</div>
+          <div id="evt-next"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid mt-3">
+    <div class="kpi"><div class="lbl">Bruto</div><div class="val">₡ 0.00</div></div>
+    <div class="kpi"><div class="lbl">Deducciones</div><div class="val">₡ 0.00</div></div>
+    <div class="kpi"><div class="lbl">Neto</div><div class="val">₡ 0.00</div></div>
+    <div class="kpi"><div class="lbl">Patronales</div><div class="val">₡ 0.00</div></div>
+    <div class="kpi"><div class="lbl"># Colab</div><div class="val">0</div></div>
+    <div class="kpi"><div class="lbl">Horas Extra</div><div class="val">0.00</div></div>
+  </div>
+</div>
+
+@section Scripts{
+<script>
+(function(){
+  const feriadosCR = ["2025-01-01","2025-04-13","2025-04-17","2025-04-18","2025-05-01","2025-07-25","2025-08-15","2025-09-15","2025-12-25"];
+  const pad2=n=>(n<10?'0':'')+n, fmtISO=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
+  let viewDate = new Date(); let selStart=new Date(), selEnd=new Date();
+  selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); let dragging=false;
+
+  const calTitle=document.getElementById('cal-title'), grid=document.getElementById('cal-grid');
+  const lblRange=document.getElementById('evt-range-label'), cur=document.getElementById('evt-current'), nxt=document.getElementById('evt-next');
+
+  function monthLabel(dt){return dt.toLocaleString('es-CR',{month:'long',year:'numeric'});}
+  function startOfMonth(dt){return new Date(dt.getFullYear(), dt.getMonth(), 1);}
+  function endOfMonth(dt){return new Date(dt.getFullYear(), dt.getMonth()+1, 0);}
+  function inRange(d,a,b){return d>=a && d<=b;}
+
+  function renderCal(){
+    calTitle.textContent = monthLabel(viewDate);
+    grid.innerHTML = "";
+    const first=startOfMonth(viewDate), last=endOfMonth(viewDate);
+    let dow=first.getDay(); if(dow===0)dow=7; for(let i=0;i<dow-1;i++) grid.appendChild(document.createElement('div'));
+    for(let day=1; day<=last.getDate(); day++){
+      const cell=document.createElement('div'); cell.className='cal-cell'; cell.textContent=day;
+      const curd=new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+      const today=new Date(); today.setHours(0,0,0,0);
+      if(fmtISO(curd)===fmtISO(today)) cell.classList.add('cal-today');
+      if(inRange(curd, selStart, selEnd)) cell.classList.add('cal-selected');
+      if(feriadosCR.includes(fmtISO(curd))) cell.style.boxShadow="inset 0 -3px 0 #02343F";
+
+      cell.onmousedown=(e)=>{dragging=true; selStart=selEnd=curd; renderCal(); renderEvents(); e.preventDefault();};
+      cell.onmouseenter=()=>{ if(!dragging) return; if(curd<selStart){ selEnd=selStart; selStart=curd; } else { selEnd=curd; } renderCal(); renderEvents(); };
+      cell.onmouseup=()=>{dragging=false;};
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderEvents(){
+    const fmt=d=>d.toLocaleDateString('es-CR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    lblRange.textContent = selStart.getTime()===selEnd.getTime()? fmt(selStart) : (fmt(selStart)+' – '+fmt(selEnd));
+    const itemsNow=[
+      {title:"Verificar marcaciones",note:"RRHH"},
+      {title:"Aprobar horas extra",note:"Jefaturas"},
+      {title:"Cargar ausencias",note:"RRHH"}
+    ];
+    const mk=e=>`<div class="evt"><div class="evt-dot"></div><div><div class="fw-semibold">${e.title}</div><small>${e.note}</small></div></div>`;
+    cur.innerHTML = itemsNow.map(mk).join("");
+    const itemsNext=[
+      {title:"Pago planilla",note:"Tesorería"},
+      {title:"Reporte patronales",note:"Contabilidad"}
+    ];
+    nxt.innerHTML = itemsNext.map(mk).join("");
+  }
+
+  document.getElementById('cal-prev').onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);renderCal();};
+  document.getElementById('cal-next').onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);renderCal();};
+  document.getElementById('cal-today').onclick=()=>{viewDate=new Date(); selStart=selEnd=new Date(); selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); renderCal(); renderEvents();};
+
+  renderCal(); renderEvents();
+  document.addEventListener('mouseup',()=>dragging=false);
+})();
+</script>
+}</p>
+
 
