@@ -18,7 +18,16 @@
       <div class="hdr">Calendario</div>
       <div class="body">
         <div class="cal-head">
-          <div id="cal-title" class="fw-semibold"></div>
+  <div class="d-flex align-items-center gap-2">
+    <select id="cal-month" class="form-select form-select-sm" style="width:auto"></select>
+    <select id="cal-year"  class="form-select form-select-sm" style="width:auto"></select>
+  </div>
+  <div class="cal-nav d-flex align-items-center gap-1">
+    <button type="button" id="cal-prev" class="nav-icon" aria-label="Anterior">&lt;</button>
+    <button type="button" id="cal-today" class="btn btn-light btn-sm">Hoy</button>
+    <button type="button" id="cal-next" class="nav-icon" aria-label="Siguiente">&gt;</button>
+  </div>
+</div>
           <div class="cal-nav d-flex gap-1">
             <button type="button" id="cal-prev" aria-label="Anterior">&lt;</button>
             <button type="button" id="cal-today" class="btn btn-light btn-sm ms-2">Hoy</button>
@@ -69,7 +78,7 @@
   let viewDate = new Date(); let selStart=new Date(), selEnd=new Date();
   selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); let dragging=false;
 
-  const calTitle=document.getElementById('cal-title'), grid=document.getElementById('cal-grid');
+  const monthSel=document.getElementById('cal-month'), yearSel=document.getElementById('cal-year'), grid=document.getElementById('cal-grid');
   const lblRange=document.getElementById('evt-range-label'), cur=document.getElementById('evt-current'), nxt=document.getElementById('evt-next');
   // Reemplaza el título por selects Mes/Año (no rompemos el HTML original)
   calTitle.innerHTML = `
@@ -110,7 +119,7 @@
 
   function renderCal(){
     syncSelectors();
-    calTitle.textContent = monthLabel(viewDate);
+    if(monthSel&&yearSel){ monthSel.value=viewDate.getMonth().toString(); yearSel.value=viewDate.getFullYear().toString(); }
     grid.innerHTML = "";
     const first=startOfMonth(viewDate), last=endOfMonth(viewDate);
     let dow=first.getDay(); if(dow===0)dow=7; for(let i=0;i<dow-1;i++) grid.appendChild(document.createElement('div'));
@@ -122,8 +131,8 @@
       if(inRange(curd, selStart, selEnd)) cell.classList.add('cal-selected');
       if(feriadosCR.includes(fmtISO(curd))) cell.style.boxShadow="inset 0 -3px 0 #02343F";
 
-      cell.onmousedown=(e)=>{dragging=true; selStart=selEnd=curd; renderCal(); renderEvents(); e.preventDefault();};
-      cell.onmouseenter=()=>{ if(!dragging) return; if(curd<selStart){ selEnd=selStart; selStart=curd; } else { selEnd=curd; } renderCal(); renderEvents(); };
+      cell.onmousedown=(e)=>{dragging=true; selStart=selEnd=curd; initSelectors(); renderCal(); renderEvents(); e.preventDefault();};
+      cell.onmouseenter=()=>{ if(!dragging) return; if(curd<selStart){ selEnd=selStart; selStart=curd; } else { selEnd=curd; } initSelectors(); renderCal(); renderEvents(); };
       cell.onmouseup=()=>{dragging=false;};
       grid.appendChild(cell);
     }
@@ -146,15 +155,28 @@
     nxt.innerHTML = itemsNext.map(mk).join("");
   }
 
+    function initSelectors(){
+    if(!monthSel || !yearSel) return;
+    const months = Array.from({length:12}, (_,i)=> new Date(2000,i,1).toLocaleString('es-CR',{month:'long'}));
+    monthSel.innerHTML = months.map((m,i)=><option value=""></option>).join('');
+    const y = new Date().getFullYear(); const years=[];
+    for(let k=y-3;k<=y+3;k++) years.push(k);
+    yearSel.innerHTML = years.map(v=><option value=""></option>).join('');
+    monthSel.value = viewDate.getMonth().toString();
+    yearSel.value = viewDate.getFullYear().toString();
+    monthSel.onchange = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); initSelectors(); renderCal(); renderEvents(); };
+    yearSel.onchange = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); initSelectors(); renderCal(); renderEvents(); };
+  }
   document.getElementById('cal-prev').onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);renderCal();};
   document.getElementById('cal-next').onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);renderCal();};
-  document.getElementById('cal-today').onclick=()=>{viewDate=new Date(); selStart=selEnd=new Date(); selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); renderCal(); renderEvents();};
+  document.getElementById('cal-today').onclick=()=>{viewDate=new Date(); selStart=selEnd=new Date(); selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); initSelectors(); renderCal(); renderEvents();};
 
-  renderCal(); renderEvents();
+  initSelectors(); renderCal(); renderEvents();
   document.addEventListener('mouseup',()=>dragging=false);
 })();
 </script>
 }</p>
+
 
 
 
