@@ -31,12 +31,7 @@
     <button type="button" id="cal-next" class="nav-icon" aria-label="Siguiente">&gt;</button>
   </div>
 </div>
-          <div class="cal-nav d-flex gap-1">
-            <button type="button" id="cal-prev" aria-label="Anterior">&lt;</button>
-            <button type="button" id="cal-today" class="btn btn-light btn-sm ms-2">Hoy</button>
-            <button type="button" id="cal-next" aria-label="Siguiente">&gt;</button>
-          </div>
-        </div>
+</div>
         <div class="cal-dow d-grid" style="grid-template-columns:repeat(7,1fr);gap:4px;">
           <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
         </div>
@@ -83,12 +78,8 @@
 
   const monthSel=document.getElementById('cal-month'), yearSel=document.getElementById('cal-year'), grid=document.getElementById('cal-grid');
   const lblRange=document.getElementById('evt-range-label'), cur=document.getElementById('evt-current'), nxt=document.getElementById('evt-next');
+  var calTitle = document.getElementById('cal-title') || document.createElement('div');
   // Reemplaza el título por selects Mes/Año (no rompemos el HTML original)
-  calTitle.innerHTML = `
-    <div class="d-flex align-items-center gap-2">
-      <select id="cal-month" class="form-select form-select-sm"></select>
-      <select id="cal-year"  class="form-select form-select-sm"></select>
-    </div>`;
   const selMonth = document.getElementById('cal-month');
   const selYear  = document.getElementById('cal-year');
 
@@ -158,9 +149,32 @@
     nxt.innerHTML = itemsNext.map(mk).join("");
   }
 
-    function initSelectors(){
+      function initSelectors(){
     if(!monthSel || !yearSel) return;
-    const months = Array.from({length:12}, (_,i)=> new Date(2000,i,1).toLocaleString('es-CR',{month:'long'}));
+    // Meses
+    monthSel.innerHTML = "";
+    for(let i=0;i<12;i++){
+      const name = new Date(2000,i,1).toLocaleString("es-CR",{month:"long"});
+      const o = document.createElement("option");
+      o.value = i; o.textContent = name.charAt(0).toUpperCase()+name.slice(1);
+      monthSel.appendChild(o);
+    }
+    // Años (actual -3 .. +4)
+    const y = new Date().getFullYear();
+    yearSel.innerHTML = "";
+    for(let k=y-3;k<=y+4;k++){
+      const o = document.createElement("option");
+      o.value = k; o.textContent = k;
+      yearSel.appendChild(o);
+    }
+    // Seleccionados según viewDate
+    monthSel.value = viewDate.getMonth().toString();
+    yearSel.value  = viewDate.getFullYear().toString();
+
+    // Cambios de los selects -> repintar
+    monthSel.onchange = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); renderCal(); renderEvents(); };
+    yearSel.onchange  = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); renderCal(); renderEvents(); };
+  }, (_,i)=> new Date(2000,i,1).toLocaleString('es-CR',{month:'long'}));
     monthSel.innerHTML = months.map((m,i)=><option value=""></option>).join('');
     const y = new Date().getFullYear(); const years=[];
     for(let k=y-3;k<=y+3;k++) years.push(k);
@@ -191,5 +205,6 @@
 
 
 <!-- bump: 2025-09-18T13:05:56 -->
+
 
 
