@@ -13,29 +13,27 @@
     ViewData["Title"] = "Principal";
 }
 <h1>Principal</h1>
-<p><div id="rrhh-dashboard" class="payroll-scope mb-4">
+<div id="cal-title"></div><p><div id="rrhh-dashboard" class="payroll-scope mb-4">
   
 
   <div class="rrhh-wrap">
   <div class="rrhh-card">
     <div class="hdr">Calendario</div>
     <div class="body">
-      <div class="cal-head">
-        <div class="d-flex align-items-center gap-2">
-          <select id="cal-month" class="form-select form-select-sm" style="width:auto"></select>
-          <select id="cal-year"  class="form-select form-select-sm" style="width:auto"></select>
-        </div>
-        <div class="cal-nav d-flex align-items-center gap-1">
-          <button type="button" id="cal-prev" class="nav-icon" aria-label="Anterior">&lt;</button>
-          <button type="button" id="cal-today" class="btn btn-light btn-sm">Hoy</button>
-          <button type="button" id="cal-next" class="nav-icon" aria-label="Siguiente">&gt;</button>
-        </div>
-      </div>
-      <div class="cal-dow d-grid" style="grid-template-columns:repeat(7,1fr);gap:4px;">
-        <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
-      </div>
-      <div id="cal-grid" class="cal-grid"></div>
-      <div class="mt-3 small text-muted">Arrastra para seleccionar un rango.</div>
+      <div class="cal-head d-flex align-items-center gap-2">
+  <select id="cal-month" class="form-select form-select-sm" style="width:auto"></select>
+  <select id="cal-year" class="form-select form-select-sm" style="width:auto"></select>
+  <div class="cal-nav d-flex align-items-center gap-1 ms-auto">
+    <button type="button" id="cal-prev" class="btn btn-outline-secondary btn-sm" aria-label="Anterior">‹</button>
+    <button type="button" id="cal-today" class="btn btn-outline-secondary btn-sm" aria-label="Hoy">Hoy</button>
+    <button type="button" id="cal-next" class="btn btn-outline-secondary btn-sm" aria-label="Siguiente">›</button>
+  </div>
+</div>
+<div class="cal-dow d-grid" style="grid-template-columns:repeat(7,1fr);gap:4px;">
+  <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+</div>
+<div id="cal-grid" class="cal-grid"></div>
+<div class="mt-3 small text-muted">Arrastra para seleccionar un rango.</div>
     </div>
   </div>
   <div class="rrhh-card">
@@ -67,264 +65,150 @@
 @section Scripts{
 <script>
 (function(){
+  // Feriados (ejemplo) en formato ISO
   const feriadosCR = ["2025-01-01","2025-04-13","2025-04-17","2025-04-18","2025-05-01","2025-07-25","2025-08-15","2025-09-15","2025-12-25"];
-  const pad2=n=>(n<10?'0':'')+n, fmtISO=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
-  let viewDate = new Date(); let selStart=new Date(), selEnd=new Date();
-  selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); let dragging=false;
+  // Capturar controles
+  const monthSel = document.getElementById('cal-month');
+  const yearSel  = document.getElementById('cal-year');
+  const grid     = document.getElementById('cal-grid');
+  const lblRange = document.getElementById('evt-range-label');
+  const cur      = document.getElementById('evt-current');
+  const nxt      = document.getElementById('evt-next');
+  // Estado
+  let viewDate = new Date();
+  let selStart = new Date();
+  let selEnd   = new Date();
+  selStart.setHours(0,0,0,0);
+  selEnd.setHours(0,0,0,0);
+  let dragging = false;
 
-  const monthSel=document.getElementById('cal-month'), yearSel=document.getElementById('cal-year'), grid=document.getElementById('cal-grid');
-  const lblRange=document.getElementById('evt-range-label'), cur=document.getElementById('evt-current'), nxt=document.getElementById('evt-next');`n  var calTitle = document.getElementById('cal-title') || document.createElement('div');`r`n  var calTitle = document.getElementById('cal-title') || document.createElement('div');
-  var calTitle = document.getElementById('cal-title') || document.createElement('div');
-  // Reemplaza el título por selects Mes/Año (no rompemos el HTML original)
-  const selMonth = document.getElementById('cal-month');
-  const selYear  = document.getElementById('cal-year');
+  // Funciones auxiliares
+  function startOfMonth(dt){ return new Date(dt.getFullYear(), dt.getMonth(), 1); }
+  function endOfMonth(dt){ return new Date(dt.getFullYear(), dt.getMonth()+1, 0); }
+  function pad2(n){ return n < 10 ? '0'+n : n; }
+  function fmtISO(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+  function inRange(d,a,b){ return d >= a && d <= b; }
 
-  // Meses en español
-  const months = Array.from({length:12}, (_,m)=> new Date(2000,m,1).toLocaleString('es-CR',{month:'long'}))
-                      .map(s => s.charAt(0).toUpperCase()+s.slice(1));
-
-  // Poblar opciones de mes
-  months.forEach((name, i)=>{
-    const o=document.createElement('option'); o.value=i; o.textContent=name; selMonth.appendChild(o);
-  });
-
-  // Rango de años (actual - 3 .. actual + 4)
-  const yNow = new Date().getFullYear();
-  for (let y=yNow-3; y<=yNow+4; y++) {
-    const o=document.createElement('option'); o.value=y; o.textContent=y; selYear.appendChild(o);
+  // Inicializar selects de mes y año
+  function initSelectors(){
+    // Meses (enero…diciembre)
+    monthSel.innerHTML = '';
+    for(let i=0; i<12; i++){
+      const nombre = new Date(2000,i,1).toLocaleString('es-CR',{month:'long'});
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = nombre.charAt(0).toUpperCase() + nombre.slice(1);
+      monthSel.appendChild(opt);
+    }
+    // Años (actual -3 … actual +4)
+    const currentYear = new Date().getFullYear();
+    yearSel.innerHTML = '';
+    for(let y=currentYear-3; y<=currentYear+4; y++){
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
   }
-
+  // Sincroniza selects con viewDate
   function syncSelectors(){
-    selMonth.value = String(viewDate.getMonth());
-    selYear.value  = String(viewDate.getFullYear());
+    monthSel.value = String(viewDate.getMonth());
+    yearSel.value  = String(viewDate.getFullYear());
   }
 
-  selMonth.onchange = ()=>{ viewDate = new Date(parseInt(selYear.value), parseInt(selMonth.value), 1); renderCal(); };
-  selYear.onchange  = ()=>{ viewDate = new Date(parseInt(selYear.value), parseInt(selMonth.value), 1); renderCal(); };
-
-  function monthLabel(dt){return dt.toLocaleString('es-CR',{month:'long',year:'numeric'});}
-  function startOfMonth(dt){return new Date(dt.getFullYear(), dt.getMonth(), 1);}
-  function endOfMonth(dt){return new Date(dt.getFullYear(), dt.getMonth()+1, 0);}
-  function inRange(d,a,b){return d>=a && d<=b;}
-
+  // Renderiza calendario
   function renderCal(){
     syncSelectors();
-    if(monthSel&&yearSel){ monthSel.value=viewDate.getMonth().toString(); yearSel.value=viewDate.getFullYear().toString(); }
-    grid.innerHTML = "";
-    const first=startOfMonth(viewDate), last=endOfMonth(viewDate);
-    let dow=first.getDay(); if(dow===0)dow=7; for(let i=0;i<dow-1;i++) grid.appendChild(document.createElement('div'));
+    grid.innerHTML = '';
+    const first = startOfMonth(viewDate);
+    const last  = endOfMonth(viewDate);
+    let dow = first.getDay();
+    if(dow === 0) dow = 7;
+    for(let i=0; i<dow-1; i++){
+      grid.appendChild(document.createElement('div'));
+    }
     for(let day=1; day<=last.getDate(); day++){
-      const cell=document.createElement('div'); cell.className='cal-cell'; cell.textContent=day;
-      const curd=new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
-      const today=new Date(); today.setHours(0,0,0,0);
-      if(fmtISO(curd)===fmtISO(today)) cell.classList.add('cal-today');
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+      cell.textContent = day;
+      const curd = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+      const hoy  = new Date();
+      hoy.setHours(0,0,0,0);
+      if(fmtISO(curd) === fmtISO(hoy)) cell.classList.add('cal-today');
       if(inRange(curd, selStart, selEnd)) cell.classList.add('cal-selected');
-      if(feriadosCR.includes(fmtISO(curd))) cell.style.boxShadow="inset 0 -3px 0 #02343F";
-
-      cell.onmousedown=(e)=>{dragging=true; selStart=selEnd=curd; initSelectors(); renderCal(); renderEvents(); e.preventDefault();};
-      cell.onmouseenter=()=>{ if(!dragging) return; if(curd<selStart){ selEnd=selStart; selStart=curd; } else { selEnd=curd; } initSelectors(); renderCal(); renderEvents(); };
-      cell.onmouseup=()=>{dragging=false;};
+      if(feriadosCR.includes(fmtISO(curd))) cell.style.boxShadow = 'inset 0 -3px 0 #02343F';
+      cell.onmousedown = (e) => {
+        dragging = true;
+        selStart = selEnd = curd;
+        renderCal(); renderEvents();
+        e.preventDefault();
+      };
+      cell.onmouseenter = () => {
+        if(!dragging) return;
+        if(curd < selStart){
+          selEnd = selStart;
+          selStart = curd;
+        } else {
+          selEnd = curd;
+        }
+        renderCal(); renderEvents();
+      };
+      cell.onmouseup = () => { dragging = false; };
       grid.appendChild(cell);
     }
   }
 
+  // Renderiza eventos de ejemplo
   function renderEvents(){
-    const fmt=d=>d.toLocaleDateString('es-CR',{day:'2-digit',month:'2-digit',year:'numeric'});
-    lblRange.textContent = selStart.getTime()===selEnd.getTime()? fmt(selStart) : (fmt(selStart)+' – '+fmt(selEnd));
-    const itemsNow=[
-      {title:"Verificar marcaciones",note:"RRHH"},
-      {title:"Aprobar horas extra",note:"Jefaturas"},
-      {title:"Cargar ausencias",note:"RRHH"}
+    const fmt = (d) => d.toLocaleDateString('es-CR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    lblRange.textContent = (selStart.getTime() === selEnd.getTime())
+      ? fmt(selStart)
+      : (fmt(selStart) + ' – ' + fmt(selEnd));
+    const itemsNow = [
+      {title:'Verificar marcaciones', note:'RRHH'},
+      {title:'Aprobar horas extra',   note:'Jefaturas'},
+      {title:'Cargar ausencias',      note:'RRHH'}
     ];
-    const mk=e=>`<div class="evt"><div class="evt-dot"></div><div><div class="fw-semibold">${e.title}</div><small>${e.note}</small></div></div>`;
-    cur.innerHTML = itemsNow.map(mk).join("");
-    const itemsNext=[
-      {title:"Pago planilla",note:"Tesorería"},
-      {title:"Reporte patronales",note:"Contabilidad"}
+    const itemsNext = [
+      {title:'Pago planilla',      note:'Tesorería'},
+      {title:'Reporte patronales', note:'Contabilidad'}
     ];
-    nxt.innerHTML = itemsNext.map(mk).join("");
+    const mk = (e) => '<div class=\"evt\"><div class=\"evt-dot\"></div><div><div class=\"fw-semibold\">'+e.title+'</div><small>'+e.note+'</small></div></div>';
+    cur.innerHTML = itemsNow.map(mk).join('');
+    nxt.innerHTML = itemsNext.map(mk).join('');
   }
 
-            function initSelectors(){
-    if(!monthSel || !yearSel) return;
-    // Reiniciar opciones
-    monthSel.innerHTML = "";
-    yearSel.innerHTML = "";
-
-    // Poblar meses (enero–diciembre)
-    for (let i = 0; i < 12; i++){
-      let name = new Date(2000, i, 1).toLocaleString('es-CR', {month: 'long'});
-      let o = document.createElement('option');
-      o.value = i;
-      o.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-      monthSel.appendChild(o);
-    }
-
-    // Poblar años (actual -3 hasta actual +4)
-    let currentYear = new Date().getFullYear();
-    for (let y = currentYear - 3; y <= currentYear + 4; y++){
-      let o = document.createElement('option');
-      o.value = y;
-      o.textContent = y;
-      yearSel.appendChild(o);
-    }
-
-    // Preseleccionar el mes y año actuales
-    monthSel.value = viewDate.getMonth().toString();
-    yearSel.value = viewDate.getFullYear().toString();
-
-    // Al cambiar selección, recalcular calendario y eventos
-    monthSel.onchange = () => {
-      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-      renderCal();
-      renderEvents();
-    };
-    yearSel.onchange = () => {
-      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-      renderCal();
-      renderEvents();
-    };
-  });
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-      monthSel.appendChild(opt);
-    }
-    // Poblar años (actual - 3 .. actual + 4)
-    const currentYear = new Date().getFullYear();
-    for (let y = currentYear - 3; y <= currentYear + 4; y++){
-      const opt = document.createElement('option');
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
-    }
-    // Seleccionar mes y año según viewDate
-    monthSel.value = viewDate.getMonth().toString();
-    yearSel.value  = viewDate.getFullYear().toString();
-    // Cambios en selects → repintan calendario y eventos
-    monthSel.onchange = () => {
-      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-      renderCal();
-      renderEvents();
-    };
-    yearSel.onchange = () => {
-      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-      renderCal();
-      renderEvents();
-    };
-  });
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-    monthSel.appendChild(opt);
-  }
-  // Poblar años (rango actual-3 a actual+4)
-  const currentYear = new Date().getFullYear();
-  for (let y = currentYear - 3; y <= currentYear + 4; y++) {
-    const opt = document.createElement("option");
-    opt.value = y;
-    opt.textContent = y;
-    yearSel.appendChild(opt);
-  }
-  // Seleccionar mes y año actuales
-  monthSel.value = viewDate.getMonth().toString();
-  yearSel.value  = viewDate.getFullYear().toString();
-  // Al cambiar los selectores, recalcular
+  // Manejadores de selects y botones
   monthSel.onchange = () => {
     viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-    renderCal();
-    renderEvents();
+    renderCal(); renderEvents();
   };
-  yearSel.onchange = () => {
+  yearSel.onchange  = () => {
     viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-    renderCal();
-    renderEvents();
+    renderCal(); renderEvents();
   };
-});
-      const opt = document.createElement("option");
-      opt.value = i;
-      opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-      monthSel.appendChild(opt);
-    }
-    // Populate year selector (current year ± 4)
-    const currYear = new Date().getFullYear();
-    yearSel.innerHTML = "";
-    for(let y = currYear - 3; y <= currYear + 4; y++){
-      const opt = document.createElement("option");
-      opt.value = y;
-      opt.textContent = y;
-      yearSel.appendChild(opt);
-    }
-    // Set current selections
-    monthSel.value = viewDate.getMonth().toString();
-    yearSel.value  = viewDate.getFullYear().toString();
-    // Change handlers
-    monthSel.onchange = () => {
-      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-      renderCal();
-      renderEvents();
-    };
-    yearSel.onchange = () => {
-      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
-      renderCal();
-      renderEvents();
-    };
-  });
-      const o = document.createElement("option");
-      o.value = i; o.textContent = name.charAt(0).toUpperCase()+name.slice(1);
-      monthSel.appendChild(o);
-    }
-    // Años (actual -3 .. +4)
-    const y = new Date().getFullYear();
-    yearSel.innerHTML = "";
-    for(let k=y-3;k<=y+4;k++){
-      const o = document.createElement("option");
-      o.value = k; o.textContent = k;
-      yearSel.appendChild(o);
-    }
-    // Seleccionados según viewDate
-    monthSel.value = viewDate.getMonth().toString();
-    yearSel.value  = viewDate.getFullYear().toString();
+  document.getElementById('cal-prev').onclick = () => {
+    viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()-1, 1);
+    renderCal(); renderEvents();
+  };
+  document.getElementById('cal-next').onclick = () => {
+    viewDate = new Date(viewDate.getFullYear(), viewDate.getMonth()+1, 1);
+    renderCal(); renderEvents();
+  };
+  document.getElementById('cal-today').onclick = () => {
+    viewDate = new Date();
+    selStart = new Date();
+    selEnd   = new Date();
+    selStart.setHours(0,0,0,0);
+    selEnd.setHours(0,0,0,0);
+    renderCal(); renderEvents();
+  };
+  document.addEventListener('mouseup', () => { dragging = false; });
 
-    // Cambios de los selects -> repintar
-    monthSel.onchange = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); renderCal(); renderEvents(); };
-    yearSel.onchange  = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); renderCal(); renderEvents(); };
-  }, (_,i)=> new Date(2000,i,1).toLocaleString('es-CR',{month:'long'}));
-    monthSel.innerHTML = months.map((m,i)=><option value=""></option>).join('');
-    const y = new Date().getFullYear(); const years=[];
-    for(let k=y-3;k<=y+3;k++) years.push(k);
-    yearSel.innerHTML = years.map(v=><option value=""></option>).join('');
-    monthSel.value = viewDate.getMonth().toString();
-    yearSel.value = viewDate.getFullYear().toString();
-    monthSel.onchange = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); initSelectors(); renderCal(); renderEvents(); };
-    yearSel.onchange = ()=>{ viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1); initSelectors(); renderCal(); renderEvents(); };
-  }
-  document.getElementById('cal-prev').onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()-1,1);renderCal();};
-  document.getElementById('cal-next').onclick=()=>{viewDate=new Date(viewDate.getFullYear(),viewDate.getMonth()+1,1);renderCal();};
-  document.getElementById('cal-today').onclick=()=>{viewDate=new Date(); selStart=selEnd=new Date(); selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); initSelectors(); renderCal(); renderEvents();};
-
-  initSelectors(); renderCal(); renderEvents();
-  document.addEventListener('mouseup',()=>dragging=false);
+  // Inicialización
+  initSelectors();
+  renderCal();
+  renderEvents();
 })();
 </script>
-}</p>
-
-
-
-
-
-
-
-
-
-
-
-<!-- bump: 2025-09-18T13:05:56 -->
-
-
-
-
-
-
-
-
+}
