@@ -71,7 +71,8 @@
   const monthSel = document.getElementById('cal-month');
   const yearSel  = document.getElementById('cal-year');
   const grid     = document.getElementById('cal-grid');
-  const lblRange = document.getElementById('evt-range-label');
+  const lblRange=document.getElementById('evt-range-label');
+  var calTitle = document.getElementById('cal-title') || document.createElement('div');
   const cur      = document.getElementById('evt-current');
   const nxt      = document.getElementById('evt-next');
   // Estado
@@ -137,6 +138,7 @@
       if(fmtISO(curd) === fmtISO(hoy)) cell.classList.add('cal-today');
       if(inRange(curd, selStart, selEnd)) cell.classList.add('cal-selected');
       if(feriadosCR.includes(fmtISO(curd))) cell.style.boxShadow = 'inset 0 -3px 0 #02343F';
+      if(eventMap.has(fmtISO(curd))) cell.classList.add('cal-has-event');
       cell.onmousedown = (e) => {
         dragging = true;
         selStart = selEnd = curd;
@@ -160,7 +162,38 @@
 
   // Renderiza eventos de ejemplo
   function renderEvents(){
-    const fmt = (d) => d.toLocaleDateString('es-CR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const fmt = d => d.toLocaleDateString("es-CR",{day:"2-digit",month:"2-digit",year:"numeric"});
+  lblRange.textContent = selStart.getTime()===selEnd.getTime() ? fmt(selStart) : (fmt(selStart)+" – "+fmt(selEnd));
+
+  const all = [];
+  eventMap.forEach((arr, iso) => {
+    arr.forEach(e => all.push({ iso, title: e.title, note: e.note, date: new Date(iso) }));
+  });
+
+  const inSel = e => e.date >= selStart && e.date <= selEnd;
+  const current = all.filter(inSel).sort((a,b)=>a.date-b.date);
+  const next    = all.filter(e => e.date > selEnd).sort((a,b)=>a.date-b.date).slice(0,10);
+
+  const mk = e => `<div class="evt"><div class="evt-dot"></div><div><div class="fw-semibold">${e.title}</div><small>${e.note??""} — ${e.iso}</small></div></div>`;
+  cur.innerHTML = current.length? current.map(mk).join("") : '<div class="text-muted">Sin eventos</div>';
+  nxt.innerHTML = next.length? next.map(mk).join("") : '<div class="text-muted">Sin próximos</div>';
+});
+  lblRange.textContent = selStart.getTime()===selEnd.getTime() ? fmt(selStart) : (fmt(selStart)+" – "+fmt(selEnd));
+
+  // Aplanar eventMap a una lista
+  const all = [];
+  eventMap.forEach((arr, iso) => {
+    arr.forEach(e => all.push({ iso, title: e.title, note: e.note, date: new Date(iso) }));
+  });
+
+  const inSel = e => e.date >= selStart && e.date <= selEnd;
+  const current = all.filter(inSel).sort((a,b)=>a.date-b.date);
+  const next    = all.filter(e => e.date > selEnd).sort((a,b)=>a.date-b.date).slice(0,10);
+
+  const mk = e => `<div class="evt"><div class="evt-dot"></div><div><div class="fw-semibold">${e.title}</div><small>${e.note??""} — ${e.iso}</small></div></div>`;
+  cur.innerHTML = current.length? current.map(mk).join("") : '<div class="text-muted">Sin eventos</div>';
+  nxt.innerHTML = next.length? next.map(mk).join("") : '<div class="text-muted">Sin próximos</div>';
+});
     lblRange.textContent = (selStart.getTime() === selEnd.getTime())
       ? fmt(selStart)
       : (fmt(selStart) + ' – ' + fmt(selEnd));
@@ -203,12 +236,36 @@
     selEnd.setHours(0,0,0,0);
     renderCal(); renderEvents();
   };
-  document.addEventListener('mouseup', () => { dragging = false; });
+  document.addEventListener('mouseup',()=>{ if(dragging){ dragging=false; loadEvents(); } });
 
   // Inicialización
-  initSelectors();
-  renderCal();
-  renderEvents();
+  initSelectors(); renderCal(); loadEvents();
+
+  async function loadEvents(){
+    try{
+      const url = `${location.pathname}?handler=Events&from=${fmtISO(selStart)}&to=${fmtISO(selEnd)}`;
+      const res = await fetch(url, { headers: { "Accept":"application/json" }});
+      const data = await res.json();
+      eventMap.clear();
+      for (const e of data){
+        if(!eventMap.has(e.date)) eventMap.set(e.date, []);
+        eventMap.get(e.date).push({ title: e.title, note: e.note });
+      }
+      renderCal(); renderEvents();
+    }catch(err){
+      console.error("Error cargando eventos:", err);
+    }
+  }
+
+document.getElementById('cal-today').onclick=()=>{
+  viewDate=new Date();
+  selStart=selEnd=new Date();
+  selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0);
+  initSelectors(); renderCal();
+  loadEvents();
+};
 })();
 </script>
 }
+
+

@@ -110,3 +110,12 @@ a:focus-visible, .btn:focus-visible { box-shadow: 0 0 0 3px rgba(2,52,63,.18) !i
 }
 /* === PAYROLL FIX: cal-today width (no wrap) END === */
 
+
+/* === PAYROLL: marca visual para días con eventos === */
+.cal-cell{ position:relative; }
+.cal-has-event::after{
+  content:"";
+  position:absolute; left:50%; transform:translateX(-50%);
+  bottom:4px; width:6px; height:6px; border-radius:50%;
+  background: var(--brand,#02343F);
+}
