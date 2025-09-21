@@ -1,0 +1,59 @@
+@page
+@{
+    ViewData["Title"] = "Planilla total";
+    ViewData["PayrollSection"] = "PlanillaTotal";
+}
+<partial name="~/Areas/Payroll/Components/_Topbar.cshtml" />
+
+<h1 class="mb-3">Planilla total</h1>
+
+<div id="plt-filters" class="row g-2 align-items-end mb-3">
+  <div class="col-auto">
+    <label for="plt-from" class="form-label">Desde</label>
+    <input type="date" id="plt-from" class="form-control form-control-sm" />
+  </div>
+  <div class="col-auto">
+    <label for="plt-to" class="form-label">Hasta</label>
+    <input type="date" id="plt-to" class="form-control form-control-sm" />
+  </div>
+  <div class="col-auto">
+    <label for="plt-company" class="form-label">Empresa</label>
+    <select id="plt-company" class="form-select form-select-sm">
+      <option value="">Todas</option>
+      <option value="A">Empresa A (demo)</option>
+      <option value="B">Empresa B (demo)</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button id="plt-apply" class="btn btn-primary btn-sm">Aplicar</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table id="plt-table" class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Colaborador</th>
+            <th>Identificación</th>
+            <th>Cargo</th>
+            <th>Salario Mensual</th>
+            <th>Salario (rango)</th>
+            <th>Extras</th>
+            <th>Total Ingresos</th>
+            <th>Deducciones</th>
+            <th>Neto a recibir</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="~/css/payroll-planilla-total.css" />
+@section Scripts{
+  <script src="~/js/payroll-planilla-total.js"></script>
+}
