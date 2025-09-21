@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 using System.Linq;
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -42,6 +44,10 @@ builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
 builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
 
+builder.Services.AddDbContext<PayrollDbContext>(opt =>
+{
+    opt.UseSqlite(builder.Configuration.GetConnectionString("Payroll"));
+});
 var app = builder.Build();
 
 // ===== Cultura es-CR =====
@@ -94,3 +100,4 @@ app.Use(async (context, next) =>
 app.MapRazorPages();
 
 app.Run();
+
