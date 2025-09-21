@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using IvaFacilitador.Services;
 
+using IvaFacilitador.Areas.Payroll.Api;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== App settings =====
@@ -99,5 +100,7 @@ app.Use(async (context, next) =>
 });
 app.MapRazorPages();
 
+app.MapPayrollApi();
 app.Run();
+
 
