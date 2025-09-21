@@ -145,13 +145,42 @@
     nxt.innerHTML = itemsNext.map(mk).join("");
   }
 
-        function initSelectors(){
-  if(!monthSel || !yearSel) return;
-  monthSel.innerHTML = "";
-  yearSel.innerHTML  = "";
-  // Poblar meses (nombres en español)
-  for (let i = 0; i < 12; i++) {
-    const name = new Date(2000, i, 1).toLocaleString("es-CR", { month: "long" });
+          function initSelectors(){
+    if(!monthSel || !yearSel) return;
+    // Limpiar selects
+    monthSel.innerHTML = "";
+    yearSel.innerHTML = "";
+    // Poblar meses (enero–diciembre)
+    for (let i = 0; i < 12; i++){
+      const name = new Date(2000, i, 1).toLocaleString('es-CR', { month: 'long' });
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      monthSel.appendChild(opt);
+    }
+    // Poblar años (actual - 3 .. actual + 4)
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear - 3; y <= currentYear + 4; y++){
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
+    // Seleccionar mes y año según viewDate
+    monthSel.value = viewDate.getMonth().toString();
+    yearSel.value  = viewDate.getFullYear().toString();
+    // Cambios en selects → repintan calendario y eventos
+    monthSel.onchange = () => {
+      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
+      renderCal();
+      renderEvents();
+    };
+    yearSel.onchange = () => {
+      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
+      renderCal();
+      renderEvents();
+    };
+  });
     const opt = document.createElement("option");
     opt.value = i;
     opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
@@ -259,6 +288,7 @@
 
 
 <!-- bump: 2025-09-18T13:05:56 -->
+
 
 
 
