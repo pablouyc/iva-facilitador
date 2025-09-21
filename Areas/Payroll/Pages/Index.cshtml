@@ -73,7 +73,7 @@
   selStart.setHours(0,0,0,0); selEnd.setHours(0,0,0,0); let dragging=false;
 
   const monthSel=document.getElementById('cal-month'), yearSel=document.getElementById('cal-year'), grid=document.getElementById('cal-grid');
-  const lblRange=document.getElementById('evt-range-label'), cur=document.getElementById('evt-current'), nxt=document.getElementById('evt-next');`r`n  var calTitle = document.getElementById('cal-title') || document.createElement('div');
+  const lblRange=document.getElementById('evt-range-label'), cur=document.getElementById('evt-current'), nxt=document.getElementById('evt-next');`n  var calTitle = document.getElementById('cal-title') || document.createElement('div');`r`n  var calTitle = document.getElementById('cal-title') || document.createElement('div');
   var calTitle = document.getElementById('cal-title') || document.createElement('div');
   // Reemplaza el título por selects Mes/Año (no rompemos el HTML original)
   const selMonth = document.getElementById('cal-month');
@@ -145,14 +145,46 @@
     nxt.innerHTML = itemsNext.map(mk).join("");
   }
 
-          function initSelectors(){
+            function initSelectors(){
     if(!monthSel || !yearSel) return;
-    // Limpiar selects
+    // Reiniciar opciones
     monthSel.innerHTML = "";
     yearSel.innerHTML = "";
+
     // Poblar meses (enero–diciembre)
     for (let i = 0; i < 12; i++){
-      const name = new Date(2000, i, 1).toLocaleString('es-CR', { month: 'long' });
+      let name = new Date(2000, i, 1).toLocaleString('es-CR', {month: 'long'});
+      let o = document.createElement('option');
+      o.value = i;
+      o.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      monthSel.appendChild(o);
+    }
+
+    // Poblar años (actual -3 hasta actual +4)
+    let currentYear = new Date().getFullYear();
+    for (let y = currentYear - 3; y <= currentYear + 4; y++){
+      let o = document.createElement('option');
+      o.value = y;
+      o.textContent = y;
+      yearSel.appendChild(o);
+    }
+
+    // Preseleccionar el mes y año actuales
+    monthSel.value = viewDate.getMonth().toString();
+    yearSel.value = viewDate.getFullYear().toString();
+
+    // Al cambiar selección, recalcular calendario y eventos
+    monthSel.onchange = () => {
+      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
+      renderCal();
+      renderEvents();
+    };
+    yearSel.onchange = () => {
+      viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
+      renderCal();
+      renderEvents();
+    };
+  });
       const opt = document.createElement('option');
       opt.value = i;
       opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
@@ -288,6 +320,8 @@
 
 
 <!-- bump: 2025-09-18T13:05:56 -->
+
+
 
 
 

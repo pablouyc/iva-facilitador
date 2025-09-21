@@ -95,3 +95,6 @@ a:focus-visible, .btn:focus-visible { box-shadow: 0 0 0 3px rgba(2,52,63,.18) !i
 .evt small{opacity:.7}
 @media(max-width:1024px){.rrhh-wrap{grid-template-columns:1fr}}
 
+
+/* Ancho fijo para el botón Hoy */
+.btn.btn-light.btn-sm { min-width: 2.8rem; }
