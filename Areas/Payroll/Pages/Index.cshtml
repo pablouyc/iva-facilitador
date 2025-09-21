@@ -17,48 +17,44 @@
   
 
   <div class="rrhh-wrap">
-    <div class="rrhh-card">
-      <div class="hdr">Calendario</div>
-      <div class="body">
-        <div class="cal-head">
-  <div class="d-flex align-items-center gap-2">
-    <select id="cal-month" class="form-select form-select-sm" style="width:auto"></select>
-    <select id="cal-year"  class="form-select form-select-sm" style="width:auto"></select>
-  </div>
-  <div class="cal-nav d-flex align-items-center gap-1">
-    <button type="button" id="cal-prev" class="nav-icon" aria-label="Anterior">&lt;</button>
-    <button type="button" id="cal-today" class="btn btn-light btn-sm">Hoy</button>
-    <button type="button" id="cal-next" class="nav-icon" aria-label="Siguiente">&gt;</button>
-  </div>
-</div>
-</div>
-        <div class="cal-dow d-grid" style="grid-template-columns:repeat(7,1fr);gap:4px;">
-          <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+  <div class="rrhh-card">
+    <div class="hdr">Calendario</div>
+    <div class="body">
+      <div class="cal-head">
+        <div class="d-flex align-items-center gap-2">
+          <select id="cal-month" class="form-select form-select-sm" style="width:auto"></select>
+          <select id="cal-year"  class="form-select form-select-sm" style="width:auto"></select>
         </div>
-        <div id="cal-grid" class="cal-grid"></div>
-        <div class="mt-3 small text-muted">Arrastra para seleccionar un rango.</div>
+        <div class="cal-nav d-flex align-items-center gap-1">
+          <button type="button" id="cal-prev" class="nav-icon" aria-label="Anterior">&lt;</button>
+          <button type="button" id="cal-today" class="btn btn-light btn-sm">Hoy</button>
+          <button type="button" id="cal-next" class="nav-icon" aria-label="Siguiente">&gt;</button>
+        </div>
       </div>
+      <div class="cal-dow d-grid" style="grid-template-columns:repeat(7,1fr);gap:4px;">
+        <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+      </div>
+      <div id="cal-grid" class="cal-grid"></div>
+      <div class="mt-3 small text-muted">Arrastra para seleccionar un rango.</div>
     </div>
-
-    <div class="rrhh-card">
-      <div class="hdr d-flex justify-content-between align-items-center">
-        <span>Eventos</span>
-        <span class="small text-muted" id="evt-range-label"></span>
+  </div>
+  <div class="rrhh-card">
+    <div class="hdr d-flex justify-content-between align-items-center">
+      <span>Eventos</span>
+      <span class="small text-muted" id="evt-range-label"></span>
+    </div>
+    <div class="body">
+      <div class="mb-3">
+        <div class="fw-semibold mb-2">Del período seleccionado</div>
+        <div id="evt-current"></div>
       </div>
-      <div class="body">
-        <div class="mb-3">
-          <div class="fw-semibold mb-2">Del período seleccionado</div>
-          <div id="evt-current"></div>
-        </div>
-        <div>
-          <div class="fw-semibold mb-2">Próximos</div>
-          <div id="evt-next"></div>
-        </div>
+      <div>
+        <div class="fw-semibold mb-2">Próximos</div>
+        <div id="evt-next"></div>
       </div>
     </div>
   </div>
-
-  <div class="kpi-grid mt-3">
+</div><div class="kpi-grid mt-3">
     <div class="kpi"><div class="lbl">Bruto</div><div class="val">₡ 0.00</div></div>
     <div class="kpi"><div class="lbl">Deducciones</div><div class="val">₡ 0.00</div></div>
     <div class="kpi"><div class="lbl">Neto</div><div class="val">₡ 0.00</div></div>
@@ -150,11 +146,40 @@
   }
 
         function initSelectors(){
-    if(!monthSel || !yearSel) return;
-    // Populate month selector
-    monthSel.innerHTML = "";
-    for(let i = 0; i < 12; i++){
-      const name = new Date(2000,i,1).toLocaleString("es-CR", { month: "long" });
+  if(!monthSel || !yearSel) return;
+  monthSel.innerHTML = "";
+  yearSel.innerHTML  = "";
+  // Poblar meses (nombres en español)
+  for (let i = 0; i < 12; i++) {
+    const name = new Date(2000, i, 1).toLocaleString("es-CR", { month: "long" });
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    monthSel.appendChild(opt);
+  }
+  // Poblar años (rango actual-3 a actual+4)
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear - 3; y <= currentYear + 4; y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  }
+  // Seleccionar mes y año actuales
+  monthSel.value = viewDate.getMonth().toString();
+  yearSel.value  = viewDate.getFullYear().toString();
+  // Al cambiar los selectores, recalcular
+  monthSel.onchange = () => {
+    viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
+    renderCal();
+    renderEvents();
+  };
+  yearSel.onchange = () => {
+    viewDate = new Date(parseInt(yearSel.value), parseInt(monthSel.value), 1);
+    renderCal();
+    renderEvents();
+  };
+});
       const opt = document.createElement("option");
       opt.value = i;
       opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
@@ -234,6 +259,7 @@
 
 
 <!-- bump: 2025-09-18T13:05:56 -->
+
 
 
 
