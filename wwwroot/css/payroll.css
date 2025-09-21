@@ -98,3 +98,15 @@ a:focus-visible, .btn:focus-visible { box-shadow: 0 0 0 3px rgba(2,52,63,.18) !i
 
 /* Ancho fijo para el botón Hoy */
 .btn.btn-light.btn-sm { min-width: 2.8rem; }
+
+/* === PAYROLL FIX: cal-today width (no wrap) START === */
+.payroll-scope .cal-nav #cal-today,
+#rrhh-dashboard .cal-nav #cal-today {
+  white-space: nowrap;       /* evita cortar 'Hoy' */
+  min-width: 3.6rem !important;  /* fuerza espacio suficiente */
+  padding-left: 0.65rem;     /* aire a los lados */
+  padding-right: 0.65rem;
+  overflow: visible;
+}
+/* === PAYROLL FIX: cal-today width (no wrap) END === */
+
