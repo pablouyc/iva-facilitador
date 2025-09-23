@@ -1,7 +1,7 @@
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @using System
 @using System.Linq
 @using System.Collections
+@using System.Globalization
 
 @{
     var section = (ViewData["PayrollSection"] as string) ?? "";
@@ -15,7 +15,7 @@
     string aEmp  = string.Equals(section, "Empresas",         StringComparison.OrdinalIgnoreCase) ? "active" : "";
     string aCol  = string.Equals(section, "Colaboradores",    StringComparison.OrdinalIgnoreCase) ? "active" : "";
 
-    // ===== Cargar DbContext vía DI sin @inject =====
+    // ====== Cargar DbContext vía DI sin @inject (reflexión) ======
     object? db = null;
     try
     {
@@ -25,7 +25,7 @@
     }
     catch { }
 
-    // ===== Enumerar empresas por reflexión (tolerante a nombres distintos) =====
+    // ====== Enumerar empresas por reflexión (tolerante a nombres distintos) ======
     var rawList = new System.Collections.Generic.List<object>();
     string statusText = "Sin datos";
 
@@ -61,7 +61,7 @@
         statusText = "BD no inicializada";
     }
 
-    // ===== Helpers por reflexión para Id y Nombre =====
+    // ====== Helpers por reflexión para Id y Nombre ======
     Func<object,string> getId = (obj) =>
     {
         var t = obj.GetType();
@@ -103,19 +103,90 @@
         items.Add((id, getName(c)));
     }
 
-    var selectedCompanyId = (string?)Context.Request.Query["companyId"] ?? "";
+    var companyId = (string?)Context.Request.Query["companyId"] ?? "";
+
+    // ====== Filtros de fecha (solo para 4 secciones) ======
+    bool showFilter = new[] { "Planilla total","Deducciones","Extras","Reportes" }
+        .Contains(section, StringComparer.OrdinalIgnoreCase);
+
+    // Query params
+    var mParam    = ((string?)Context.Request.Query["m"])?.Trim();
+    var qParam    = ((string?)Context.Request.Query["q"])?.Trim();
+    var fromParam = ((string?)Context.Request.Query["from"])?.Trim();
+    var toParam   = ((string?)Context.Request.Query["to"])?.Trim();
+
+    // Hoy en zona CR
+    DateTime todayCR;
+    try {
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("America/Costa_Rica");
+        todayCR = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+    } catch {
+        try {
+            var tz = TimeZoneInfo.FindSystemTimeZoneById("Central America Standard Time");
+            todayCR = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        } catch {
+            todayCR = DateTime.Now;
+        }
+    }
+
+    // Mes base
+    var firstOfMonth = new DateTime(todayCR.Year, todayCR.Month, 1);
+    if (!string.IsNullOrEmpty(mParam))
+    {
+        if (DateTime.TryParseExact(mParam, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var mdt))
+            firstOfMonth = new DateTime(mdt.Year, mdt.Month, 1);
+    }
+    int dim = DateTime.DaysInMonth(firstOfMonth.Year, firstOfMonth.Month);
+
+    // Rango
+    DateTime fromDate, toDate;
+    string qValue = "";
+
+    if (!string.IsNullOrEmpty(fromParam) && !string.IsNullOrEmpty(toParam)
+        && DateTime.TryParse(fromParam, out fromDate) && DateTime.TryParse(toParam, out toDate))
+    {
+        if (fromDate > toDate) { var t = fromDate; fromDate = toDate; toDate = t; }
+
+        if (fromDate.Year==firstOfMonth.Year && fromDate.Month==firstOfMonth.Month
+            && toDate.Year==firstOfMonth.Year && toDate.Month==firstOfMonth.Month)
+        {
+            if (fromDate.Day==1 && toDate.Day==Math.Min(15, dim)) qValue = "1";
+            else if (fromDate.Day==16 && toDate.Day==dim)         qValue = "2";
+        }
+    }
+    else
+    {
+        int qInt;
+        if (!int.TryParse(qParam, out qInt)) qInt = (todayCR.Day<=15)?1:2;
+        if (qInt==1) { fromDate = firstOfMonth; toDate = new DateTime(firstOfMonth.Year, firstOfMonth.Month, Math.Min(15, dim)); qValue="1"; }
+        else         { fromDate = new DateTime(firstOfMonth.Year, firstOfMonth.Month, 16); toDate = new DateTime(firstOfMonth.Year, firstOfMonth.Month, dim); qValue="2"; }
+    }
+
+    string mValue    = firstOfMonth.ToString("yyyy-MM",   CultureInfo.InvariantCulture);
+    string fromValue = fromDate    .ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
+    string toValue   = toDate      .ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
+
+    // Rutas: companyId para todas; filtros solo para 4 secciones
+    var routeAll = new System.Collections.Generic.Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+    if (!string.IsNullOrEmpty(companyId)) routeAll["companyId"] = companyId;
+
+    var routeFilters = new System.Collections.Generic.Dictionary<string,string>(routeAll);
+    routeFilters["m"]    = mValue;
+    routeFilters["from"] = fromValue;
+    routeFilters["to"]   = toValue;
+    if (!string.IsNullOrEmpty(qValue)) routeFilters["q"] = qValue;
 }
 
 <div class="card topbar payroll-scope">
   <div class="card-body d-flex align-items-center gap-2 flex-wrap">
     <div class="btn-group segmented" role="group" aria-label="Navegación RRHH">
-      <a asp-area="Payroll" asp-page="/Index"                  class="btn btn-outline-secondary btn-sm @aPrin">Principal</a>
-      <a asp-area="Payroll" asp-page="/PlanillaTotal/Index"    class="btn btn-outline-secondary btn-sm @aPlan">Planilla total</a>
-      <a asp-area="Payroll" asp-page="/Deducciones/Index"      class="btn btn-outline-secondary btn-sm @aDed">Deducciones</a>
-      <a asp-area="Payroll" asp-page="/Extras/Index"           class="btn btn-outline-secondary btn-sm @aExt">Extras</a>
-      <a asp-area="Payroll" asp-page="/Reportes/Index"         class="btn btn-outline-secondary btn-sm @aRep">Reportes</a>
-      <a asp-area="Payroll" asp-page="/Empresas/Index"         class="btn btn-outline-secondary btn-sm @aEmp">Empresas</a>
-      <a asp-area="Payroll" asp-page="/Colaboradores/Index"    class="btn btn-outline-secondary btn-sm @aCol">Colaboradores</a>
+      <a asp-area="Payroll" asp-page="/Index"                  asp-all-route-data="routeAll"    class="btn btn-outline-secondary btn-sm @aPrin">Principal</a>
+      <a asp-area="Payroll" asp-page="/PlanillaTotal/Index"    asp-all-route-data="routeFilters" class="btn btn-outline-secondary btn-sm @aPlan">Planilla total</a>
+      <a asp-area="Payroll" asp-page="/Deducciones/Index"      asp-all-route-data="routeFilters" class="btn btn-outline-secondary btn-sm @aDed">Deducciones</a>
+      <a asp-area="Payroll" asp-page="/Extras/Index"           asp-all-route-data="routeFilters" class="btn btn-outline-secondary btn-sm @aExt">Extras</a>
+      <a asp-area="Payroll" asp-page="/Reportes/Index"         asp-all-route-data="routeFilters" class="btn btn-outline-secondary btn-sm @aRep">Reportes</a>
+      <a asp-area="Payroll" asp-page="/Empresas/Index"         asp-all-route-data="routeAll"     class="btn btn-outline-secondary btn-sm @aEmp">Empresas</a>
+      <a asp-area="Payroll" asp-page="/Colaboradores/Index"    asp-all-route-data="routeAll"     class="btn btn-outline-secondary btn-sm @aCol">Colaboradores</a>
     </div>
 
     <div class="ms-auto d-flex align-items-center gap-2">
@@ -123,15 +194,98 @@
 
       <form method="get" asp-area="Payroll" asp-page="/Index" class="d-flex align-items-center gap-2">
         <select name="companyId" id="company-select" class="form-select form-select-sm" onchange="this.form.submit()">
-          <option value="" selected="@(string.IsNullOrEmpty(selectedCompanyId))">Todas las empresas</option>
+          <option value="" selected="@(string.IsNullOrEmpty(companyId))">Todas las empresas</option>
           @foreach (var it in items)
           {
-              <option value="@it.Id" selected="@(selectedCompanyId == it.Id)">@it.Name</option>
+              <option value="@it.Id" selected="@(companyId == it.Id)">@it.Name</option>
           }
         </select>
         <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Aplicar</button></noscript>
       </form>
     </div>
+
+    @* ====== Bloque de filtros (debajo del menú) solo en 4 secciones ====== *@
+    @if (showFilter)
+    {
+        <div class="w-100"></div>
+        <form id="payroll-range-form" method="get" action="@Context.Request.Path" class="row g-2 align-items-end mt-2">
+            @if (!string.IsNullOrEmpty(companyId)) {
+              <input type="hidden" name="companyId" value="@companyId" />
+            }
+
+            <div class="col-auto">
+              <label class="form-label form-label-sm">Mes</label>
+              <input type="month" name="m" id="pf-month" value="@mValue" class="form-control form-control-sm" />
+            </div>
+
+            <div class="col-auto">
+              <label class="form-label form-label-sm">Quincena</label>
+              <select name="q" id="pf-q" class="form-select form-select-sm">
+                <option value=""  selected="@(string.IsNullOrEmpty(qParam) && string.IsNullOrEmpty(qValue))">—</option>
+                <option value="1" selected="@(qValue=="1")">1ª (1–15)</option>
+                <option value="2" selected="@(qValue=="2")">2ª (16–fin)</option>
+              </select>
+            </div>
+
+            <div class="col-auto">
+              <label class="form-label form-label-sm">Desde</label>
+              <input type="date" name="from" id="pf-from" value="@fromValue" class="form-control form-control-sm" />
+            </div>
+
+            <div class="col-auto">
+              <label class="form-label form-label-sm">Hasta</label>
+              <input type="date" name="to" id="pf-to" value="@toValue" class="form-control form-control-sm" />
+            </div>
+
+            <div class="col-auto">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Aplicar</button>
+            </div>
+        </form>
+
+        <script>
+        (function(){
+          var f  = document.getElementById('payroll-range-form'); if(!f) return;
+          var m  = document.getElementById('pf-month');
+          var q  = document.getElementById('pf-q');
+          var d1 = document.getElementById('pf-from');
+          var d2 = document.getElementById('pf-to');
+
+          function pad2(n){ return (n<10?'0':'')+n; }
+          function ymd(y,m,d){ return y+'-'+pad2(m)+'-'+pad2(d); }
+          function lastDay(y,m){ return new Date(y, m, 0).getDate(); } // m: 1..12
+          function monthParts(){ if(!m || !m.value) return null; var s=m.value.split('-'); return {y:+s[0], m:+s[1]}; }
+
+          function syncFromMonthQ(){
+            var mp = monthParts(); if(!mp) return;
+            var ld = lastDay(mp.y, mp.m);
+            if(q.value==='1'){ d1.value = ymd(mp.y, mp.m, 1);  d2.value = ymd(mp.y, mp.m, Math.min(15, ld)); }
+            else if(q.value==='2'){ d1.value = ymd(mp.y, mp.m, 16); d2.value = ymd(mp.y, mp.m, ld); }
+          }
+
+          function syncQFromRange(){
+            if(!d1.value || !d2.value) return;
+            var a = d1.value.split('-').map(Number);
+            var b = d2.value.split('-').map(Number);
+            var ld = lastDay(a[0], a[1]);
+
+            // Ajustar el input "mes" al del "desde"
+            m.value = a[0] + '-' + (a[1] < 10 ? '0'+a[1] : a[1]);
+
+            if(a[0]===b[0] && a[1]===b[1]){
+              if(a[2]===1 && b[2]===Math.min(15, ld)) q.value='1';
+              else if(a[2]===16 && b[2]===ld)         q.value='2';
+              else q.value='';
+            } else {
+              q.value='';
+            }
+          }
+
+          if(m) m.addEventListener('change',  syncFromMonthQ);
+          if(q) q.addEventListener('change',  syncFromMonthQ);
+          if(d1) d1.addEventListener('change', syncQFromRange);
+          if(d2) d2.addEventListener('change', syncQFromRange);
+        })();
+        </script>
+    }
   </div>
 </div>
-
