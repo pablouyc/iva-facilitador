@@ -1,10 +1,56 @@
+@using IvaFacilitador.Areas.Payroll.BaseDatosPayroll
+@inject PayrollDbContext Db
+
 @{
     var section = (ViewData["PayrollSection"] as string) ?? "";
     Func<string,string> Active = key =>
         string.Equals(section, key, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+
+    // Helpers tolerantes a distintos nombres de propiedades
+    int GetId(object o) {
+        var t = o.GetType();
+        var p = t.GetProperty("Id") ?? t.GetProperty("CompanyId");
+        if (p == null) return 0;
+        var v = p.GetValue(o);
+        return v is int i ? i : Convert.ToInt32(v ?? 0);
+    }
+    string GetName(object o) {
+        var t = o.GetType();
+        var p = t.GetProperty("Name") ?? t.GetProperty("CompanyName") ?? t.GetProperty("DisplayName");
+        var v = p?.GetValue(o);
+        return Convert.ToString(v) ?? "Empresa";
+    }
+
+    // Cargar empresas
+    var companies = Db.Companies.AsEnumerable().OrderBy(c => GetName(c)).ToList();
+
+    // Selección actual por query o cookie
+    var req = Context.Request;
+    int selectedId = 0;
+    if (req.Query.ContainsKey("companyId"))
+    {
+        int.TryParse(req.Query["companyId"].ToString(), out selectedId);
+    }
+    else if (req.Cookies.TryGetValue("payroll_company_id", out var cval))
+    {
+        int.TryParse(cval, out selectedId);
+    }
+
+    string empresaNombre = selectedId == 0
+        ? "Todas las empresas"
+        : companies.Select(c => new { Id = GetId(c), Name = GetName(c) })
+                   .FirstOrDefault(x => x.Id == selectedId)?.Name ?? "Empresa";
+
+    // Estado: si existe cookie de parametrización pendiente → "Pendiente", si no "Activa"
+    string estado = (req.Cookies.TryGetValue("must_param_realm", out var realm) && !string.IsNullOrWhiteSpace(realm))
+        ? "Pendiente"
+        : "Activa";
+    string estadoClase = (estado == "Activa") ? "badge bg-success" : "badge bg-warning";
 }
+
 <div class="card topbar payroll-scope">
-  <div class="card-body d-flex align-items-center gap-2">
+  <div class="card-body d-flex align-items-center justify-content-between gap-3">
+    <!-- Navegación -->
     <div class="btn-group segmented" role="group" aria-label="Navegación RRHH">
       <a asp-area="Payroll" asp-page="/Index"                  class="btn btn-outline-secondary btn-sm @Active("Principal")">Principal</a>
       <a asp-area="Payroll" asp-page="/PlanillaTotal/Index"    class="btn btn-outline-secondary btn-sm @Active("Planilla total")">Planilla total</a>
@@ -14,5 +60,37 @@
       <a asp-area="Payroll" asp-page="/Empresas/Index"         class="btn btn-outline-secondary btn-sm @Active("Empresas")">Empresas</a>
       <a asp-area="Payroll" asp-page="/Colaboradores/Index"    class="btn btn-outline-secondary btn-sm @Active("Colaboradores")">Colaboradores</a>
     </div>
+
+    <!-- Selector de empresa + estado -->
+    <div class="d-flex align-items-center gap-2">
+      <div class="text-muted small">Empresa</div>
+      <select id="sel-company" class="form-select form-select-sm" style="min-width:220px;max-width:320px;">
+        <option value="0" @(selectedId==0 ? "selected" : "")>Todas las empresas</option>
+        @foreach (var c in companies)
+        {
+            var id = GetId(c);
+            var name = GetName(c);
+            <option value="@id" @(id==selectedId ? "selected" : "")>@name</option>
+        }
+      </select>
+      <span class="@estadoClase" id="empresa-estado">@estado</span>
+    </div>
   </div>
 </div>
+
+<script>
+(()=> {
+  const sel = document.getElementById('sel-company');
+  if(!sel) return;
+  sel.addEventListener('change', ()=>{
+    const v = sel.value || "0";
+    // Guardar selección 90 días
+    document.cookie = "payroll_company_id=" + v + "; path=/; max-age=" + (60*60*24*90) + "; samesite=lax";
+    // Añadir ?companyId= a la URL y navegar
+    const url = new URL(window.location.href);
+    url.searchParams.set('companyId', v);
+    window.location.href = url.toString();
+  }, {passive:true});
+})();
+</script>
+
