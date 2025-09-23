@@ -4,8 +4,6 @@ using System.Linq;
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
 using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,10 +42,19 @@ builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
 builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
 
+// ===== DBContext con fallback a Data\payroll.db =====
 builder.Services.AddDbContext<PayrollDbContext>(opt =>
 {
-    opt.UseSqlite(builder.Configuration.GetConnectionString("Payroll"));
+    var cs = builder.Configuration.GetConnectionString("Payroll");
+    if (string.IsNullOrWhiteSpace(cs))
+    {
+        var dataDir = System.IO.Path.Combine(builder.Environment.ContentRootPath, "Data");
+        System.IO.Directory.CreateDirectory(dataDir);
+        cs = $"Data Source={System.IO.Path.Combine(dataDir, "payroll.db")}";
+    }
+    opt.UseSqlite(cs);
 });
+
 var app = builder.Build();
 
 // ===== Cultura es-CR =====
@@ -60,7 +67,6 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 });
 
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.UseAuthentication();
@@ -79,8 +85,7 @@ app.Use(async (context, next) =>
         {
             "/Parametrizador",
             "/Auth/Callback",
-            "/Auth/Disconnect"
-        };
+            "/Auth/Disconnect", "/Payroll"};
 
         bool esEstatico = path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
                        || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
@@ -97,7 +102,7 @@ app.Use(async (context, next) =>
 
     await next();
 });
-app.MapRazorPages();
 
+app.MapRazorPages();
 app.Run();
 
