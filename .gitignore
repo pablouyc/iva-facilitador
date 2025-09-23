@@ -13,3 +13,9 @@ obj/
 *.bak
 *.bak_*
 
+
+# Payroll (auto)
+Areas/Payroll/**/*.bak.*
+audit/
+payroll.db
+
