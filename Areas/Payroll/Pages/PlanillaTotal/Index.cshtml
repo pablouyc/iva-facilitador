@@ -1,9 +1,122 @@
 @page
+@model IvaFacilitador.Areas.Payroll.Pages.PlanillaTotal.IndexModel
 @{
     ViewData["Title"] = "Planilla total";
     ViewData["PayrollSection"] = "Planilla total";
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
-<h1>Planilla total</h1>
-<p>Sección en construcción.</p>
+@section Styles {
+  <style>
+    .pt-wrap { position: relative; }
+    .pt-table-wrap { overflow: auto; }
+    .pt-table thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
+    .pt-table td, .pt-table th { white-space: nowrap; }
+    .pt-meta { display: flex; gap: .75rem; align-items: center; margin-bottom: .75rem; }
+    .pt-meta .badge { font-weight: 500; }
+    .pt-cell-money { text-align: right; font-variant-numeric: tabular-nums; }
+  </style>
+}
+
+<div class="pt-wrap">
+  <div class="pt-meta">
+    <span class="badge text-bg-light">Periodo: @Model.PeriodoLabel</span>
+    @if (!string.IsNullOrWhiteSpace(Model.companyId))
+    {
+        <span class="badge text-bg-light">Empresa: @Model.companyId</span>
+    }
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="pt-table-wrap">
+        <table class="table table-sm table-hover align-middle pt-table">
+          <thead>
+            <tr>
+              <th>Colaborador</th>
+              <th>Identificación</th>
+              <th>Cargo</th>
+              <th>Sector</th>
+              <th class="text-end">Salario mensual</th>
+              <th class="text-end">Salario quincena</th>
+              <th class="text-end">Extras</th>
+              <th class="text-end">Salario bruto</th>
+              <th class="text-end">Deducciones</th>
+              <th class="text-end">Neto a recibir</th>
+            </tr>
+          </thead>
+          <tbody>
+          @for (var i = 0; i < Model.Rows.Count; i++)
+          {
+              var r = Model.Rows[i];
+              <tr>
+                <td>@r.Colaborador</td>
+                <td>@r.Identificacion</td>
+                <td>@r.Cargo</td>
+                <td>@r.Sector</td>
+                <td class="pt-cell-money">@Model.Money(r.SalarioMensual)</td>
+                <td class="pt-cell-money">@Model.Money(r.SalarioQuincena)</td>
+                <td class="pt-cell-money">
+                  <a href="javascript:void(0)" class="link-dark text-decoration-none pop-extras" data-content-id="ex-@i">
+                    @Model.Money(r.Extras)
+                  </a>
+                  <div id="ex-@i" class="d-none">
+                    <div class="small">
+                      @foreach (var it in r.ExtrasDetalle)
+                      {
+                        <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
+                      }
+                      @if (r.ExtrasDetalle.Count == 0)
+                      {
+                        <div class="text-muted fst-italic">Sin extras</div>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="pt-cell-money">@Model.Money(r.Bruto)</td>
+                <td class="pt-cell-money">
+                  <a href="javascript:void(0)" class="link-dark text-decoration-none pop-deds" data-content-id="dd-@i">
+                    @Model.Money(r.Deducciones)
+                  </a>
+                  <div id="dd-@i" class="d-none">
+                    <div class="small">
+                      @foreach (var it in r.DeduccionesDetalle)
+                      {
+                        <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
+                      }
+                      @if (r.DeduccionesDetalle.Count == 0)
+                      {
+                        <div class="text-muted fst-italic">Sin deducciones</div>
+                      }
+                    </div>
+                  </div>
+                </td>
+                <td class="pt-cell-money fw-semibold">@Model.Money(r.Neto)</td>
+              </tr>
+          }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+  <script>
+    (function(){
+      if (!window.bootstrap) return;
+      function initPop(cls){
+        document.querySelectorAll(cls).forEach(function(el){
+          var id = el.getAttribute('data-content-id');
+          var html = document.getElementById(id)?.innerHTML || '';
+          var pop = bootstrap.Popover.getInstance(el);
+          if (pop) pop.dispose();
+          new bootstrap.Popover(el, { html: true, content: html, placement: 'top', trigger: 'hover focus' });
+        });
+      }
+      initPop('.pop-extras');
+      initPop('.pop-deds');
+      document.addEventListener('ivapayroll:reinit-popovers', function(){ initPop('.pop-extras'); initPop('.pop-deds'); });
+    })();
+  </script>
+}
