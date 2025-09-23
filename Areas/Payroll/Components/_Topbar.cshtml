@@ -1,52 +1,18 @@
-@{ var section = (ViewData["PayrollSection"] as string) ?? "Other"; }
-@* Topbar contextual (UI) *@
-<div class="card shadow-sm mb-3 topbar">
-  <div class="card-body">
-
-    <!-- FILA 1: Navegación entre secciones -->
-    <div class="btn-group btn-group-sm segmented flex-wrap mb-3" role="group" aria-label="Navegación Payroll">
-      <a asp-area="Payroll" asp-page="/Index" class="btn btn-outline-secondary btn-sm">Principal</a>
-      <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Planilla total</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Deducciones</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Extras</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Reportes</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Empresas</button>
-      <button type="button" class="btn btn-outline-secondary btn-sm" disabled title="Próximamente">Colaboradores</button>
+@{
+    var section = (ViewData["PayrollSection"] as string) ?? "";
+    Func<string,string> Active = key =>
+        string.Equals(section, key, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<div class="card topbar payroll-scope">
+  <div class="card-body d-flex align-items-center gap-2">
+    <div class="btn-group segmented" role="group" aria-label="Navegación RRHH">
+      <a asp-area="Payroll" asp-page="/Index"                  class="btn btn-outline-secondary btn-sm @Active("Principal")">Principal</a>
+      <a asp-area="Payroll" asp-page="/PlanillaTotal/Index"    class="btn btn-outline-secondary btn-sm @Active("Planilla total")">Planilla total</a>
+      <a asp-area="Payroll" asp-page="/Deducciones/Index"      class="btn btn-outline-secondary btn-sm @Active("Deducciones")">Deducciones</a>
+      <a asp-area="Payroll" asp-page="/Extras/Index"           class="btn btn-outline-secondary btn-sm @Active("Extras")">Extras</a>
+      <a asp-area="Payroll" asp-page="/Reportes/Index"         class="btn btn-outline-secondary btn-sm @Active("Reportes")">Reportes</a>
+      <a asp-area="Payroll" asp-page="/Empresas/Index"         class="btn btn-outline-secondary btn-sm @Active("Empresas")">Empresas</a>
+      <a asp-area="Payroll" asp-page="/Colaboradores/Index"    class="btn btn-outline-secondary btn-sm @Active("Colaboradores")">Colaboradores</a>
     </div>
-
-    <!-- FILA 2: Filtros (Empresa / Desde / Hasta / Estado) -->
-    <div class="row g-3 align-items-end payroll-filters">
-      <!-- Empresa -->
-      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-        <label class="form-label mb-1 small text-muted d-block">Empresa</label>
-        <select class="form-select form-select-sm">
-          <option selected>Seleccionar…</option>
-          <option>Empresa A (demo)</option>
-          <option>Empresa B (demo)</option>
-        </select>
-      </div>
-
-      @if (section != "Principal") { <div class="col-6 col-sm-3 col-md-2 col-lg-2">
-        <label class="form-label mb-1 small text-muted d-block">Desde</label>
-        <input type="date" class="form-control form-control-sm"/>
-      </div> }
-
-      @if (section != "Principal") { <div class="col-6 col-sm-3 col-md-2 col-lg-2">
-        <label class="form-label mb-1 small text-muted d-block">Hasta</label>
-        <input type="date" class="form-control form-control-sm"/>
-      </div> }
-
-      <!-- Estado (alineado a la derecha en pantallas grandes) -->
-      <div class="col-12 col-md-4 col-lg-5 d-flex justify-content-md-end">
-        <div>
-          <label class="form-label mb-1 small text-muted d-block">Estado</label>
-          <span class="badge text-bg-secondary">Borrador</span>
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>
-
-
-
