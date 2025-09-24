@@ -73,7 +73,24 @@
     /* popovers */
     .popover{ border:1px solid var(--pt-border); box-shadow:0 14px 30px rgba(2,52,63,.18); border-radius:10px; }
     .popover .popover-body{ font-size:.875rem; color:var(--pt-ink); }
-  </style>
+  
+    /* filtros de cabecera */
+    .pt-filter-row th { background:#fff; position:sticky; top:40px; z-index:1; }
+    .pt-filter-row input[type="text"]{ width:16ch; }
+    .pt-filter-row .nbox{ display:flex; gap:.25rem; align-items:center; }
+    .pt-filter-row .nbox input{ width:8ch; }
+
+    /* tfoot sticky */
+    .pt-table tfoot.pt-sticky { position: sticky; bottom: 0; background:#fff; }
+    .pt-table tfoot.pt-sticky th, .pt-table tfoot.pt-sticky td{
+      background:#fff; border-top:2px solid var(--pt-border-strong);
+      box-shadow: 0 -4px 10px rgba(2,52,63,.06);
+    }
+
+    /* fila subtotal por sector */
+    .subtotal-row{ background: var(--pt-row); font-weight:600; }
+    .subtotal-label{ text-align:right; color:#0b5c6b; }
+</style>
 }
 <div class="pt-wrap">
   <div class="pt-meta">
@@ -89,69 +106,136 @@
       <div class="pt-table-wrap">
         <table class="table table-sm table-hover align-middle pt-table">
           <thead>
-            <tr>
-              <th>Colaborador</th>
-              <th>Identificación</th>
-              <th>Cargo</th>
-              <th>Sector</th>
-              <th class="text-end">Salario mensual</th>
-              <th class="text-end">Salario quincena</th>
-              <th class="text-end">Extras</th>
-              <th class="text-end">Salario bruto</th>
-              <th class="text-end">Deducciones</th>
-              <th class="text-end">Neto a recibir</th>
-            </tr>
-          </thead>
-          <tbody>
-          @for (var i = 0; i < Model.Rows.Count; i++)
-          {
-              var r = Model.Rows[i];
-              <tr>
-                <td>@r.Colaborador</td>
-                <td>@r.Identificacion</td>
-                <td>@r.Cargo</td>
-                <td>@r.Sector</td>
-                <td class="pt-cell-money">@Model.Money(r.SalarioMensual)</td>
-                <td class="pt-cell-money">@Model.Money(r.SalarioQuincena)</td>
-                <td class="pt-cell-money">
-                  <a href="javascript:void(0)" class="link-dark text-decoration-none pop-extras" data-content-id="ex-@i">
-                    @Model.Money(r.Extras)
-                  </a>
-                  <div id="ex-@i" class="d-none">
-                    <div class="small">
-                      @foreach (var it in r.ExtrasDetalle)
-                      {
-                        <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
-                      }
-                      @if (r.ExtrasDetalle.Count == 0)
-                      {
-                        <div class="text-muted fst-italic">Sin extras</div>
-                      }
-                    </div>
-                  </div>
-                </td>
-                <td class="pt-cell-money">@Model.Money(r.Bruto)</td>
-                <td class="pt-cell-money">
-                  <a href="javascript:void(0)" class="link-dark text-decoration-none pop-deds" data-content-id="dd-@i">
-                    @Model.Money(r.Deducciones)
-                  </a>
-                  <div id="dd-@i" class="d-none">
-                    <div class="small">
-                      @foreach (var it in r.DeduccionesDetalle)
-                      {
-                        <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
-                      }
-                      @if (r.DeduccionesDetalle.Count == 0)
-                      {
-                        <div class="text-muted fst-italic">Sin deducciones</div>
-                      }
-                    </div>
-                  </div>
-                </td>
-                <td class="pt-cell-money fw-semibold">@Model.Money(r.Neto)</td>
-              </tr>
-          }
-          </tbody>
+  <tr>
+    <th>Colaborador</th>
+    <th>Identificación</th>
+    <th>Cargo</th>
+    <th>Sector</th>
+    <th class="text-end">Salario mensual</th>
+    <th class="text-end">Salario quincena</th>
+    <th class="text-end">Extras</th>
+    <th class="text-end">Salario bruto</th>
+    <th class="text-end">Deducciones</th>
+    <th class="text-end">Neto a recibir</th>
+  </tr>
+  <tr class="pt-filter-row">
+    <th><input id="f-colab" type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
+    <th><input id="f-id"    type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
+    <th><input id="f-cargo" type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
+    <th><input id="f-sector"type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
+    <th>
+      <div class="nbox">
+        <input id="f-mensual-min" type="number" class="form-control form-control-sm" placeholder="mín">
+        <span>–</span>
+        <input id="f-mensual-max" type="number" class="form-control form-control-sm" placeholder="máx">
+      </div>
+    </th>
+    <th>
+      <div class="nbox">
+        <input id="f-quin-min" type="number" class="form-control form-control-sm" placeholder="mín">
+        <span>–</span>
+        <input id="f-quin-max" type="number" class="form-control form-control-sm" placeholder="máx">
+      </div>
+    </th>
+    <th>
+      <div class="nbox">
+        <input id="f-extras-min" type="number" class="form-control form-control-sm" placeholder="mín">
+        <span>–</span>
+        <input id="f-extras-max" type="number" class="form-control form-control-sm" placeholder="máx">
+      </div>
+    </th>
+    <th>
+      <div class="nbox">
+        <input id="f-bruto-min" type="number" class="form-control form-control-sm" placeholder="mín">
+        <span>–</span>
+        <input id="f-bruto-max" type="number" class="form-control form-control-sm" placeholder="máx">
+      </div>
+    </th>
+    <th>
+      <div class="nbox">
+        <input id="f-deds-min" type="number" class="form-control form-control-sm" placeholder="mín">
+        <span>–</span>
+        <input id="f-deds-max" type="number" class="form-control form-control-sm" placeholder="máx">
+      </div>
+    </th>
+    <th>
+      <div class="d-flex justify-content-end">
+        <button type="button" id="btn-clear-filters" class="btn btn-sm btn-outline-secondary">Limpiar</button>
+      </div>
+    </th>
+  </tr>
+</thead>
+          <tbody id=""pt-body"">
+@for (var i = 0; i < Model.Rows.Count; i++)
+{
+    var r = Model.Rows[i];
+    <tr class=""data-row""
+        data-colaborador=""@r.Colaborador""
+        data-identificacion=""@r.Identificacion""
+        data-cargo=""@r.Cargo""
+        data-sector=""@r.Sector""
+        data-mensual=""@(r.SalarioMensual.ToString(System.Globalization.CultureInfo.InvariantCulture))""
+        data-quin=""@(r.SalarioQuincena.ToString(System.Globalization.CultureInfo.InvariantCulture))""
+        data-extras=""@(r.Extras.ToString(System.Globalization.CultureInfo.InvariantCulture))""
+        data-bruto=""@(r.Bruto.ToString(System.Globalization.CultureInfo.InvariantCulture))""
+        data-deds=""@(r.Deducciones.ToString(System.Globalization.CultureInfo.InvariantCulture))""
+        data-neto=""@(r.Neto.ToString(System.Globalization.CultureInfo.InvariantCulture))"">
+      <td>@r.Colaborador</td>
+      <td>@r.Identificacion</td>
+      <td>@r.Cargo</td>
+      <td>@r.Sector</td>
+      <td class=""pt-cell-money"">@Model.Money(r.SalarioMensual)</td>
+      <td class=""pt-cell-money"">@Model.Money(r.SalarioQuincena)</td>
+      <td class=""pt-cell-money"">
+        <a href=""javascript:void(0)"" class=""link-dark text-decoration-none pop-extras"" data-content-id=""ex-@i"">
+          @Model.Money(r.Extras)
+        </a>
+        <div id=""ex-@i"" class=""d-none"">
+          <div class=""small"">
+            @foreach (var it in r.ExtrasDetalle)
+            {
+              <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
+            }
+            @if (r.ExtrasDetalle.Count == 0)
+            {
+              <div class=""text-muted fst-italic"">Sin extras</div>
+            }
+          </div>
+        </div>
+      </td>
+      <td class=""pt-cell-money"">@Model.Money(r.Bruto)</td>
+      <td class=""pt-cell-money"">
+        <a href=""javascript:void(0)"" class=""link-dark text-decoration-none pop-deds"" data-content-id=""dd-@i"">
+          @Model.Money(r.Deducciones)
+        </a>
+        <div id=""dd-@i"" class=""d-none"">
+          <div class=""small"">
+            @foreach (var it in r.DeduccionesDetalle)
+            {
+              <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
+            }
+            @if (r.DeduccionesDetalle.Count == 0)
+            {
+              <div class=""text-muted fst-italic"">Sin deducciones</div>
+            }
+          </div>
+        </div>
+      </td>
+      <td class=""pt-cell-money fw-semibold"">@Model.Money(r.Neto)</td>
+    </tr>
+}
+</tbody>
+<tfoot class=""pt-sticky"">
+  <tr>
+    <th colspan=""4"" class=""subtotal-label"">Totales visibles</th>
+    <th class=""pt-cell-money"" id=""tot-mensual""></th>
+    <th class=""pt-cell-money"" id=""tot-quin""></th>
+    <th class=""pt-cell-money"" id=""tot-extras""></th>
+    <th class=""pt-cell-money"" id=""tot-bruto""></th>
+    <th class=""pt-cell-money"" id=""tot-deds""></th>
+    <th class=""pt-cell-money fw-semibold"" id=""tot-neto""></th>
+  </tr>
+</tfoot>
         </table>
       </div>
     </div>
@@ -176,7 +260,136 @@
       document.addEventListener('ivapayroll:reinit-popovers', function(){ initPop('.pop-extras'); initPop('.pop-deds'); });
     })();
   </script>
+
+    <script>
+      (function(){
+        // Utiles
+        function moneyCR(n){ try { return n.toLocaleString('es-CR',{style:'currency',currency:'CRC',maximumFractionDigits:0}); } catch { return n.toFixed(0); } }
+        function valNum(v){ var x = parseFloat(v); return isNaN(x)?null:x; }
+        function debouncer(fn,ms){ var t; return function(){ clearTimeout(t); var a=arguments; var th=this; t=setTimeout(function(){ fn.apply(th,a); }, ms||150); }; }
+
+        var tbody = document.getElementById('pt-body');
+        if(!tbody) return;
+
+        function visibleRows(){
+          return Array.from(tbody.querySelectorAll('tr.data-row')).filter(function(tr){ return !tr.classList.contains('d-none'); });
+        }
+
+        function applyFilters(){
+          var t = {
+            colab : (document.getElementById('f-colab')?.value || '').toLowerCase().trim(),
+            id    : (document.getElementById('f-id')?.value    || '').toLowerCase().trim(),
+            cargo : (document.getElementById('f-cargo')?.value || '').toLowerCase().trim(),
+            sector: (document.getElementById('f-sector')?.value|| '').toLowerCase().trim(),
+            mensualMin: valNum(document.getElementById('f-mensual-min')?.value),
+            mensualMax: valNum(document.getElementById('f-mensual-max')?.value),
+            quinMin   : valNum(document.getElementById('f-quin-min')?.value),
+            quinMax   : valNum(document.getElementById('f-quin-max')?.value),
+            extrasMin : valNum(document.getElementById('f-extras-min')?.value),
+            extrasMax : valNum(document.getElementById('f-extras-max')?.value),
+            brutoMin  : valNum(document.getElementById('f-bruto-min')?.value),
+            brutoMax  : valNum(document.getElementById('f-bruto-max')?.value),
+            dedsMin   : valNum(document.getElementById('f-deds-min')?.value),
+            dedsMax   : valNum(document.getElementById('f-deds-max')?.value),
+          };
+
+          Array.from(tbody.querySelectorAll('tr.data-row')).forEach(function(tr){
+            var ok = true;
+            function contains(dsKey, q){ if (!q) return true; var v=(tr.dataset[dsKey]||'').toLowerCase(); return v.indexOf(q) >= 0; }
+            function inRange(dsKey,min,max){
+              var v = parseFloat(tr.dataset[dsKey]||'0'); if (isNaN(v)) v=0;
+              if (min!=null && v<min) return false;
+              if (max!=null && v>max) return false;
+              return true;
+            }
+            ok = ok && contains('colaborador', t.colab);
+            ok = ok && contains('identificacion', t.id);
+            ok = ok && contains('cargo', t.cargo);
+            ok = ok && contains('sector', t.sector);
+
+            ok = ok && inRange('mensual', t.mensualMin, t.mensualMax);
+            ok = ok && inRange('quin',    t.quinMin,    t.quinMax);
+            ok = ok && inRange('extras',  t.extrasMin,  t.extrasMax);
+            ok = ok && inRange('bruto',   t.brutoMin,   t.brutoMax);
+            ok = ok && inRange('deds',    t.dedsMin,    t.dedsMax);
+
+            tr.classList.toggle('d-none', !ok);
+          });
+
+          rebuildSubtotals();
+          updateTotals();
+          document.dispatchEvent(new CustomEvent('ivapayroll:reinit-popovers'));
+        }
+
+        function updateTotals(){
+          var ids = ['mensual','quin','extras','bruto','deds','neto'];
+          var sums = {mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0};
+          visibleRows().forEach(function(tr){
+            ids.forEach(function(k){ var v=parseFloat(tr.dataset[k]||'0'); if(!isNaN(v)) sums[k]+=v; });
+          });
+          document.getElementById('tot-mensual').textContent = moneyCR(sums.mensual);
+          document.getElementById('tot-quin').textContent    = moneyCR(sums.quin);
+          document.getElementById('tot-extras').textContent  = moneyCR(sums.extras);
+          document.getElementById('tot-bruto').textContent   = moneyCR(sums.bruto);
+          document.getElementById('tot-deds').textContent    = moneyCR(sums.deds);
+          document.getElementById('tot-neto').textContent    = moneyCR(sums.neto);
+        }
+
+        function rebuildSubtotals(){
+          // quitar subtotales actuales
+          Array.from(tbody.querySelectorAll('tr.subtotal-row')).forEach(function(tr){ tr.remove(); });
+
+          // agrupar por sector sobre filas visibles y colocarlos después del último de su sector
+          var groups = new Map(); // sector => {rows:[], sums:{}}
+          visibleRows().forEach(function(tr){
+            var sec = tr.dataset.sector || '';
+            if(!groups.has(sec)) groups.set(sec, {rows:[], sums:{mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0}});
+            var g = groups.get(sec);
+            g.rows.push(tr);
+            ['mensual','quin','extras','bruto','deds','neto'].forEach(function(k){
+              var v=parseFloat(tr.dataset[k]||'0'); if(!isNaN(v)) g.sums[k]+=v;
+            });
+          });
+
+          groups.forEach(function(g,sec){
+            if (g.rows.length===0) return;
+            var last = g.rows[g.rows.length-1];
+            var tr = document.createElement('tr');
+            tr.className = 'subtotal-row';
+            tr.innerHTML = ''
+              + '<td colspan="4" class="subtotal-label">Subtotal — ' + (sec||'—') + '</td>'
+              + '<td class="pt-cell-money">'+moneyCR(g.sums.mensual)+'</td>'
+              + '<td class="pt-cell-money">'+moneyCR(g.sums.quin)+'</td>'
+              + '<td class="pt-cell-money">'+moneyCR(g.sums.extras)+'</td>'
+              + '<td class="pt-cell-money">'+moneyCR(g.sums.bruto)+'</td>'
+              + '<td class="pt-cell-money">'+moneyCR(g.sums.deds)+'</td>'
+              + '<td class="pt-cell-money fw-semibold">'+moneyCR(g.sums.neto)+'</td>';
+            last.parentNode.insertBefore(tr, last.nextSibling);
+          });
+        }
+
+        // listeners
+        var idsTxt = ['f-colab','f-id','f-cargo','f-sector'];
+        var idsNum = ['f-mensual-min','f-mensual-max','f-quin-min','f-quin-max','f-extras-min','f-extras-max','f-bruto-min','f-bruto-max','f-deds-min','f-deds-max'];
+        idsTxt.concat(idsNum).forEach(function(id){
+          var el = document.getElementById(id);
+          if (el) el.addEventListener('input', debouncer(applyFilters, 200));
+        });
+        document.getElementById('btn-clear-filters')?.addEventListener('click', function(){
+          idsTxt.concat(idsNum).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+          applyFilters();
+        });
+
+        // init
+        rebuildSubtotals();
+        updateTotals();
+      })();
+    </script>
 }
+
+
+
+
 
 
 

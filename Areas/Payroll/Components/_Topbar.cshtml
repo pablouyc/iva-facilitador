@@ -165,6 +165,37 @@
     string mValue    = firstOfMonth.ToString("yyyy-MM",   CultureInfo.InvariantCulture);
     string fromValue = fromDate    .ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
     string toValue   = toDate      .ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
+    // Status (query override opcional)
+    var statusParam = ((string?)Context.Request.Query["status"])?.Trim();
+    string statusTextUI = "En curso";
+    string statusBadge  = "secondary";
+
+    // Determinar en base a rango si no viene override
+    DateTime todayOnlyDate = todayCR.Date;
+    if (!string.IsNullOrEmpty(statusParam))
+    {
+        var s = statusParam.ToLowerInvariant();
+        if (s.StartsWith("aprob")) { statusTextUI = "Aprobada"; statusBadge = "success"; }
+        else if (s.StartsWith("tard")) { statusTextUI = "Tarde"; statusBadge = "danger"; }
+        else if (s.StartsWith("cerc")) { statusTextUI = "Cercana a vencer"; statusBadge = "warning"; }
+        else { statusTextUI = "En curso"; statusBadge = "secondary"; }
+    }
+    else
+    {
+        // usar fromDate/toDate ya calculados arriba
+        if (toDate.Date < todayOnlyDate) { statusTextUI = "Tarde"; statusBadge = "danger"; }
+        else {
+            var dias = (toDate.Date - todayOnlyDate).TotalDays;
+            if (dias >= 0 && dias <= 3) { statusTextUI = "Cercana a vencer"; statusBadge = "warning"; }
+            else { statusTextUI = "En curso"; statusBadge = "secondary"; }
+        }
+    }
+
+    // Persistir status en rutas si vino por query
+    if (!string.IsNullOrEmpty(statusParam)) {
+
+
+    }
 
     // Rutas: companyId para todas; filtros solo para 4 secciones
     var routeAll = new System.Collections.Generic.Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
@@ -175,6 +206,10 @@
     routeFilters["from"] = fromValue;
     routeFilters["to"]   = toValue;
     if (!string.IsNullOrEmpty(qValue)) routeFilters["q"] = qValue;
+        if (!string.IsNullOrEmpty(statusParam)) {
+            routeAll["status"] = statusParam;
+            routeFilters["status"] = statusParam;
+        }
 }
 
 <div class="card topbar payroll-scope">
@@ -240,7 +275,12 @@
             <div class="col-auto">
               <button type="submit" class="btn btn-sm btn-outline-secondary">Aplicar</button>
             </div>
-        </form>
+        
+            <div class="col-auto ms-auto d-flex align-items-end gap-2">
+              <span class="badge text-bg-@statusBadge">Estado: @statusTextUI</span>
+              <button type="button" id="btn-pt-approve" class="btn btn-sm btn-success">Aprobar</button>
+              <button type="button" id="btn-pt-edit" class="btn btn-sm btn-outline-primary">Editar</button>
+            </div></form>
 
         <script>
         (function(){
@@ -285,7 +325,31 @@
           if(d1) d1.addEventListener('change', syncQFromRange);
           if(d2) d2.addEventListener('change', syncQFromRange);
         })();
-        </script>
+                  // --- Demo acciones ---
+          function showToast(msg){
+            var wrap = document.createElement('div');
+            wrap.innerHTML = '<div class="toast align-items-center text-bg-dark border-0" role="status" aria-live="polite" aria-atomic="true" style="position:fixed; right:1rem; bottom:1rem; z-index:1080;">'
+              + '<div class="d-flex"><div class="toast-body">'+msg+'</div>'
+              + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div>';
+            var toast = wrap.firstChild;
+            document.body.appendChild(toast);
+            try {
+              var inst = bootstrap.Toast.getOrCreateInstance(toast,{ delay:2000 });
+              inst.show();
+              toast.addEventListener('hidden.bs.toast', function(){ toast.remove(); });
+            } catch(e){ alert(msg); toast.remove(); }
+          }
+          document.getElementById('btn-pt-approve')?.addEventListener('click', function(){
+            showToast('Planilla aprobada (demo)');
+          });
+          document.getElementById('btn-pt-edit')?.addEventListener('click', function(){
+            showToast('Editar planilla (demo)');
+          });
+</script>
     }
   </div>
 </div>
+
+
+
+
