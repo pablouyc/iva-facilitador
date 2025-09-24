@@ -253,7 +253,284 @@
 </div>
 
 @section Scripts {
-  
+<script>
+(function(){
+  const tbody = document.getElementById('pt-body');
+  if(!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll('tr.data-row'));
+  const filterBtns = Array.from(document.querySelectorAll('.pt-table thead .pt-filter-btn'));
+
+  // ===== Helpers =====
+  const nf = new Intl.NumberFormat('es-CR', { style:'currency', currency:'CRC', maximumFractionDigits:0 });
+
+  function getVal(tr, key){ return tr.getAttribute('data-' + key) ?? ''; }
+
+  // Estado de filtros por columna
+  const keys = filterBtns.map(b => b.dataset.key);
+  const filterState = {};
+  filterBtns.forEach(btn=>{
+    const key  = btn.dataset.key;
+    const type = btn.dataset.type || 'text';
+    filterState[key] = (type === 'num')
+      ? { type, min:null, max:null }
+      : { type, values:new Set() }; // Set vacío = sin filtro
+  });
+
+  // ===== Aplicar filtros + totales + subtotales =====
+  function applyFilters(){
+    rows.forEach(tr=>{
+      let show = true;
+      for(const key of keys){
+        const st  = filterState[key];
+        const raw = getVal(tr, key);
+        if(st.type === 'text'){
+          if(st.values && st.values.size && !st.values.has(raw)){ show = false; break; }
+        }else{
+          const num = Number(raw);
+          if(st.min!=null && num < st.min){ show = false; break; }
+          if(st.max!=null && num > st.max){ show = false; break; }
+        }
+      }
+      tr.style.display = show ? '' : 'none';
+    });
+
+    // Estado visual del embudo
+    filterBtns.forEach(btn=>{
+      const st = filterState[btn.dataset.key];
+      const active = (st.type==='text') ? (st.values && st.values.size>0) : (st.min!=null || st.max!=null);
+      btn.classList.toggle('active', !!active);
+    });
+
+    updateTotals();
+    rebuildSubtotals();
+    reinitPopovers();
+  }
+
+  function updateTotals(){
+    const acc = { mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0 };
+    let vis = 0;
+    rows.forEach(tr=>{
+      if(tr.style.display==='none') return;
+      vis++;
+      for(const k in acc){ acc[k] += +getVal(tr,k) || 0; }
+    });
+    const map = { mensual:'tot-mensual', quin:'tot-quin', extras:'tot-extras', bruto:'tot-bruto', deds:'tot-deds', neto:'tot-neto' };
+    Object.entries(map).forEach(([k,id])=>{
+      const el = document.getElementById(id);
+      if(el) el.textContent = vis ? nf.format(Math.round(acc[k])) : '—';
+    });
+  }
+
+  function rebuildSubtotals(){
+    // quitar subtotales anteriores
+    tbody.querySelectorAll('tr.subtotal-row').forEach(el=>el.remove());
+
+    // agrupar por sector SOLO filas visibles (en orden actual)
+    const groups = new Map(); // sector -> sums + lastRow
+    rows.forEach(tr=>{
+      if(tr.style.display==='none') return;
+      const sec = getVal(tr, 'sector') || '';
+      if(!groups.has(sec)){
+        groups.set(sec, { mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0, lastRow:tr });
+      }
+      const g = groups.get(sec);
+      g.lastRow = tr;
+      g.mensual += +getVal(tr,'mensual') || 0;
+      g.quin    += +getVal(tr,'quin')    || 0;
+      g.extras  += +getVal(tr,'extras')  || 0;
+      g.bruto   += +getVal(tr,'bruto')   || 0;
+      g.deds    += +getVal(tr,'deds')    || 0;
+      g.neto    += +getVal(tr,'neto')    || 0;
+    });
+
+    // insertar filas de subtotal después del último registro visible del sector
+    groups.forEach((g,sec)=>{
+      const tr = document.createElement('tr');
+      tr.className = 'subtotal-row';
+      tr.innerHTML =
+        '<td colspan="4" class="subtotal-label">Subtotal — ' + sec + '</td>' +
+        '<td class="pt-cell-money">' + nf.format(Math.round(g.mensual)) + '</td>' +
+        '<td class="pt-cell-money">' + nf.format(Math.round(g.quin)) + '</td>' +
+        '<td class="pt-cell-money">' + nf.format(Math.round(g.extras)) + '</td>' +
+        '<td class="pt-cell-money">' + nf.format(Math.round(g.bruto)) + '</td>' +
+        '<td class="pt-cell-money">' + nf.format(Math.round(g.deds)) + '</td>' +
+        '<td class="pt-cell-money fw-semibold">' + nf.format(Math.round(g.neto)) + '</td>';
+      g.lastRow.insertAdjacentElement('afterend', tr);
+    });
+  }
+
+  // ===== Popovers (Extras / Deducciones) =====
+  let popoversInitOnce = false;
+  function reinitPopovers(){
+    try{
+      document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el=>{
+        const p = bootstrap.Popover.getInstance(el); if(p) p.dispose();
+      });
+    }catch(e){}
+    document.querySelectorAll('.pop-extras, .pop-deds').forEach(a=>{
+      const id  = a.getAttribute('data-content-id');
+      const src = id ? document.getElementById(id) : null;
+      if(!src) return;
+      a.setAttribute('data-bs-toggle','popover');
+      a.setAttribute('data-bs-placement','top');
+      try{
+        new bootstrap.Popover(a, {
+          html:true, trigger:'click', sanitize:false,
+          content: () => src.innerHTML
+        });
+        a.addEventListener('shown.bs.popover', () => {
+          document.querySelectorAll('.pop-extras, .pop-deds').forEach(o=>{
+            if(o!==a){ bootstrap.Popover.getInstance(o)?.hide(); }
+          });
+        });
+      }catch(e){}
+    });
+    if(!popoversInitOnce){
+      document.addEventListener('click', (ev)=>{
+        if(!ev.target.closest('.popover') && !ev.target.closest('.pop-extras') && !ev.target.closest('.pop-deds')){
+          document.querySelectorAll('.pop-extras, .pop-deds').forEach(a=>bootstrap.Popover.getInstance(a)?.hide());
+        }
+      });
+      popoversInitOnce = true;
+    }
+  }
+
+  // ===== Menú de filtros tipo Excel =====
+  let openForKey = null;
+  const menu = document.createElement('div');
+  menu.id = 'pt-filter-menu';
+  menu.className = 'pt-filter-menu shadow';
+  document.body.appendChild(menu);
+
+  function uniqueValuesFor(key){
+    const set = new Set();
+    rows.forEach(tr => set.add(getVal(tr, key)));
+    return Array.from(set).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}));
+  }
+
+  function positionMenu(btn){
+    const r = btn.getBoundingClientRect();
+    const top  = window.scrollY + r.bottom + 6;
+    const left = Math.min(window.scrollX + r.left, window.scrollX + window.innerWidth - menu.offsetWidth - 12);
+    menu.style.top  = top + 'px';
+    menu.style.left = left + 'px';
+  }
+
+  function hideMenu(){ menu.style.display='none'; openForKey=null; }
+  function outsideOnce(ev){ if(!ev.target.closest('#pt-filter-menu')) hideMenu(); }
+
+  function showMenuFor(btn){
+    const key  = btn.dataset.key;
+    const type = btn.dataset.type || 'text';
+    openForKey = key;
+
+    if(type==='text'){
+      const opts = uniqueValuesFor(key);
+      const current = filterState[key].values;
+      let list = '';
+      opts.forEach((v,i)=>{
+        const id = `fm-${key}-${i}`;
+        const chk = (!current || current.size===0 || current.has(v)) ? 'checked' : '';
+        const label = v || '(vacío)';
+        list += `<div class="form-check">
+          <input class="form-check-input" type="checkbox" id="${id}" value="${String(v).replace(/"/g,'&quot;')}" ${chk}>
+          <label class="form-check-label" for="${id}">${label}</label>
+        </div>`;
+      });
+      menu.innerHTML = `
+        <div class="fm-head">
+          <input type="text" class="form-control form-control-sm" placeholder="Buscar…">
+          <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="fm-all" checked>
+            <label class="form-check-label small" for="fm-all">Seleccionar todo</label>
+          </div>
+        </div>
+        <div class="fm-list">${list}</div>
+        <div class="fm-actions">
+          <button type="button" class="btn btn-sm btn-light" id="fm-clear">Limpiar</button>
+          <button type="button" class="btn btn-sm btn-primary" id="fm-apply">Aplicar</button>
+        </div>`;
+
+      const search = menu.querySelector('input[placeholder^="Buscar"]');
+      const master = menu.querySelector('#fm-all');
+      const checks = Array.from(menu.querySelectorAll('.fm-list input[type="checkbox"]'));
+
+      function syncMaster(){
+        const vis = checks.filter(c => c.closest('.form-check').style.display!=='none');
+        master.checked = vis.every(c=>c.checked);
+      }
+      search.addEventListener('input', ()=>{
+        const q = search.value.trim().toLowerCase();
+        checks.forEach(c=>{
+          const lbl = c.nextElementSibling.textContent.toLowerCase();
+          c.closest('.form-check').style.display = (q==='' || lbl.includes(q)) ? '' : 'none';
+        });
+        syncMaster();
+      });
+      master.addEventListener('change', ()=>{ checks.forEach(c=>{
+        if(c.closest('.form-check').style.display!=='none') c.checked = master.checked;
+      }); });
+      menu.querySelector('#fm-clear').addEventListener('click', ()=>{ checks.forEach(c=>c.checked=false); });
+      menu.querySelector('#fm-apply').addEventListener('click', ()=>{
+        const selected = new Set(checks.filter(c=>c.checked).map(c=>c.value));
+        if(selected.size===checks.length || selected.size===0) filterState[key].values = new Set(); // sin filtro
+        else filterState[key].values = selected;
+        applyFilters(); hideMenu();
+      });
+    }else{
+      const st = filterState[key];
+      const minStr = (st.min!=null) ? st.min : '';
+      const maxStr = (st.max!=null) ? st.max : '';
+      menu.innerHTML = `
+        <div class="fm-head"><div class="small text-muted">Rango numérico</div></div>
+        <div class="p-2">
+          <div class="row g-2">
+            <div class="col">
+              <label class="form-label form-label-sm">Mín</label>
+              <input type="number" step="1" class="form-control form-control-sm" id="fm-min" value="${minStr}">
+            </div>
+            <div class="col">
+              <label class="form-label form-label-sm">Máx</label>
+              <input type="number" step="1" class="form-control form-control-sm" id="fm-max" value="${maxStr}">
+            </div>
+          </div>
+        </div>
+        <div class="fm-actions">
+          <button type="button" class="btn btn-sm btn-light" id="fm-clear">Limpiar</button>
+          <button type="button" class="btn btn-sm btn-primary" id="fm-apply">Aplicar</button>
+        </div>`;
+      menu.querySelector('#fm-clear').addEventListener('click', ()=>{
+        filterState[key].min=null; filterState[key].max=null; applyFilters(); hideMenu();
+      });
+      menu.querySelector('#fm-apply').addEventListener('click', ()=>{
+        const min = menu.querySelector('#fm-min').value;
+        const max = menu.querySelector('#fm-max').value;
+        filterState[key].min = (min==='') ? null : Number(min);
+        filterState[key].max = (max==='') ? null : Number(max);
+        applyFilters(); hideMenu();
+      });
+    }
+
+    positionMenu(btn);
+    menu.style.display = 'block';
+    setTimeout(()=>document.addEventListener('click', outsideOnce, { once:true }),0);
+  }
+
+  // Abrir menú desde cada embudo
+  filterBtns.forEach(btn=>{
+    btn.addEventListener('click', (ev)=>{
+      ev.stopPropagation();
+      if(openForKey===btn.dataset.key && menu.style.display==='block'){ hideMenu(); return; }
+      showMenuFor(btn);
+    });
+  });
+
+  // Init
+  reinitPopovers();
+  applyFilters();
+})();
+</script>
 }
 
 

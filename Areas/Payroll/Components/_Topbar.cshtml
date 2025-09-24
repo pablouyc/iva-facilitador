@@ -277,10 +277,13 @@
             </div>
         
             <div class="col-auto ms-auto d-flex align-items-end gap-2">
-              <span class="badge text-bg-@statusBadge">Estado: @statusTextUI</span>
-              <button type="button" id="btn-pt-approve" class="btn btn-sm btn-success">Aprobar</button>
-              <button type="button" id="btn-pt-edit" class="btn btn-sm btn-outline-primary">Editar</button>
-            </div></form>
+  <span class="badge text-bg-@statusBadge">Estado: @statusTextUI</span>
+  @if (string.Equals(section, "Planilla total", StringComparison.OrdinalIgnoreCase))
+  {
+    <button type="button" id="btn-pt-approve" class="btn btn-sm btn-success">Aprobar</button>
+    <button type="button" id="btn-pt-edit" class="btn btn-sm btn-outline-primary">Editar</button>
+  }
+</div></form>
 
         <script>
         (function(){
