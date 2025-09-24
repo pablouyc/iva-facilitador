@@ -127,6 +127,9 @@
     .pt-filter-menu .fm-list{ max-height:40vh; overflow:auto; padding:.25rem .5rem; }
     .pt-filter-menu .fm-actions{ display:flex; gap:.5rem; justify-content:flex-end; padding:.5rem; border-top:1px solid var(--pt-border); }
     .pt-filter-menu .form-check{ margin:.15rem 0; }
+  /* pt-compact-cells */
+  .pt-table th, .pt-table td{ padding:.35rem .5rem; }
+  .pt-table thead th .pt-filter-btn{ margin-left:.25rem; }
 </style>
 }
 <div class="pt-wrap">
@@ -309,138 +312,11 @@
         });
       }
 
-      // === Filtros tipo Excel ===
-      var state = {}; cols.forEach(function(c){ state[c.key] = null; }); // null = sin filtro
+      // === Filtros tipo Excel === (UI movida al script final)
+      // Exponer helpers para que el otro script pueda recalcular totales/subtotales
+      window.ivapayroll = Object.assign(window.ivapayroll||{}, { rebuildSubtotals, updateTotals });
 
-      function rowPasses(tr, ignoreKey){
-        for (var i=0;i<cols.length;i++){
-          var c=cols[i]; if (c.key===ignoreKey) continue;
-          var set = state[c.key]; if (!set) continue;
-          var raw = tr.dataset[c.key] || "";
-          var canon = (c.type==="text") ? raw.toLowerCase() : String(parseFloat(raw));
-          if (!set.has(canon)) return false;
-        }
-        return true;
-      }
-      function applyFromState(){
-        Array.from(tbody.querySelectorAll("tr.data-row")).forEach(function(tr){
-          tr.classList.toggle("d-none", !rowPasses(tr));
-        });
-        rebuildSubtotals();
-        updateTotals();
-        document.dispatchEvent(new CustomEvent("ivapayroll:reinit-popovers"));
-        document.querySelectorAll(".pt-filter-btn").forEach(function(b){
-          var k = b.getAttribute("data-key"); b.classList.toggle("active", !!state[k]);
-        });
-      }
-
-      function uniqueOptions(key, type){
-        var map = new Map();
-        Array.from(tbody.querySelectorAll("tr.data-row")).forEach(function(tr){
-          if(!rowPasses(tr, key)) return; // respetar otros filtros
-          var raw = tr.dataset[key] || "";
-          var canon = (type==="text") ? raw.toLowerCase() : String(parseFloat(raw));
-          var display = (type==="text") ? raw : moneyCR(parseFloat(raw));
-          if(!map.has(canon)) map.set(canon, display);
-        });
-        var arr = Array.from(map.entries());
-        arr.sort(function(a,b){
-          if (type==="text") return a[1].localeCompare(b[1],"es");
-          var na = parseFloat(a[0]); var nb = parseFloat(b[0]); return na-nb;
-        });
-        return arr; // [canon, display]
-      }
-
-      var menu = document.createElement("div");
-      menu.id = "pt-filter-menu";
-      menu.className = "pt-filter-menu";
-      menu.innerHTML =
-        "<div class=\"hdr\">"
-        +   "<input type=\"text\" class=\"form-control form-control-sm\" id=\"pf-search\" placeholder=\"Buscar...\" />"
-        + "</div>"
-        + "<div class=\"form-check ms-2 my-1\">"
-        +   "<input class=\"form-check-input\" type=\"checkbox\" id=\"pf-all\" checked>"
-        +   "<label class=\"form-check-label small\" for=\"pf-all\">(Seleccionar todo)</label>"
-        + "</div>"
-        + "<div class=\"list\" id=\"pf-list\"></div>"
-        + "<div class=\"foot\">"
-        +   "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" id=\"pf-cancel\">Cancelar</button>"
-        +   "<button type=\"button\" class=\"btn btn-sm btn-primary\" id=\"pf-ok\">OK</button>"
-        + "</div>";
-      document.body.appendChild(menu);
-      var elSearch = menu.querySelector("#pf-search");
-      var elList   = menu.querySelector("#pf-list");
-      var elAll    = menu.querySelector("#pf-all");
-      var btnOk    = menu.querySelector("#pf-ok");
-      var btnCancel= menu.querySelector("#pf-cancel");
-      var current  = null; // {key,type,btn}
-
-      function openMenuFor(btn){
-        current = { key: btn.getAttribute("data-key"), type: btn.getAttribute("data-type"), btn: btn };
-        var opts = uniqueOptions(current.key, current.type);
-        elList.innerHTML = "";
-        opts.forEach(function(pair, idx){
-          var id = "pf-opt-" + idx;
-          var div = document.createElement("div"); div.className="opt form-check";
-          div.innerHTML = "<input class=\"form-check-input\" type=\"checkbox\" id=\""+id+"\" data-value=\""+pair[0]+"\">"
-                        + "<label class=\"form-check-label small\" for=\""+id+"\">"+pair[1]+"</label>";
-          elList.appendChild(div);
-        });
-        var set = state[current.key];
-        var allChecked = !set;
-        elList.querySelectorAll('input[type="checkbox"]').forEach(function(ch){
-          ch.checked = allChecked || set.has(ch.getAttribute("data-value"));
-        });
-        function syncAll(){
-          var boxes = elList.querySelectorAll('input[type="checkbox"]');
-          var checked = 0; boxes.forEach(function(ch){ if(ch.checked) checked++; });
-          elAll.checked = (checked === boxes.length);
-        }
-        syncAll();
-        elList.addEventListener("change", function(e){ if(e.target && e.target.matches('input[type="checkbox"]')) syncAll(); }, {once:true});
-
-        elSearch.value = "";
-        var r = btn.getBoundingClientRect();
-        var top = window.scrollY + r.bottom + 4;
-        var left= window.scrollX + r.left - 140 + r.width;
-        menu.style.top = top+"px";
-        menu.style.left= Math.max(8,left)+"px";
-        menu.style.display="block";
-        setTimeout(function(){ elSearch.focus(); }, 0);
-      }
-      function closeMenu(){ menu.style.display="none"; current=null; }
-
-      document.querySelectorAll(".pt-filter-btn").forEach(function(btn){
-        btn.addEventListener("click", function(e){
-          e.stopPropagation();
-          if (menu.style.display==="block" && current && current.btn===btn){ closeMenu(); return; }
-          openMenuFor(btn);
-        });
-      });
-      elAll.addEventListener("change", function(){
-        var b = elAll.checked;
-        elList.querySelectorAll('input[type="checkbox"]').forEach(function(ch){ ch.checked = b; });
-      });
-      elSearch.addEventListener("input", function(){
-        var q = elSearch.value.toLowerCase().trim();
-        elList.querySelectorAll(".opt").forEach(function(div){
-          var label = div.querySelector("label")?.textContent?.toLowerCase() || "";
-          div.style.display = (!q || label.indexOf(q)>=0) ? "" : "none";
-        });
-      });
-      btnCancel.addEventListener("click", function(){ closeMenu(); });
-      btnOk.addEventListener("click", function(){
-        if(!current) return;
-        var boxes = Array.from(elList.querySelectorAll('input[type="checkbox"]'));
-        var selected = boxes.filter(function(ch){ return ch.checked; }).map(function(ch){ return ch.getAttribute("data-value"); });
-        if (selected.length === boxes.length) { state[current.key] = null; } else { state[current.key] = new Set(selected); }
-        closeMenu();
-        applyFromState();
-      });
-      document.addEventListener("click", function(e){ if(menu.style.display==="block" && !menu.contains(e.target)) closeMenu(); });
-      document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeMenu(); });
-
-      // init
+        // init
       rebuildSubtotals();
       updateTotals();
     })();
@@ -473,8 +349,8 @@
         tr.classList.toggle('d-none', !ok);
       });
       // Subtotales y totales ya existen en tu script
-      try { rebuildSubtotals(); } catch(e){}
-      try { updateTotals(); } catch(e){}
+      try { window.ivapayroll.rebuildSubtotals(); } catch(e){}
+      try { window.ivapayroll.updateTotals(); } catch(e){}
       document.dispatchEvent(new CustomEvent('ivapayroll:reinit-popovers'));
     }
 
@@ -599,6 +475,7 @@
   })();
   </script>
 }
+
 
 
 
