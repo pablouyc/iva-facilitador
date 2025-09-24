@@ -211,7 +211,7 @@
             routeFilters["status"] = statusParam;
         }
 }
-
+@{ bool isPlanilla = string.Equals(section, "Planilla total", StringComparison.OrdinalIgnoreCase); bool isApproved = string.Equals(statusTextUI, "Aprobada", StringComparison.OrdinalIgnoreCase); }
 <div class="card topbar payroll-scope">
   <div class="card-body d-flex align-items-center gap-2 flex-wrap">
     <div class="btn-group segmented" role="group" aria-label="Navegación RRHH">
@@ -246,7 +246,7 @@
         <form id="payroll-range-form" method="get" action="@Context.Request.Path" class="row g-2 align-items-end mt-2">
             @if (!string.IsNullOrEmpty(companyId)) {
               <input type="hidden" name="companyId" value="@companyId" />
-            }
+            @if (!string.IsNullOrEmpty(statusParam)) { <input type="hidden" name="status" value="@statusParam" /> } }
 
             <div class="col-auto">
               <label class="form-label form-label-sm">Mes</label>
@@ -276,14 +276,14 @@
               <button type="submit" class="btn btn-sm btn-outline-secondary">Aplicar</button>
             </div>
         
-            <div class="col-auto ms-auto d-flex align-items-end gap-2">
-  <span class="badge text-bg-@statusBadge">Estado: @statusTextUI</span>
-  @if (string.Equals(section, "Planilla total", StringComparison.OrdinalIgnoreCase))
-  {
-    <button type="button" id="btn-pt-approve" class="btn btn-sm btn-success">Aprobar</button>
-    <button type="button" id="btn-pt-edit" class="btn btn-sm btn-outline-primary">Editar</button>
-  }
-</div></form>
+            @{ /* botones solo en Planilla */ } @if (isPlanilla) {
+  <div class="col-auto ms-auto d-flex align-items-end gap-2">
+    <span class="badge text-bg-@statusBadge">Estado: @statusTextUI</span>
+    @if (!isApproved) { <button type="button" id="btn-pt-approve" class="btn btn-sm btn-success">Aprobar</button> }
+    @if (isApproved)  { <button type="button" id="btn-pt-edit" class="btn btn-sm btn-outline-primary">Editar</button> }
+  </div>
+}
+</form>
 
         <script>
         (function(){
@@ -352,6 +352,7 @@
     }
   </div>
 </div>
+
 
 
 
