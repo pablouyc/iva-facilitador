@@ -70,3 +70,32 @@ a{ color: var(--verde); }
 /* caret (triangulito) del dropdown en blanco */
 .avatar-btn.dropdown-toggle::after{ border-top-color:#fff; }
 /* === ui-header-contrast-white: END === */
+
+/* === Payroll UI (pt-) v1 === */
+:root{
+  --payroll-accent: var(--verde, #02343F);
+  --payroll-accent-soft: color-mix(in srgb, var(--payroll-accent) 12%, white);
+  --payroll-ink: #0b1320;
+}
+.payroll-card{
+  border:1px solid #e6eaef; border-radius:14px;
+  box-shadow:0 2px 8px rgba(2,52,63,.06); overflow:hidden;
+}
+.pt-table-wrap{ overflow:auto; }
+.pt-table thead th{
+  position:sticky; top:0; background:#fff; z-index:2;
+  border-bottom:1px solid #e6eaef; color:var(--payroll-ink); font-weight:600;
+}
+.pt-table td,.pt-table th{ white-space:nowrap; vertical-align:middle; }
+.pt-table tbody tr:hover{ background:#f9fbfc; }
+.pt-cell-money{ text-align:right; font-variant-numeric:tabular-nums; }
+.badge-mono{
+  background:var(--payroll-accent-soft); color:var(--payroll-accent);
+  font-weight:500;
+}
+.pt-money-pill{
+  display:inline-block; padding:.25rem .5rem; border-radius:.5rem;
+  background:#fff; border:1px dashed rgba(2,52,63,.2);
+}
+/* === /Payroll UI v1 === */
+

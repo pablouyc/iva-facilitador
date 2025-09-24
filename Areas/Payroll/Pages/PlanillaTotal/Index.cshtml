@@ -6,22 +6,7 @@
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
-@section Styles {
-  <style>
-    :root{
-      --pt-brand: var(--verde, #02343F);
-      --pt-ink: #0f172a;
-      --pt-border: #e9eef2;
-      --pt-border-strong: #dfe7ec;
-      --pt-row: #fbfdfe;
-      --pt-hover: rgba(2,52,63,.06);
-      --pt-chip-extra-bg: rgba(2, 52, 63, .06);
-      --pt-chip-extra-fg: #02343F;
-      --pt-chip-ded-bg: rgba(220, 53, 69, .08);
-      --pt-chip-ded-fg: #b02a37;
-    }
-
-    /* contenedor */
+/* contenedor */
     .pt-wrap { position: relative; }
 
     /* tarjeta */
@@ -112,14 +97,14 @@
 
 <div class="pt-wrap">
   <div class="pt-meta">
-    <span class="badge text-bg-light">Periodo: @Model.PeriodoLabel</span>
+    <span class="badge badge-mono">Periodo: @Model.PeriodoLabel</span>
     @if (!string.IsNullOrWhiteSpace(Model.companyId))
     {
-        <span class="badge text-bg-light">Empresa: @Model.companyId</span>
+        <span class="badge badge-mono">Empresa: @Model.companyId</span>
     }
   </div>
 
-  <div class="card">
+  <div class="card payroll-card">
     <div class="card-body">
       <div class="pt-table-wrap">
         <table class="table table-sm table-hover align-middle pt-table">
@@ -212,4 +197,5 @@
     })();
   </script>
 }
+
 
