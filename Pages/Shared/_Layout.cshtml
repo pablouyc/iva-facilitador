@@ -40,6 +40,7 @@ body{ background:var(--blanco); color:#111;}
 </style>
 </head>
 <body>
+@{ var mainClass = (ViewData["Wide"] as string) == "true" ? "container-fluid" : "container"; }
 @{
     var userName = User?.Identity?.Name;
     var initial = string.IsNullOrWhiteSpace(userName)
@@ -106,7 +107,7 @@ body{ background:var(--blanco); color:#111;}
     })();
   </script>
 }
-<main class="container my-4">
+<main class="@mainClass my-4">
   @RenderBody()
 </main>
 
@@ -126,4 +127,5 @@ ov?.addEventListener('click', ()=>{ sb.classList.remove('open'); ov.classList.re
 @RenderSection("Scripts", required: false)
 </body>
 </html>
+
 
