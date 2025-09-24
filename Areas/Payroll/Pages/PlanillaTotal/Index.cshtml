@@ -90,6 +90,25 @@
     /* fila subtotal por sector */
     .subtotal-row{ background: var(--pt-row); font-weight:600; }
     .subtotal-label{ text-align:right; color:#0b5c6b; }
+
+    /* filtros tipo Excel */
+    .pt-filter-btn{ border:0; background:transparent; padding:0; margin-left:.35rem; opacity:.6; vertical-align:middle; }
+    .pt-filter-btn:hover{ opacity:1; }
+    .pt-filter-btn .pt-filter-ic{ display:inline-block; fill:#6c757d; }
+    .pt-filter-btn.active .pt-filter-ic{ fill: var(--pt-brand); opacity:1; }
+    .pt-filter-menu{
+      position:absolute; z-index:1055; width:260px; background:#fff;
+      border:1px solid var(--pt-border); border-radius:.5rem;
+      box-shadow:0 12px 28px rgba(2,52,63,.18); padding:.5rem; display:none;
+    }
+    .pt-filter-menu .hdr{ display:flex; gap:.5rem; align-items:center; padding:.25rem .25rem .5rem; border-bottom:1px solid var(--pt-border); margin-bottom:.5rem; }
+    .pt-filter-menu .hdr input[type="text"]{ flex:1; }
+    .pt-filter-menu .list{ max-height:220px; overflow:auto; padding:.25rem; }
+    .pt-filter-menu .list .opt{ display:flex; align-items:center; gap:.5rem; padding:.15rem .25rem; border-radius:.25rem; }
+    .pt-filter-menu .list .opt:hover{ background:#f8f9fa; }
+    .pt-filter-menu .foot{ display:flex; justify-content:flex-end; gap:.5rem; margin-top:.5rem; }
+    /* blindaje: mantener ocultos los divs de popover */
+    .pt-table .d-none{ display:none !important; }
 </style>
 }
 <div class="pt-wrap">
@@ -107,133 +126,87 @@
         <table class="table table-sm table-hover align-middle pt-table">
           <thead>
   <tr>
-    <th>Colaborador</th>
-    <th>Identificación</th>
-    <th>Cargo</th>
-    <th>Sector</th>
-    <th class="text-end">Salario mensual</th>
-    <th class="text-end">Salario quincena</th>
-    <th class="text-end">Extras</th>
-    <th class="text-end">Salario bruto</th>
-    <th class="text-end">Deducciones</th>
-    <th class="text-end">Neto a recibir</th>
-  </tr>
-  <tr class="pt-filter-row">
-    <th><input id="f-colab" type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
-    <th><input id="f-id"    type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
-    <th><input id="f-cargo" type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
-    <th><input id="f-sector"type="text" class="form-control form-control-sm" placeholder="Filtrar..."></th>
-    <th>
-      <div class="nbox">
-        <input id="f-mensual-min" type="number" class="form-control form-control-sm" placeholder="mín">
-        <span>–</span>
-        <input id="f-mensual-max" type="number" class="form-control form-control-sm" placeholder="máx">
-      </div>
-    </th>
-    <th>
-      <div class="nbox">
-        <input id="f-quin-min" type="number" class="form-control form-control-sm" placeholder="mín">
-        <span>–</span>
-        <input id="f-quin-max" type="number" class="form-control form-control-sm" placeholder="máx">
-      </div>
-    </th>
-    <th>
-      <div class="nbox">
-        <input id="f-extras-min" type="number" class="form-control form-control-sm" placeholder="mín">
-        <span>–</span>
-        <input id="f-extras-max" type="number" class="form-control form-control-sm" placeholder="máx">
-      </div>
-    </th>
-    <th>
-      <div class="nbox">
-        <input id="f-bruto-min" type="number" class="form-control form-control-sm" placeholder="mín">
-        <span>–</span>
-        <input id="f-bruto-max" type="number" class="form-control form-control-sm" placeholder="máx">
-      </div>
-    </th>
-    <th>
-      <div class="nbox">
-        <input id="f-deds-min" type="number" class="form-control form-control-sm" placeholder="mín">
-        <span>–</span>
-        <input id="f-deds-max" type="number" class="form-control form-control-sm" placeholder="máx">
-      </div>
-    </th>
-    <th>
-      <div class="d-flex justify-content-end">
-        <button type="button" id="btn-clear-filters" class="btn btn-sm btn-outline-secondary">Limpiar</button>
-      </div>
-    </th>
+    <th>Colaborador <button type="button" class="pt-filter-btn" data-key="colaborador" data-type="text" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th>Identificación <button type="button" class="pt-filter-btn" data-key="identificacion" data-type="text" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th>Cargo <button type="button" class="pt-filter-btn" data-key="cargo" data-type="text" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th>Sector <button type="button" class="pt-filter-btn" data-key="sector" data-type="text" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th class="text-end">Salario mensual <button type="button" class="pt-filter-btn" data-key="mensual" data-type="num" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th class="text-end">Salario quincena <button type="button" class="pt-filter-btn" data-key="quin" data-type="num" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th class="text-end">Extras <button type="button" class="pt-filter-btn" data-key="extras" data-type="num" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th class="text-end">Salario bruto <button type="button" class="pt-filter-btn" data-key="bruto" data-type="num" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th class="text-end">Deducciones <button type="button" class="pt-filter-btn" data-key="deds" data-type="num" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
+    <th class="text-end">Neto a recibir <button type="button" class="pt-filter-btn" data-key="neto" data-type="num" aria-label="Filtrar"><svg class="pt-filter-ic" width="14" height="14" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg></button></th>
   </tr>
 </thead>
-          <tbody id=""pt-body"">
+          <tbody id="pt-body">
 @for (var i = 0; i < Model.Rows.Count; i++)
 {
     var r = Model.Rows[i];
-    <tr class=""data-row""
-        data-colaborador=""@r.Colaborador""
-        data-identificacion=""@r.Identificacion""
-        data-cargo=""@r.Cargo""
-        data-sector=""@r.Sector""
-        data-mensual=""@(r.SalarioMensual.ToString(System.Globalization.CultureInfo.InvariantCulture))""
-        data-quin=""@(r.SalarioQuincena.ToString(System.Globalization.CultureInfo.InvariantCulture))""
-        data-extras=""@(r.Extras.ToString(System.Globalization.CultureInfo.InvariantCulture))""
-        data-bruto=""@(r.Bruto.ToString(System.Globalization.CultureInfo.InvariantCulture))""
-        data-deds=""@(r.Deducciones.ToString(System.Globalization.CultureInfo.InvariantCulture))""
-        data-neto=""@(r.Neto.ToString(System.Globalization.CultureInfo.InvariantCulture))"">
+    <tr class="data-row"
+        data-colaborador="@r.Colaborador"
+        data-identificacion="@r.Identificacion"
+        data-cargo="@r.Cargo"
+        data-sector="@r.Sector"
+        data-mensual="@(r.SalarioMensual.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+        data-quin="@(r.SalarioQuincena.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+        data-extras="@(r.Extras.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+        data-bruto="@(r.Bruto.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+        data-deds="@(r.Deducciones.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+        data-neto="@(r.Neto.ToString(System.Globalization.CultureInfo.InvariantCulture))">
       <td>@r.Colaborador</td>
       <td>@r.Identificacion</td>
       <td>@r.Cargo</td>
       <td>@r.Sector</td>
-      <td class=""pt-cell-money"">@Model.Money(r.SalarioMensual)</td>
-      <td class=""pt-cell-money"">@Model.Money(r.SalarioQuincena)</td>
-      <td class=""pt-cell-money"">
-        <a href=""javascript:void(0)"" class=""link-dark text-decoration-none pop-extras"" data-content-id=""ex-@i"">
+      <td class="pt-cell-money">@Model.Money(r.SalarioMensual)</td>
+      <td class="pt-cell-money">@Model.Money(r.SalarioQuincena)</td>
+      <td class="pt-cell-money">
+        <a href="javascript:void(0)" class="link-dark text-decoration-none pop-extras" data-content-id="ex-@i">
           @Model.Money(r.Extras)
         </a>
-        <div id=""ex-@i"" class=""d-none"">
-          <div class=""small"">
+        <div id="ex-@i" class="d-none">
+          <div class="small">
             @foreach (var it in r.ExtrasDetalle)
             {
               <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
             }
             @if (r.ExtrasDetalle.Count == 0)
             {
-              <div class=""text-muted fst-italic"">Sin extras</div>
+              <div class="text-muted fst-italic">Sin extras</div>
             }
           </div>
         </div>
       </td>
-      <td class=""pt-cell-money"">@Model.Money(r.Bruto)</td>
-      <td class=""pt-cell-money"">
-        <a href=""javascript:void(0)"" class=""link-dark text-decoration-none pop-deds"" data-content-id=""dd-@i"">
+      <td class="pt-cell-money">@Model.Money(r.Bruto)</td>
+      <td class="pt-cell-money">
+        <a href="javascript:void(0)" class="link-dark text-decoration-none pop-deds" data-content-id="dd-@i">
           @Model.Money(r.Deducciones)
         </a>
-        <div id=""dd-@i"" class=""d-none"">
-          <div class=""small"">
+        <div id="dd-@i" class="d-none">
+          <div class="small">
             @foreach (var it in r.DeduccionesDetalle)
             {
               <div>@it.Name: <strong>@Model.Money(it.Amount)</strong></div>
             }
             @if (r.DeduccionesDetalle.Count == 0)
             {
-              <div class=""text-muted fst-italic"">Sin deducciones</div>
+              <div class="text-muted fst-italic">Sin deducciones</div>
             }
           </div>
         </div>
       </td>
-      <td class=""pt-cell-money fw-semibold"">@Model.Money(r.Neto)</td>
+      <td class="pt-cell-money fw-semibold">@Model.Money(r.Neto)</td>
     </tr>
 }
 </tbody>
-<tfoot class=""pt-sticky"">
+<tfoot class="pt-sticky">
   <tr>
-    <th colspan=""4"" class=""subtotal-label"">Totales visibles</th>
-    <th class=""pt-cell-money"" id=""tot-mensual""></th>
-    <th class=""pt-cell-money"" id=""tot-quin""></th>
-    <th class=""pt-cell-money"" id=""tot-extras""></th>
-    <th class=""pt-cell-money"" id=""tot-bruto""></th>
-    <th class=""pt-cell-money"" id=""tot-deds""></th>
-    <th class=""pt-cell-money fw-semibold"" id=""tot-neto""></th>
+    <th colspan="4" class="subtotal-label">Totales visibles</th>
+    <th class="pt-cell-money" id="tot-mensual"></th>
+    <th class="pt-cell-money" id="tot-quin"></th>
+    <th class="pt-cell-money" id="tot-extras"></th>
+    <th class="pt-cell-money" id="tot-bruto"></th>
+    <th class="pt-cell-money" id="tot-deds"></th>
+    <th class="pt-cell-money fw-semibold" id="tot-neto"></th>
   </tr>
 </tfoot>
         </table>
@@ -248,148 +221,210 @@
       if (!window.bootstrap) return;
       function initPop(cls){
         document.querySelectorAll(cls).forEach(function(el){
-          var id = el.getAttribute('data-content-id');
-          var html = document.getElementById(id)?.innerHTML || '';
+          var id = el.getAttribute("data-content-id");
+          var html = document.getElementById(id)?.innerHTML || "";
           var pop = bootstrap.Popover.getInstance(el);
           if (pop) pop.dispose();
-          new bootstrap.Popover(el, { html: true, content: html, placement: 'top', trigger: 'hover focus' });
+          new bootstrap.Popover(el, { html: true, content: html, placement: "top", trigger: "hover focus" });
         });
       }
-      initPop('.pop-extras');
-      initPop('.pop-deds');
-      document.addEventListener('ivapayroll:reinit-popovers', function(){ initPop('.pop-extras'); initPop('.pop-deds'); });
+      initPop(".pop-extras");
+      initPop(".pop-deds");
+      document.addEventListener("ivapayroll:reinit-popovers", function(){ initPop(".pop-extras"); initPop(".pop-deds"); });
     })();
   </script>
 
-    <script>
-      (function(){
-        // Utiles
-        function moneyCR(n){ try { return n.toLocaleString('es-CR',{style:'currency',currency:'CRC',maximumFractionDigits:0}); } catch { return n.toFixed(0); } }
-        function valNum(v){ var x = parseFloat(v); return isNaN(x)?null:x; }
-        function debouncer(fn,ms){ var t; return function(){ clearTimeout(t); var a=arguments; var th=this; t=setTimeout(function(){ fn.apply(th,a); }, ms||150); }; }
+  <script>
+    (function(){
+      function moneyCR(n){ try { return n.toLocaleString("es-CR",{style:"currency",currency:"CRC",maximumFractionDigits:0}); } catch { return (Math.round(n)).toString(); } }
+      var tbody = document.getElementById("pt-body"); if(!tbody) return;
 
-        var tbody = document.getElementById('pt-body');
-        if(!tbody) return;
+      var cols = [
+        {key:"colaborador", type:"text"},
+        {key:"identificacion", type:"text"},
+        {key:"cargo", type:"text"},
+        {key:"sector", type:"text"},
+        {key:"mensual", type:"num"},
+        {key:"quin", type:"num"},
+        {key:"extras", type:"num"},
+        {key:"bruto", type:"num"},
+        {key:"deds", type:"num"},
+        {key:"neto", type:"num"}
+      ];
 
-        function visibleRows(){
-          return Array.from(tbody.querySelectorAll('tr.data-row')).filter(function(tr){ return !tr.classList.contains('d-none'); });
-        }
-
-        function applyFilters(){
-          var t = {
-            colab : (document.getElementById('f-colab')?.value || '').toLowerCase().trim(),
-            id    : (document.getElementById('f-id')?.value    || '').toLowerCase().trim(),
-            cargo : (document.getElementById('f-cargo')?.value || '').toLowerCase().trim(),
-            sector: (document.getElementById('f-sector')?.value|| '').toLowerCase().trim(),
-            mensualMin: valNum(document.getElementById('f-mensual-min')?.value),
-            mensualMax: valNum(document.getElementById('f-mensual-max')?.value),
-            quinMin   : valNum(document.getElementById('f-quin-min')?.value),
-            quinMax   : valNum(document.getElementById('f-quin-max')?.value),
-            extrasMin : valNum(document.getElementById('f-extras-min')?.value),
-            extrasMax : valNum(document.getElementById('f-extras-max')?.value),
-            brutoMin  : valNum(document.getElementById('f-bruto-min')?.value),
-            brutoMax  : valNum(document.getElementById('f-bruto-max')?.value),
-            dedsMin   : valNum(document.getElementById('f-deds-min')?.value),
-            dedsMax   : valNum(document.getElementById('f-deds-max')?.value),
-          };
-
-          Array.from(tbody.querySelectorAll('tr.data-row')).forEach(function(tr){
-            var ok = true;
-            function contains(dsKey, q){ if (!q) return true; var v=(tr.dataset[dsKey]||'').toLowerCase(); return v.indexOf(q) >= 0; }
-            function inRange(dsKey,min,max){
-              var v = parseFloat(tr.dataset[dsKey]||'0'); if (isNaN(v)) v=0;
-              if (min!=null && v<min) return false;
-              if (max!=null && v>max) return false;
-              return true;
-            }
-            ok = ok && contains('colaborador', t.colab);
-            ok = ok && contains('identificacion', t.id);
-            ok = ok && contains('cargo', t.cargo);
-            ok = ok && contains('sector', t.sector);
-
-            ok = ok && inRange('mensual', t.mensualMin, t.mensualMax);
-            ok = ok && inRange('quin',    t.quinMin,    t.quinMax);
-            ok = ok && inRange('extras',  t.extrasMin,  t.extrasMax);
-            ok = ok && inRange('bruto',   t.brutoMin,   t.brutoMax);
-            ok = ok && inRange('deds',    t.dedsMin,    t.dedsMax);
-
-            tr.classList.toggle('d-none', !ok);
-          });
-
-          rebuildSubtotals();
-          updateTotals();
-          document.dispatchEvent(new CustomEvent('ivapayroll:reinit-popovers'));
-        }
-
-        function updateTotals(){
-          var ids = ['mensual','quin','extras','bruto','deds','neto'];
-          var sums = {mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0};
-          visibleRows().forEach(function(tr){
-            ids.forEach(function(k){ var v=parseFloat(tr.dataset[k]||'0'); if(!isNaN(v)) sums[k]+=v; });
-          });
-          document.getElementById('tot-mensual').textContent = moneyCR(sums.mensual);
-          document.getElementById('tot-quin').textContent    = moneyCR(sums.quin);
-          document.getElementById('tot-extras').textContent  = moneyCR(sums.extras);
-          document.getElementById('tot-bruto').textContent   = moneyCR(sums.bruto);
-          document.getElementById('tot-deds').textContent    = moneyCR(sums.deds);
-          document.getElementById('tot-neto').textContent    = moneyCR(sums.neto);
-        }
-
-        function rebuildSubtotals(){
-          // quitar subtotales actuales
-          Array.from(tbody.querySelectorAll('tr.subtotal-row')).forEach(function(tr){ tr.remove(); });
-
-          // agrupar por sector sobre filas visibles y colocarlos después del último de su sector
-          var groups = new Map(); // sector => {rows:[], sums:{}}
-          visibleRows().forEach(function(tr){
-            var sec = tr.dataset.sector || '';
-            if(!groups.has(sec)) groups.set(sec, {rows:[], sums:{mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0}});
-            var g = groups.get(sec);
-            g.rows.push(tr);
-            ['mensual','quin','extras','bruto','deds','neto'].forEach(function(k){
-              var v=parseFloat(tr.dataset[k]||'0'); if(!isNaN(v)) g.sums[k]+=v;
-            });
-          });
-
-          groups.forEach(function(g,sec){
-            if (g.rows.length===0) return;
-            var last = g.rows[g.rows.length-1];
-            var tr = document.createElement('tr');
-            tr.className = 'subtotal-row';
-            tr.innerHTML = ''
-              + '<td colspan="4" class="subtotal-label">Subtotal — ' + (sec||'—') + '</td>'
-              + '<td class="pt-cell-money">'+moneyCR(g.sums.mensual)+'</td>'
-              + '<td class="pt-cell-money">'+moneyCR(g.sums.quin)+'</td>'
-              + '<td class="pt-cell-money">'+moneyCR(g.sums.extras)+'</td>'
-              + '<td class="pt-cell-money">'+moneyCR(g.sums.bruto)+'</td>'
-              + '<td class="pt-cell-money">'+moneyCR(g.sums.deds)+'</td>'
-              + '<td class="pt-cell-money fw-semibold">'+moneyCR(g.sums.neto)+'</td>';
-            last.parentNode.insertBefore(tr, last.nextSibling);
-          });
-        }
-
-        // listeners
-        var idsTxt = ['f-colab','f-id','f-cargo','f-sector'];
-        var idsNum = ['f-mensual-min','f-mensual-max','f-quin-min','f-quin-max','f-extras-min','f-extras-max','f-bruto-min','f-bruto-max','f-deds-min','f-deds-max'];
-        idsTxt.concat(idsNum).forEach(function(id){
-          var el = document.getElementById(id);
-          if (el) el.addEventListener('input', debouncer(applyFilters, 200));
+      function visibleRows(){ return Array.from(tbody.querySelectorAll("tr.data-row")).filter(function(tr){ return !tr.classList.contains("d-none"); }); }
+      function updateTotals(){
+        var ids = ["mensual","quin","extras","bruto","deds","neto"];
+        var sums = {mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0};
+        visibleRows().forEach(function(tr){ ids.forEach(function(k){ var v=parseFloat(tr.dataset[k]||"0"); if(!isNaN(v)) sums[k]+=v; }); });
+        document.getElementById("tot-mensual").textContent = moneyCR(sums.mensual);
+        document.getElementById("tot-quin").textContent    = moneyCR(sums.quin);
+        document.getElementById("tot-extras").textContent  = moneyCR(sums.extras);
+        document.getElementById("tot-bruto").textContent   = moneyCR(sums.bruto);
+        document.getElementById("tot-deds").textContent    = moneyCR(sums.deds);
+        document.getElementById("tot-neto").textContent    = moneyCR(sums.neto);
+      }
+      function rebuildSubtotals(){
+        Array.from(tbody.querySelectorAll("tr.subtotal-row")).forEach(function(tr){ tr.remove(); });
+        var groups = new Map();
+        visibleRows().forEach(function(tr){
+          var sec = tr.dataset.sector || "";
+          if(!groups.has(sec)) groups.set(sec, {rows:[], sums:{mensual:0, quin:0, extras:0, bruto:0, deds:0, neto:0}});
+          var g = groups.get(sec);
+          g.rows.push(tr);
+          ["mensual","quin","extras","bruto","deds","neto"].forEach(function(k){ var v=parseFloat(tr.dataset[k]||"0"); if(!isNaN(v)) g.sums[k]+=v; });
         });
-        document.getElementById('btn-clear-filters')?.addEventListener('click', function(){
-          idsTxt.concat(idsNum).forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-          applyFilters();
+        groups.forEach(function(g,sec){
+          if (g.rows.length===0) return;
+          var last = g.rows[g.rows.length-1];
+          var tr = document.createElement("tr");
+          tr.className = "subtotal-row";
+          tr.innerHTML = ""
+            + "<td colspan=\"4\" class=\"subtotal-label\">Subtotal — " + (sec||"—") + "</td>"
+            + "<td class=\"pt-cell-money\">"+moneyCR(g.sums.mensual)+"</td>"
+            + "<td class=\"pt-cell-money\">"+moneyCR(g.sums.quin)+"</td>"
+            + "<td class=\"pt-cell-money\">"+moneyCR(g.sums.extras)+"</td>"
+            + "<td class=\"pt-cell-money\">"+moneyCR(g.sums.bruto)+"</td>"
+            + "<td class=\"pt-cell-money\">"+moneyCR(g.sums.deds)+"</td>"
+            + "<td class=\"pt-cell-money fw-semibold\">"+moneyCR(g.sums.neto)+"</td>";
+          last.parentNode.insertBefore(tr, last.nextSibling);
         });
+      }
 
-        // init
+      // === Filtros tipo Excel ===
+      var state = {}; cols.forEach(function(c){ state[c.key] = null; }); // null = sin filtro
+
+      function rowPasses(tr, ignoreKey){
+        for (var i=0;i<cols.length;i++){
+          var c=cols[i]; if (c.key===ignoreKey) continue;
+          var set = state[c.key]; if (!set) continue;
+          var raw = tr.dataset[c.key] || "";
+          var canon = (c.type==="text") ? raw.toLowerCase() : String(parseFloat(raw));
+          if (!set.has(canon)) return false;
+        }
+        return true;
+      }
+      function applyFromState(){
+        Array.from(tbody.querySelectorAll("tr.data-row")).forEach(function(tr){
+          tr.classList.toggle("d-none", !rowPasses(tr));
+        });
         rebuildSubtotals();
         updateTotals();
-      })();
-    </script>
+        document.dispatchEvent(new CustomEvent("ivapayroll:reinit-popovers"));
+        document.querySelectorAll(".pt-filter-btn").forEach(function(b){
+          var k = b.getAttribute("data-key"); b.classList.toggle("active", !!state[k]);
+        });
+      }
+
+      function uniqueOptions(key, type){
+        var map = new Map();
+        Array.from(tbody.querySelectorAll("tr.data-row")).forEach(function(tr){
+          if(!rowPasses(tr, key)) return; // respetar otros filtros
+          var raw = tr.dataset[key] || "";
+          var canon = (type==="text") ? raw.toLowerCase() : String(parseFloat(raw));
+          var display = (type==="text") ? raw : moneyCR(parseFloat(raw));
+          if(!map.has(canon)) map.set(canon, display);
+        });
+        var arr = Array.from(map.entries());
+        arr.sort(function(a,b){
+          if (type==="text") return a[1].localeCompare(b[1],"es");
+          var na = parseFloat(a[0]); var nb = parseFloat(b[0]); return na-nb;
+        });
+        return arr; // [canon, display]
+      }
+
+      var menu = document.createElement("div");
+      menu.id = "pt-filter-menu";
+      menu.className = "pt-filter-menu";
+      menu.innerHTML =
+        "<div class=\"hdr\">"
+        +   "<input type=\"text\" class=\"form-control form-control-sm\" id=\"pf-search\" placeholder=\"Buscar...\" />"
+        + "</div>"
+        + "<div class=\"form-check ms-2 my-1\">"
+        +   "<input class=\"form-check-input\" type=\"checkbox\" id=\"pf-all\" checked>"
+        +   "<label class=\"form-check-label small\" for=\"pf-all\">(Seleccionar todo)</label>"
+        + "</div>"
+        + "<div class=\"list\" id=\"pf-list\"></div>"
+        + "<div class=\"foot\">"
+        +   "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" id=\"pf-cancel\">Cancelar</button>"
+        +   "<button type=\"button\" class=\"btn btn-sm btn-primary\" id=\"pf-ok\">OK</button>"
+        + "</div>";
+      document.body.appendChild(menu);
+      var elSearch = menu.querySelector("#pf-search");
+      var elList   = menu.querySelector("#pf-list");
+      var elAll    = menu.querySelector("#pf-all");
+      var btnOk    = menu.querySelector("#pf-ok");
+      var btnCancel= menu.querySelector("#pf-cancel");
+      var current  = null; // {key,type,btn}
+
+      function openMenuFor(btn){
+        current = { key: btn.getAttribute("data-key"), type: btn.getAttribute("data-type"), btn: btn };
+        var opts = uniqueOptions(current.key, current.type);
+        elList.innerHTML = "";
+        opts.forEach(function(pair, idx){
+          var id = "pf-opt-" + idx;
+          var div = document.createElement("div"); div.className="opt form-check";
+          div.innerHTML = "<input class=\"form-check-input\" type=\"checkbox\" id=\""+id+"\" data-value=\""+pair[0]+"\">"
+                        + "<label class=\"form-check-label small\" for=\""+id+"\">"+pair[1]+"</label>";
+          elList.appendChild(div);
+        });
+        var set = state[current.key];
+        var allChecked = !set;
+        elList.querySelectorAll('input[type="checkbox"]').forEach(function(ch){
+          ch.checked = allChecked || set.has(ch.getAttribute("data-value"));
+        });
+        function syncAll(){
+          var boxes = elList.querySelectorAll('input[type="checkbox"]');
+          var checked = 0; boxes.forEach(function(ch){ if(ch.checked) checked++; });
+          elAll.checked = (checked === boxes.length);
+        }
+        syncAll();
+        elList.addEventListener("change", function(e){ if(e.target && e.target.matches('input[type="checkbox"]')) syncAll(); }, {once:true});
+
+        elSearch.value = "";
+        var r = btn.getBoundingClientRect();
+        var top = window.scrollY + r.bottom + 4;
+        var left= window.scrollX + r.left - 140 + r.width;
+        menu.style.top = top+"px";
+        menu.style.left= Math.max(8,left)+"px";
+        menu.style.display="block";
+        setTimeout(function(){ elSearch.focus(); }, 0);
+      }
+      function closeMenu(){ menu.style.display="none"; current=null; }
+
+      document.querySelectorAll(".pt-filter-btn").forEach(function(btn){
+        btn.addEventListener("click", function(e){
+          e.stopPropagation();
+          if (menu.style.display==="block" && current && current.btn===btn){ closeMenu(); return; }
+          openMenuFor(btn);
+        });
+      });
+      elAll.addEventListener("change", function(){
+        var b = elAll.checked;
+        elList.querySelectorAll('input[type="checkbox"]').forEach(function(ch){ ch.checked = b; });
+      });
+      elSearch.addEventListener("input", function(){
+        var q = elSearch.value.toLowerCase().trim();
+        elList.querySelectorAll(".opt").forEach(function(div){
+          var label = div.querySelector("label")?.textContent?.toLowerCase() || "";
+          div.style.display = (!q || label.indexOf(q)>=0) ? "" : "none";
+        });
+      });
+      btnCancel.addEventListener("click", function(){ closeMenu(); });
+      btnOk.addEventListener("click", function(){
+        if(!current) return;
+        var boxes = Array.from(elList.querySelectorAll('input[type="checkbox"]'));
+        var selected = boxes.filter(function(ch){ return ch.checked; }).map(function(ch){ return ch.getAttribute("data-value"); });
+        if (selected.length === boxes.length) { state[current.key] = null; } else { state[current.key] = new Set(selected); }
+        closeMenu();
+        applyFromState();
+      });
+      document.addEventListener("click", function(e){ if(menu.style.display==="block" && !menu.contains(e.target)) closeMenu(); });
+      document.addEventListener("keydown", function(e){ if(e.key==="Escape") closeMenu(); });
+
+      // init
+      rebuildSubtotals();
+      updateTotals();
+    })();
+  </script>
 }
-
-
-
-
-
-
-
