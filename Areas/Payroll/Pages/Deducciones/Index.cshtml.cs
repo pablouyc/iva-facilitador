@@ -63,10 +63,18 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Deducciones
         public async Task OnGet()
         {
             ParseQuery();
-            await EnsureSeedItemsAsync();
-            await LoadListsAsync();
-            await LoadRowsAsync();
-        }
+            try
+            {
+                await EnsureSeedItemsAsync();
+                await LoadListsAsync();
+                await LoadRowsAsync();
+            }
+            catch
+            {
+                Rows ??= new List<IndexModel.RowVM>();
+                Employees ??= new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+                Items ??= new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+            }}
 
         public async Task<IActionResult> OnPostAdd()
         {
@@ -196,4 +204,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Deducciones
             string.Format(CultureInfo.GetCultureInfo("es-CR"), "{0:C}", value);
     }
 }
+
+
 

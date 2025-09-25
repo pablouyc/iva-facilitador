@@ -55,8 +55,18 @@ builder.Services.AddDbContext<PayrollDbContext>(opt =>
     opt.UseSqlite(cs);
 });
 
-var app = builder.Build();
-
+var app = builder.Build();  
+// === Auto-migrate Payroll DB (idempotente) ===
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>();
+    db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    app.Logger?.LogError(ex, "Auto-migrate Payroll DB failed");
+}
 // ===== Cultura es-CR =====
 var supportedCultures = new[] { new CultureInfo("es-CR") };
 app.UseRequestLocalization(new RequestLocalizationOptions
@@ -105,4 +115,5 @@ app.Use(async (context, next) =>
 
 app.MapRazorPages();
 app.Run();
+
 
