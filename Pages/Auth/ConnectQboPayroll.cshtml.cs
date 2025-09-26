@@ -18,7 +18,7 @@ namespace IvaFacilitador.Pages.Auth
             string? scopes      = _cfg["IntuitPayrollAuth:Scopes"]        ?? Environment.GetEnvironmentVariable("IntuitPayrollAuth__Scopes") ?? "com.intuit.quickbooks.accounting";
             string? redirectUri = _cfg["IntuitPayrollAuth:RedirectUri"]   ?? Environment.GetEnvironmentVariable("IntuitPayrollAuth__RedirectUri");
             if (string.IsNullOrWhiteSpace(redirectUri))
-                redirectUri = $"{Request.Scheme}://{Request.Host}/Auth/Callback"; // fallback seguro
+                redirectUri = $"{Request.Scheme}://{Request.Host}/Auth/PayrollCallback"; // fallback seguro
             if (string.IsNullOrWhiteSpace(cid))
                 return BadRequest("Missing IntuitPayrollAuth ClientId.");
 
@@ -41,6 +41,7 @@ namespace IvaFacilitador.Pages.Auth
         }
     }
 }
+
 
 
 
