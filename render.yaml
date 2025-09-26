@@ -2,13 +2,7 @@ services:
   - type: web
     name: iva-facilitador
     env: docker
-    plan: free
-    region: oregon
-    dockerfilePath: ./Dockerfile
     autoDeploy: true
-envVars:
-
-
-- key: ASPNETCORE_URLS
-    value: http://0.0.0.0:${PORT}
-
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:${PORT}
