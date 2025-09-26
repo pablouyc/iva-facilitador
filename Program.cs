@@ -93,9 +93,9 @@ app.Use(async (context, next) =>
     if (context.Request.Cookies.TryGetValue("must_param_realm", out var realmId) && !string.IsNullOrEmpty(realmId))
     {
         // Rutas permitidas sin parametrizar
-        var allowed = new[] { "/Parametrizador",
+        var allowed = new[] {"/Parametrizador",
             "/Auth/Callback",
-            "/Auth/Disconnect", "/Payroll", "/Auth/ConnectQboPayroll", "/Auth/PayrollCallback" };
+            "/Auth/Disconnect", "/Payroll", "/Auth/ConnectQboPayroll", "/Auth/PayrollCallback", "/Auth/DiagPayroll"};
 
         bool esEstatico = path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
                        || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
@@ -125,7 +125,33 @@ app.MapGet("/Auth/PayrollCallback", (Microsoft.AspNetCore.Http.HttpContext http)
             + "&realmId=" + Uri.EscapeDataString(realm);
     return Results.Redirect(url);
 }).AllowAnonymous();
-app.Run();
+app.MapGet("/Auth/DiagPayroll", (Microsoft.Extensions.Configuration.IConfiguration cfg) =>
+{
+    string Env(string n) => System.Environment.GetEnvironmentVariable(n);
+    string FromCfg(string k) => cfg[k];
+
+    var payload = new {
+        env = new {
+            ClientId    = Env("IntuitPayrollAuth__ClientId"),
+            HasSecret   = !string.IsNullOrEmpty(Env("IntuitPayrollAuth__ClientSecret")),
+            Environment = Env("IntuitPayrollAuth__Environment"),
+            Scopes      = Env("IntuitPayrollAuth__Scopes"),
+            RedirectUri = Env("IntuitPayrollAuth__RedirectUri"),
+        },
+        cfg = new {
+            ClientId    = FromCfg("IntuitPayrollAuth:ClientId"),
+            Environment = FromCfg("IntuitPayrollAuth:Environment"),
+            Scopes      = FromCfg("IntuitPayrollAuth:Scopes"),
+            RedirectUri = FromCfg("IntuitPayrollAuth:RedirectUri"),
+        }
+    };
+    return Results.Json(payload);
+}).AllowAnonymous();
+
+
+
+
+
 
 
 

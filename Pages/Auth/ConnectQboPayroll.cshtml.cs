@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text;
 using System.Text.Json;
@@ -40,4 +41,7 @@ namespace IvaFacilitador.Pages.Auth
         }
     }
 }
+
+
+
 
