@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 using System.Linq;
@@ -11,7 +9,7 @@ using IvaFacilitador.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== App settings =====
-builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitPayrollAuth"));
+builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitAuth"));
 
 // ===== MVC / Razor =====
 builder.Services.AddRazorPages(options =>
@@ -93,9 +91,11 @@ app.Use(async (context, next) =>
     if (context.Request.Cookies.TryGetValue("must_param_realm", out var realmId) && !string.IsNullOrEmpty(realmId))
     {
         // Rutas permitidas sin parametrizar
-        var allowed = new[] {"/Parametrizador",
+        var allowed = new[]
+        {
+            "/Parametrizador",
             "/Auth/Callback",
-            "/Auth/Disconnect", "/Payroll", "/Auth/ConnectQboPayroll", "/Auth/PayrollCallback", "/Auth/DiagPayroll", "/healthz"};
+            "/Auth/Disconnect", "/Payroll"};
 
         bool esEstatico = path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
                        || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
@@ -114,54 +114,6 @@ app.Use(async (context, next) =>
 });
 
 app.MapRazorPages();
-app.MapGet("/Auth/PayrollCallback", (Microsoft.AspNetCore.Http.HttpContext http) =>
-{
-    var q = http.Request.Query;
-    var code   = q["code"].ToString();
-    var state  = q["state"].ToString();
-    var realm  = q["realmId"].ToString();
-    var url = "/Auth/Callback?code=" + Uri.EscapeDataString(code)
-            + "&state=" + Uri.EscapeDataString(state)
-            + "&realmId=" + Uri.EscapeDataString(realm);
-    return Results.Redirect(url);
-}).AllowAnonymous();
-app.MapGet("/Auth/DiagPayroll", (Microsoft.Extensions.Configuration.IConfiguration cfg) =>
-{
-    string Env(string n) => System.Environment.GetEnvironmentVariable(n) ?? "";
-    string FromCfg(string k) => cfg[k] ?? "";
-
-    var payload = new {
-        env = new {
-            ClientId    = Env("IntuitPayrollAuth__ClientId"),
-            HasSecret   = !string.IsNullOrEmpty(Env("IntuitPayrollAuth__ClientSecret")),
-            Environment = Env("IntuitPayrollAuth__Environment"),
-            Scopes      = Env("IntuitPayrollAuth__Scopes"),
-            RedirectUri = Env("IntuitPayrollAuth__RedirectUri"),
-        },
-        cfg = new {
-            ClientId    = FromCfg("IntuitPayrollAuth:ClientId"),
-            Environment = FromCfg("IntuitPayrollAuth:Environment"),
-            Scopes      = FromCfg("IntuitPayrollAuth:Scopes"),
-            RedirectUri = FromCfg("IntuitPayrollAuth:RedirectUri"),
-        }
-    };
-    return Results.Json(payload);
-}).AllowAnonymous();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+app.Run();
 
 

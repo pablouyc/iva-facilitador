@@ -34,26 +34,4 @@
       </div>
     </div>
   </div>
-</div>@* ===== PAYROLL-AUTO-REDIRECT (no server changes) ===== *@
-@section Scripts {
-<script>
-/* PAYROLL-AUTO-REDIRECT */
-(function () {
-  try {
-    var s = "@(Request.Query["state"])";
-    if (!s) return;
-    // base64url -> utf8 json
-    function b64UrlToUtf8(t){
-      t = (t||"").replace(/-/g,"+").replace(/_/g,"/"); while(t.length % 4) t += "=";
-      try { return decodeURIComponent(escape(atob(t))); } catch(e){ return atob(t); }
-    }
-    var obj = JSON.parse(b64UrlToUtf8(s));
-    var rt  = obj && obj.returnTo;
-    if (rt && /^\/Payroll\//i.test(rt)) {
-      window.location.replace(rt);
-    }
-  } catch(_){/* no-op */}
-})();
-</script>
-}
-@* ===== END PAYROLL-AUTO-REDIRECT ===== *@
+</div>

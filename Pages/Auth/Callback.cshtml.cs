@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using IvaFacilitador.Services;
