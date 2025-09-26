@@ -121,17 +121,22 @@ app.MapGet("/Auth/ConnectQbo", (Microsoft.AspNetCore.Http.HttpContext http, Micr
     var companyId = http.Request.Query["companyId"].ToString();
     var returnTo  = http.Request.Query["returnTo"].ToString();
 
-    string env        = cfg["IntuitAuth:Environment"] ?? System.Environment.GetEnvironmentVariable("IntuitAuth__Environment") ?? "sandbox";
-    string clientId   = cfg["IntuitAuth:ClientId"]    ?? System.Environment.GetEnvironmentVariable("IntuitAuth__ClientId")    ?? "";
-    string redirectUri= cfg["IntuitAuth:RedirectUri"] ?? System.Environment.GetEnvironmentVariable("IntuitAuth__RedirectUri") ?? "";
-    string scopes     = cfg["IntuitAuth:Scopes"]      ?? System.Environment.GetEnvironmentVariable("IntuitAuth__Scopes")      ?? "com.intuit.quickbooks.accounting";
+    // PRIORIDAD: IntuitPayrollAuth (RRHH) -> IntuitAuth (IVA) -> defaults
+    string env         = cfg["IntuitPayrollAuth:Environment"] ?? System.Environment.GetEnvironmentVariable("IntuitPayrollAuth__Environment")
+                       ?? cfg["IntuitAuth:Environment"]       ?? System.Environment.GetEnvironmentVariable("IntuitAuth__Environment")       ?? "sandbox";
+    string clientId    = cfg["IntuitPayrollAuth:ClientId"]    ?? System.Environment.GetEnvironmentVariable("IntuitPayrollAuth__ClientId")
+                       ?? cfg["IntuitAuth:ClientId"]          ?? System.Environment.GetEnvironmentVariable("IntuitAuth__ClientId")          ?? "";
+    string redirectUri = cfg["IntuitPayrollAuth:RedirectUri"] ?? System.Environment.GetEnvironmentVariable("IntuitPayrollAuth__RedirectUri")
+                       ?? cfg["IntuitAuth:RedirectUri"]       ?? System.Environment.GetEnvironmentVariable("IntuitAuth__RedirectUri")       ?? "";
+    string scopes      = cfg["IntuitPayrollAuth:Scopes"]      ?? System.Environment.GetEnvironmentVariable("IntuitPayrollAuth__Scopes")
+                       ?? cfg["IntuitAuth:Scopes"]            ?? System.Environment.GetEnvironmentVariable("IntuitAuth__Scopes")            ?? "com.intuit.quickbooks.accounting";
 
     if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(redirectUri))
-        return Results.BadRequest("QBO clientId/redirectUri faltantes (IntuitAuth).");
+        return Results.BadRequest("QBO clientId/redirectUri faltantes (IntuitPayrollAuth/IntuitAuth).");
 
     var stateObj = new { companyId = companyId, returnTo = string.IsNullOrWhiteSpace(returnTo) ? null : returnTo };
-    var stateJson = System.Text.Json.JsonSerializer.Serialize(stateObj);
-    var stateB64  = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(stateJson));
+    var stateJson = JsonSerializer.Serialize(stateObj);
+    var stateB64  = Convert.ToBase64String(Encoding.UTF8.GetBytes(stateJson));
 
     string authBase = (env?.ToLowerInvariant() == "production")
         ? "https://appcenter.intuit.com/connect/oauth2"
@@ -139,14 +144,37 @@ app.MapGet("/Auth/ConnectQbo", (Microsoft.AspNetCore.Http.HttpContext http, Micr
 
     string url =
         authBase
-        + "?client_id="   + Uri.EscapeDataString(clientId)
+        + "?client_id="    + Uri.EscapeDataString(clientId)
         + "&response_type=code"
-        + "&scope="       + Uri.EscapeDataString(scopes)
-        + "&redirect_uri="+ Uri.EscapeDataString(redirectUri)
-        + "&state="       + Uri.EscapeDataString(stateB64);
+        + "&scope="        + Uri.EscapeDataString(scopes)
+        + "&redirect_uri=" + Uri.EscapeDataString(redirectUri)
+        + "&state="        + Uri.EscapeDataString(stateB64);
 
     return Results.Redirect(url);
-}).AllowAnonymous();app.Run();
+}).AllowAnonymous();app.MapGet("/Auth/PayrollCallback", (Microsoft.AspNetCore.Http.HttpContext http) =>
+{
+    var qs = http.Request.QueryString.HasValue ? http.Request.QueryString.Value : "";
+    return Results.Redirect("/Auth/Callback" + qs);
+}).AllowAnonymous();
+app.MapGet("/Auth/PayrollReturn", (Microsoft.AspNetCore.Http.HttpContext http) =>
+{
+    var state = http.Request.Query["state"].ToString();
+    var fallback = "/Payroll/Empresas";
+    if (string.IsNullOrWhiteSpace(state))
+        return Results.Redirect(fallback);
+
+    try
+    {
+        var json = Encoding.UTF8.GetString(Convert.FromBase64String(state));
+        using var doc = JsonDocument.Parse(json);
+        var returnTo = doc.RootElement.TryGetProperty("returnTo", out var rt) ? rt.GetString() : null;
+        if (string.IsNullOrWhiteSpace(returnTo)) return Results.Redirect(fallback);
+        return Results.Redirect(returnTo!);
+    }
+    catch { return Results.Redirect(fallback); }
+}).AllowAnonymous();
+app.Run();
+
 
 
 
