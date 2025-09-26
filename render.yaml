@@ -1,4 +1,4 @@
-﻿services:
+services:
   - type: web
     name: iva-facilitador
     env: docker
@@ -6,15 +6,7 @@
     region: oregon
     dockerfilePath: ./Dockerfile
     autoDeploy: true
-    envVars:
-      - key: IntuitAuth__ClientId
-        sync: false
-      - key: IntuitAuth__ClientSecret
-        sync: false
-      - key: IntuitAuth__RedirectUri
-        value: https://iva-facilitador.onrender.com/Auth/Callback
-      - key: IntuitAuth__Environment
-        value: production
-      - key: IntuitAuth__Scopes
-        value: com.intuit.quickbooks.accounting
+envVars:
+  - key: ASPNETCORE_URLS
+    value: http://0.0.0.0:${PORT}
 
