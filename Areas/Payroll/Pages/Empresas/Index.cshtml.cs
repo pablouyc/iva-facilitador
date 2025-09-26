@@ -55,7 +55,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
             _db.Companies.Add(company);
             await _db.SaveChangesAsync();
 
-            var url = $"/Auth/Login?companyId={company.Id}";
+            var url = $"/Auth/ConnectQbo?companyId=" + company.Id + "&returnTo=/Payroll/Empresas/Config/" + company.Id;
             return Redirect(url);
         }
 
@@ -72,3 +72,4 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
+
