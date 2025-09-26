@@ -1,0 +1,30 @@
+@page "{id:int}"
+@model IvaFacilitador.Areas.Payroll.Pages.Empresas.ConfigModel
+@{
+    ViewData["Title"] = "Parametrizar empresa";
+}
+<partial name="~/Areas/Payroll/Components/_Topbar.cshtml" />
+
+<h2 class="mb-3">Parametrizar empresa</h2>
+
+@if (Model.Company == null)
+{
+    <div class="alert alert-warning">Empresa no encontrada.</div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@Model.Company.Name</h5>
+            <p class="card-text">
+                <strong>TaxId:</strong> @Model.Company.TaxId<br />
+                <strong>QBO:</strong> @(string.IsNullOrWhiteSpace(Model.Company.QboId) ? "No conectado" : $"Conectado ({Model.Company.QboId})")
+            </p>
+            <a class="btn btn-secondary" href="/Payroll/Empresas">Volver al listado</a>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        Próximo: pestañas Fechas de pago, Cálculo, Contabilidad, Catálogos y Accesos.
+    </div>
+}
