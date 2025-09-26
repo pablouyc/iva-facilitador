@@ -95,7 +95,7 @@ app.Use(async (context, next) =>
         // Rutas permitidas sin parametrizar
         var allowed = new[] {"/Parametrizador",
             "/Auth/Callback",
-            "/Auth/Disconnect", "/Payroll", "/Auth/ConnectQboPayroll", "/Auth/PayrollCallback", "/Auth/DiagPayroll"};
+            "/Auth/Disconnect", "/Payroll", "/Auth/ConnectQboPayroll", "/Auth/PayrollCallback", "/Auth/DiagPayroll", "/healthz"};
 
         bool esEstatico = path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
                        || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
@@ -147,6 +147,7 @@ app.MapGet("/Auth/DiagPayroll", (Microsoft.Extensions.Configuration.IConfigurati
     };
     return Results.Json(payload);
 }).AllowAnonymous();
+
 
 
 
