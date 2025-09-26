@@ -93,7 +93,7 @@ app.Use(async (context, next) =>
     if (context.Request.Cookies.TryGetValue("must_param_realm", out var realmId) && !string.IsNullOrEmpty(realmId))
     {
         // Rutas permitidas sin parametrizar
-        var allowed = new [] {"/Parametrizador",
+        var allowed = new[] {"/Parametrizador",
             "/Auth/Callback",
             "/Auth/Disconnect", "/Payroll", "/Auth/ConnectQboPayroll", "/Auth/PayrollCallback"};
 
@@ -114,6 +114,37 @@ app.Use(async (context, next) =>
 });
 
 app.MapRazorPages();
+app.MapGet("/Auth/ConnectQboPayroll", (Microsoft.AspNetCore.Http.HttpContext http, Microsoft.Extensions.Configuration.IConfiguration cfg) =>
+{
+    string Env(string key)
+    {
+        return cfg[$"IntuitPayrollAuth:{key}"]
+            ?? System.Environment.GetEnvironmentVariable($"IntuitPayrollAuth__{key}")
+            ?? cfg[$"IntuitAuth:{key}"]                                // fallback (por si faltara alguno)
+            ?? System.Environment.GetEnvironmentVariable($"IntuitAuth__{key}");
+    }
+
+    var companyId = http.Request.Query["companyId"].ToString();
+    var returnTo  = http.Request.Query["returnTo"].ToString();
+
+    var stateObj  = new { companyId = companyId, returnTo = returnTo };
+    var stateJson = System.Text.Json.JsonSerializer.Serialize(stateObj);
+    var state     = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(stateJson));
+
+    var clientId    = Env("ClientId") ?? "";
+    var redirectUri = Env("RedirectUri") ?? "";
+    var scopes      = Env("Scopes") ?? "com.intuit.quickbooks.accounting";
+
+    var authorizeUrl = "https://appcenter.intuit.com/connect/oauth2"
+        + "?client_id="    + System.Uri.EscapeDataString(clientId)
+        + "&response_type=code"
+        + "&scope="        + System.Uri.EscapeDataString(scopes)
+        + "&redirect_uri=" + System.Uri.EscapeDataString(redirectUri)
+        + "&state="        + System.Uri.EscapeDataString(state);
+
+    return Results.Redirect(authorizeUrl);
+}).AllowAnonymous();
 app.Run();
+
 
 
