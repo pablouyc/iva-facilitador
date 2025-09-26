@@ -93,11 +93,9 @@ app.Use(async (context, next) =>
     if (context.Request.Cookies.TryGetValue("must_param_realm", out var realmId) && !string.IsNullOrEmpty(realmId))
     {
         // Rutas permitidas sin parametrizar
-        var allowed = new[]
-        {
-            "/Parametrizador",
+        var allowed = new [] {"/Parametrizador",
             "/Auth/Callback",
-            "/Auth/Disconnect", "/Payroll"};
+            "/Auth/Disconnect", "/Payroll", "/Auth/ConnectQboPayroll", "/Auth/PayrollCallback"};
 
         bool esEstatico = path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
                        || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
@@ -116,25 +114,6 @@ app.Use(async (context, next) =>
 });
 
 app.MapRazorPages();
-app.MapGet("/Auth/ConnectQbo", (Microsoft.AspNetCore.Http.HttpContext http, Microsoft.Extensions.Configuration.IConfiguration cfg) =>
-{
-    var companyId = http.Request.Query["companyId"].ToString();
-    var returnTo  = http.Request.Query["returnTo"].ToString();
-
-    var stateObj  = new { companyId, returnTo };
-    var stateB64  = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(stateObj)));
-
-    string? Env(string k) => System.Environment.GetEnvironmentVariable(k);
-
-    var clientId    = Env("IntuitPayrollAuth__ClientId")    ?? cfg["IntuitPayrollAuth:ClientId"]    ?? cfg["IntuitAuth:ClientId"];
-    var redirectUri = Env("IntuitPayrollAuth__RedirectUri") ?? cfg["IntuitPayrollAuth:RedirectUri"] ?? cfg["IntuitAuth:RedirectUri"];
-    var scopes      = Env("IntuitPayrollAuth__Scopes")      ?? cfg["IntuitPayrollAuth:Scopes"]      ?? cfg["IntuitAuth:Scopes"] ?? "com.intuit.quickbooks.accounting";
-
-    if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(redirectUri))
-        return Results.BadRequest("Intuit ClientId/RedirectUri no configurados.");
-
-    var url = $"https://appcenter.intuit.com/connect/oauth2?client_id={Uri.EscapeDataString(clientId)}&response_type=code&scope={Uri.EscapeDataString(scopes)}&redirect_uri={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(stateB64)}";
-    return Results.Redirect(url);
-}).AllowAnonymous();
 app.Run();
+
 
