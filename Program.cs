@@ -11,7 +11,7 @@ using IvaFacilitador.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== App settings =====
-builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitAuth"));
+builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitPayrollAuth"));
 
 // ===== MVC / Razor =====
 builder.Services.AddRazorPages(options =>
@@ -127,8 +127,8 @@ app.MapGet("/Auth/PayrollCallback", (Microsoft.AspNetCore.Http.HttpContext http)
 }).AllowAnonymous();
 app.MapGet("/Auth/DiagPayroll", (Microsoft.Extensions.Configuration.IConfiguration cfg) =>
 {
-    string Env(string n) => System.Environment.GetEnvironmentVariable(n);
-    string FromCfg(string k) => cfg[k];
+    string Env(string n) => System.Environment.GetEnvironmentVariable(n) ?? "";
+    string FromCfg(string k) => cfg[k] ?? "";
 
     var payload = new {
         env = new {
@@ -147,6 +147,9 @@ app.MapGet("/Auth/DiagPayroll", (Microsoft.Extensions.Configuration.IConfigurati
     };
     return Results.Json(payload);
 }).AllowAnonymous();
+
+
+
 
 
 
