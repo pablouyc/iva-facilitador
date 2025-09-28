@@ -1,7 +1,14 @@
-@page "/Payroll"
-@functions {
-    public Microsoft.AspNetCore.Mvc.IActionResult OnGet()
-        => new Microsoft.AspNetCore.Mvc.RedirectToPageResult("/Empresas/Index");
+@page
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Payroll";
+    // señalamos a _Topbar la sección actual, si necesitas resaltar "Principal"
+    ViewData["PayrollSection"] = "Principal";
 }
-<h1>Payroll</h1>
-<p><a class="btn btn-primary" href="/Payroll/Empresas">Ir a Empresas</a></p>
+@await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
+
+<div class="mt-3">
+    <div class="alert alert-info">
+        Selecciona una pestaña del menú superior (Planilla total, Deducciones, Extras, Reportes, Empresas, Colaboradores).
+    </div>
+</div>

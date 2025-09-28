@@ -1,4 +1,5 @@
 @page
+@await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 @model IvaFacilitador.Areas.Payroll.Pages.Empresas.IndexModel
 @{
     ViewData["Title"] = "Empresas (Payroll)";
@@ -55,3 +56,4 @@ else
 {
   <div class="alert alert-info">No hay empresas aún. Agrega la primera con el formulario de arriba.</div>
 }
+
