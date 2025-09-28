@@ -1,9 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 using IvaFacilitador.Areas.Payroll.ModelosPayroll;
 
@@ -12,46 +11,42 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
     public class IndexModel : PageModel
     {
         private readonly PayrollDbContext _db;
-        public IndexModel(PayrollDbContext db) { _db = db; }
+
+        public IndexModel(PayrollDbContext db)
+        {
+            _db = db;
+        }
+
+        [BindProperty] public string? NewName  { get; set; }
+        [BindProperty] public string? NewTaxId { get; set; }
 
         public List<Company> Companies { get; set; } = new();
 
-        [BindProperty]
-        public InputCompany CompanyInput { get; set; } = new();
-
-        public class InputCompany
+        public void OnGet()
         {
-            public string Name { get; set; } = string.Empty;
-            public string? TaxId { get; set; }
+            Companies = _db.Companies
+                           .OrderBy(c => c.Name)
+                           .ToList();
         }
 
-        public async Task OnGetAsync()
+        public IActionResult OnPostAddAndConnect()
         {
-            Companies = await _db.Companies
-                .OrderBy(c => c.Name)
-                .ToListAsync();
-        }
+            var name  = (NewName  ?? string.Empty).Trim();
+            var taxId = (NewTaxId ?? string.Empty).Trim();
 
-        public async Task<IActionResult> OnPostAddAsync()
-        {
-            if (!ModelState.IsValid || string.IsNullOrWhiteSpace(CompanyInput.Name))
+            if (string.IsNullOrWhiteSpace(name))
             {
-                await OnGetAsync();
+                ModelState.AddModelError(nameof(NewName), "El nombre es obligatorio.");
+                OnGet();
                 return Page();
             }
 
-            var company = new Company
-            {
-                Name  = CompanyInput.Name.Trim(),
-                TaxId = string.IsNullOrWhiteSpace(CompanyInput.TaxId) ? null : CompanyInput.TaxId!.Trim()
-            };
+            var c = new Company { Name = name, TaxId = taxId };
+            _db.Companies.Add(c);
+            _db.SaveChanges();
 
-            _db.Companies.Add(company);
-            await _db.SaveChangesAsync();
-
-            // tras crear, vamos directo al flujo de conexión
-            var returnTo = $"/Payroll/Empresas/Config/{company.Id}";
-            var url = $"/Auth/ConnectQboPayroll?companyId={company.Id}&returnTo={System.Net.WebUtility.UrlEncode(returnTo)}";
+            var returnTo = $"/Payroll/Empresas/Config/{c.Id}";
+            var url = $"/Auth/ConnectQboPayroll?companyId={c.Id}&returnTo={Uri.EscapeDataString(returnTo)}";
             return Redirect(url);
         }
     }
