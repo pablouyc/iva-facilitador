@@ -1,9 +1,57 @@
 @page
+@model IvaFacilitador.Areas.Payroll.Pages.Empresas.IndexModel
 @{
-    ViewData["Title"] = "Empresas";
-    ViewData["PayrollSection"] = "Empresas";
+    ViewData["Title"] = "Empresas (Payroll)";
 }
-@await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
+<h2>Empresas (Payroll)</h2>
 
-<h1>Empresas</h1>
-<p>Sección en construcción.</p>
+<form method="post" asp-page-handler="Add" class="mb-3">
+  <div class="row g-2">
+    <div class="col-md-4">
+      <label class="form-label">Nombre</label>
+      <input class="form-control" asp-for="CompanyInput.Name" required />
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">RUT / TaxId</label>
+      <input class="form-control" asp-for="CompanyInput.TaxId" />
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button class="btn btn-success" type="submit">Agregar y Conectar</button>
+    </div>
+  </div>
+</form>
+
+@if (Model.Companies?.Any() == true)
+{
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>RUT</th>
+        <th>QBO Id</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    @foreach (var c in Model.Companies!)
+    {
+      <tr>
+        <td>@c.Name</td>
+        <td>@c.TaxId</td>
+        <td>@(string.IsNullOrEmpty(c.QboId) ? "-" : c.QboId)</td>
+        <td class="text-end">
+          <a class="btn btn-outline-primary btn-sm"
+             href="/Auth/ConnectQboPayroll?companyId=@c.Id&returnTo=/Payroll/Empresas/Config/@c.Id">
+             Conectar a QBO Payroll
+          </a>
+          <a class="btn btn-outline-secondary btn-sm" href="/Payroll/Empresas/Config/@c.Id">Config</a>
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+}
+else
+{
+  <div class="alert alert-info">No hay empresas aún. Agrega la primera con el formulario de arriba.</div>
+}

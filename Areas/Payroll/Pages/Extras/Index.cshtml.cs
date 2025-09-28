@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 
+using IvaFacilitador.Areas.Payroll.ModelosPayroll;
+
 namespace IvaFacilitador.Areas.Payroll.Pages.Extras
 {
     public class IndexModel : PageModel
@@ -206,5 +208,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Extras
             string.Format(CultureInfo.GetCultureInfo("es-CR"), "{0:C}", value);
     }
 }
+
 
 

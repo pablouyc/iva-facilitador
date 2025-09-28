@@ -1,0 +1,31 @@
+@page "{id:int}"
+@model IvaFacilitador.Areas.Payroll.Pages.Empresas.ConfigModel
+@{
+    ViewData["Title"] = "Config Empresa";
+}
+<h2>Config Empresa</h2>
+
+@if (Model.Company is null)
+{
+  <div class="alert alert-danger">Empresa no encontrada.</div>
+}
+else
+{
+  <dl class="row">
+    <dt class="col-sm-3">Nombre</dt><dd class="col-sm-9">@Model.Company.Name</dd>
+    <dt class="col-sm-3">RUT</dt><dd class="col-sm-9">@Model.Company.TaxId</dd>
+    <dt class="col-sm-3">QBO Id</dt><dd class="col-sm-9">@(string.IsNullOrEmpty(Model.Company.QboId) ? "-" : Model.Company.QboId)</dd>
+  </dl>
+
+  @if (string.IsNullOrEmpty(Model.Company.QboId))
+  {
+    <a class="btn btn-primary"
+       href="/Auth/ConnectQboPayroll?companyId=@Model.Company.Id&returnTo=/Payroll/Empresas/Config/@Model.Company.Id">
+       Conectar a QBO Payroll
+    </a>
+  }
+  else
+  {
+    <div class="alert alert-success">Conectado a QBO (realm/company id en la base).</div>
+  }
+}
