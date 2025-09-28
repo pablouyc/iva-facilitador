@@ -1,67 +1,71 @@
 @page
 @model IvaFacilitador.Areas.Payroll.Pages.Empresas.IndexModel
 @{
-    ViewData["Title"] = "Empresas (Payroll)";
+    ViewData["Title"] = "Empresas";
 }
-<partial name="Components/_Topbar" />
+<partial name="~/Areas/Payroll/Components/_Topbar.cshtml" />
+<div class="container mt-3">
 
-<h2 class="mb-3">Empresas (Payroll)</h2>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Empresas</h4>
+    <a class="btn btn-primary"
+       asp-area="Payroll"
+       asp-page="/Empresas/Config">
+      Agregar
+    </a>
+  </div>
 
-<form method="post" asp-page-handler="AddAndConnect" class="row g-2 align-items-center mb-3">
-    @Html.AntiForgeryToken()
-    <div class="col-sm-5">
-        <label class="form-label">Nombre</label>
-        <input asp-for="NewName" class="form-control" placeholder="Nombre de la empresa" />
-    </div>
-    <div class="col-sm-5">
-        <label class="form-label">RUT / TaxId</label>
-        <input asp-for="NewTaxId" class="form-control" placeholder="RUT / TaxId" />
-    </div>
-    <div class="col-sm-2 d-grid">
-        <label class="form-label">&nbsp;</label>
-        <button type="submit" class="btn btn-success">Agregar y Conectar</button>
-    </div>
-</form>
-
-@if (Model.Companies != null && Model.Companies.Any())
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Cédula</th>
+          <th>QBO Id</th>
+          <th>Fechas de corte</th>
+          <th>CCSS</th>
+          <th>Usuarios con acceso</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+@foreach (var c in Model.Empresas)
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>RUT</th>
-                <th>QBO Id</th>
-                <th style="width: 260px;">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var c in Model.Companies)
-        {
-            var returnTo = $"/Payroll/Empresas/Config/{c.Id}";
-            var connect  = $"/Auth/ConnectQboPayroll?companyId={c.Id}&returnTo={Uri.EscapeDataString(returnTo)}";
-            <tr>
-                <td>@c.Name</td>
-                <td>@c.TaxId</td>
-                <td>@(string.IsNullOrWhiteSpace(c.QboId) ? "-" : c.QboId)</td>
-                <td class="d-flex gap-2">
-                    @if (string.IsNullOrWhiteSpace(c.QboId))
-                    {
-                        <a class="btn btn-outline-primary btn-sm" href="@connect">Conectar a QBO Payroll</a>
-                    }
-                    else
-                    {
-                        <a class="btn btn-outline-secondary btn-sm disabled" tabindex="-1" aria-disabled="true">Conectado</a>
-                    }
-                    <a class="btn btn-outline-secondary btn-sm" asp-area="Payroll" asp-page="/Empresas/Config" asp-route-id="@c.Id">Config</a>
-                </td>
-            </tr>
-        }
-        </tbody>
+    <tr>
+      <td>@c.Name</td>
+      <td>@c.TaxId</td>
+      <td>@c.QboId</td>
+      <td>
+        @* Placeholders: mostrar cuando agreguemos campos reales *@
+        @((c.PayPolicy ?? "—"))
+      </td>
+      <td>
+        @* Placeholder: Automático/Manual cuando haya campo *@
+        — 
+      </td>
+      <td>
+        @* Placeholder: lista de usuarios cuando exista *@
+        —
+      </td>
+      <td class="text-end">
+        <a class="btn btn-outline-secondary btn-sm"
+           asp-area="Payroll"
+           asp-page="/Empresas/Config"
+           asp-route-id="@c.Id">
+          Editar
+        </a>
+      </td>
+    </tr>
+}
+@if (!Model.Empresas.Any())
+{
+    <tr>
+      <td colspan="7" class="text-center text-muted py-4">
+        No hay empresas registradas todavía.
+      </td>
+    </tr>
+}
+      </tbody>
     </table>
-}
-else
-{
-    <div class="alert alert-info">
-        No hay empresas aún. Agrega la primera con el formulario de arriba.
-    </div>
-}
+  </div>
+</div>
