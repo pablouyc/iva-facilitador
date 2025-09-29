@@ -1,10 +1,7 @@
-using System.Net.Http.Headers;
+using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
-using IvaFacilitador.Payroll.Data;
-using IvaFacilitador.Payroll.Models;
-
 namespace IvaFacilitador.Payroll.Services
 {
     public interface IPayrollAuthService
@@ -17,13 +14,13 @@ namespace IvaFacilitador.Payroll.Services
     public class PayrollAuthService : IPayrollAuthService
     {
         private readonly IConfiguration _cfg;
-        private readonly PayrollDbContext _db;
+        private readonly IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext _db;
         private readonly IHttpClientFactory _http;
 
         private static readonly Uri AuthBase = new("https://appcenter.intuit.com/connect/oauth2");
         private static readonly Uri TokenUrl = new("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer");
 
-        public PayrollAuthService(IConfiguration cfg, PayrollDbContext db, IHttpClientFactory http)
+        public PayrollAuthService(IConfiguration cfg, IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db, IHttpClientFactory http)
         {
             _cfg = cfg;
             _db  = db;
@@ -73,7 +70,7 @@ namespace IvaFacilitador.Payroll.Services
 
             var client = _http.CreateClient("intuit");
             var basic  = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{secret}"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basic);
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", basic);
 
             var form = new Dictionary<string,string>{
                 ["grant_type"]   = "authorization_code",
@@ -101,7 +98,7 @@ namespace IvaFacilitador.Payroll.Services
             var tok = _db.PayrollQboTokens.SingleOrDefault(x => x.CompanyId == companyId);
             if (tok == null)
             {
-                tok = new PayrollQboToken { CompanyId = companyId };
+                tok = new IvaFacilitador.Areas.Payroll.ModelosPayroll.PayrollQboToken { CompanyId = companyId };
                 _db.PayrollQboTokens.Add(tok);
             }
             tok.RealmId = realmId ?? tok.RealmId;
@@ -119,3 +116,11 @@ namespace IvaFacilitador.Payroll.Services
         }
     }
 }
+
+
+
+
+
+
+
+

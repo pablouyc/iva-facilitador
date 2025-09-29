@@ -20,3 +20,4 @@ namespace IvaFacilitador.Areas.Payroll.ModelosPayroll
         public string? Note { get; set; }
     }
 }
+

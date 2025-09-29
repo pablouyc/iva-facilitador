@@ -11,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Payroll DB
 builder.Services.AddDbContext<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>(o => o.UseSqlite(builder.Configuration.GetConnectionString("PayrollDb")));
 
+
+builder.Services.AddScoped<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>(sp => sp.GetRequiredService<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>());
 // ===== App settings =====
 builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitAuth"));
 
@@ -50,7 +52,7 @@ builder.Services.AddScoped<IQuickBooksAuth, QuickBooksAuth>();
 builder.Services.AddScoped<IQuickBooksApi, QuickBooksApi>();
 
 // ===== DBContext con fallback a Data\payroll.db =====
-builder.Services.AddDbContext<PayrollDbContext>(opt =>
+builder.Services.AddDbContext<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>(opt =>
 {
     var cs = builder.Configuration.GetConnectionString("Payroll");
     if (string.IsNullOrWhiteSpace(cs))
@@ -122,6 +124,14 @@ app.Use(async (context, next) =>
 
 app.MapRazorPages();
 app.Run();
+
+
+
+
+
+
+
+
 
 
 

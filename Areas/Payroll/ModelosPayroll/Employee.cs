@@ -18,3 +18,4 @@ namespace IvaFacilitador.Areas.Payroll.ModelosPayroll
         public decimal? BaseSalary { get; set; }
     }
 }
+

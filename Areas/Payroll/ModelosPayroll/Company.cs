@@ -16,3 +16,4 @@ namespace IvaFacilitador.Areas.Payroll.ModelosPayroll
         public List<PayEvent> PayEvents { get; set; } = new();
     }
 }
+
