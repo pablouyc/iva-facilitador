@@ -9,3 +9,4 @@ namespace IvaFacilitador.Areas.Payroll.ModelosPayroll
         public bool IsRecurring { get; set; }
     }
 }
+

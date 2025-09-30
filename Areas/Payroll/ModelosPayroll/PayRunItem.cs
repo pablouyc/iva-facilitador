@@ -16,3 +16,4 @@ namespace IvaFacilitador.Areas.Payroll.ModelosPayroll
         public decimal Amount { get; set; }
     }
 }
+

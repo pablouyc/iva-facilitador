@@ -5,6 +5,8 @@ namespace IvaFacilitador.Areas.Payroll.BaseDatosPayroll
 {
     public class PayrollDbContext : DbContext
     {
+    public DbSet<PayrollQboToken> PayrollQboTokens { get; set; }
+
         public PayrollDbContext(DbContextOptions<PayrollDbContext> options) : base(options) { }
 
         public DbSet<Company>   Companies   => Set<Company>();
@@ -62,3 +64,6 @@ namespace IvaFacilitador.Areas.Payroll.BaseDatosPayroll
         }
     }
 }
+
+
+

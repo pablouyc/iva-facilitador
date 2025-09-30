@@ -15,3 +15,4 @@ namespace IvaFacilitador.Areas.Payroll.ModelosPayroll
         public string Status { get; set; } = "Open"; // Open|Closed|Processed
     }
 }
+

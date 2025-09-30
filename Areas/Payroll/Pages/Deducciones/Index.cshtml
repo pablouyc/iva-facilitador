@@ -1,8 +1,8 @@
 @page
-@model IvaFacilitador.Areas.Payroll.Pages.Extras.IndexModel
+@model IvaFacilitador.Areas.Payroll.Pages.Deducciones.IndexModel
 @{
-    ViewData["Title"] = "Extras";
-    ViewData["PayrollSection"] = "Extras";
+    ViewData["Title"] = "Deducciones";
+    ViewData["PayrollSection"] = "Deducciones";
     ViewData["Wide"] = "true";
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
@@ -58,7 +58,7 @@
   <div class="card">
     <div class="card-body">
       <div class="pt-table-wrap">
-        <table class="table table-sm table-hover align-middle pt-table" id="tbl-extras">
+        <table class="table table-sm table-hover align-middle pt-table" id="tbl-deduccións">
           <thead>
             <tr>
               <th>Fecha <button type="button" class="pt-filter-btn" data-key="fecha" data-type="date" aria-label="Filtrar"></button></th>
@@ -117,7 +117,7 @@
 </tbody>
           <tfoot class="pt-sticky">
             <tr>
-              <th colspan="7" class="text-end">Total extras visibles</th>
+              <th colspan="7" class="text-end">Total deduccións visibles</th>
               <th class="pt-cell-money fw-semibold" id="tot-monto"></th>
               <th colspan="3"></th>
             </tr>
@@ -132,7 +132,7 @@
 <div class="modal fade" id="mvModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title" id="mvTitle">Agregar extra</h5>
+      <div class="modal-header"><h5 class="modal-title" id="mvTitle">Agregar deducción</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
       <div class="modal-body">
         <form method="post" id="mvForm">
@@ -172,7 +172,7 @@
         </form>
       </div>
       <div class="modal-footer">
-        <button id="btnDelete" type="button" class="btn btn-outline-danger me-auto d-none">Eliminar extra</button>
+        <button id="btnDelete" type="button" class="btn btn-outline-danger me-auto d-none">Eliminar deducción</button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
         <button id="btnSave" type="submit" form="mvForm" class="btn btn-primary">Guardar</button>
       </div>
@@ -189,7 +189,7 @@
   if(form){
     const col = document.createElement('div');
     col.className = 'col-auto d-flex align-items-end';
-    col.innerHTML = '<button id="btnAdd" type="button" class="btn btn-sm btn-success">Agregar extra</button>';
+    col.innerHTML = '<button id="btnAdd" type="button" class="btn btn-sm btn-success">Agregar deducción</button>';
     form.appendChild(col);
     if(approved){
       col.querySelector('#btnAdd').classList.add('disabled');
@@ -307,7 +307,7 @@
   function openAdd(){
     if(approved) return;
     ensureModal();
-    document.getElementById('mvTitle').textContent = 'Agregar extra';
+    document.getElementById('mvTitle').textContent = 'Agregar deducción';
     document.querySelector('#mvForm [name=handler]').value='Add';
     document.getElementById('mvId').value='';
     (document.getElementById('mvDate')).value = (new URLSearchParams(location.search).get('from')||'');
@@ -322,7 +322,7 @@
   function openEdit(btn){
     if(approved) return;
     ensureModal();
-    document.getElementById('mvTitle').textContent = 'Editar extra';
+    document.getElementById('mvTitle').textContent = 'Editar deducción';
     document.querySelector('#mvForm [name=handler]').value='Edit';
     document.getElementById('mvId').value = btn.dataset.id;
     document.getElementById('mvDate').value = btn.dataset.date || '';
@@ -336,7 +336,7 @@
   }
   document.querySelectorAll('.btn-edit').forEach(b=> b.addEventListener('click', ()=> openEdit(b)));
   document.getElementById('btnDelete')?.addEventListener('click', ()=>{
-    if(!confirm('¿Eliminar este extra?')) return;
+    if(!confirm('¿Eliminar este deducción?')) return;
     document.querySelector('#mvForm [name=handler]').value='Delete';
     document.getElementById('btnSave').disabled=true;
     document.getElementById('mvForm').submit();
@@ -353,4 +353,5 @@
 
 
 
-<!-- marker: extras-live -->
+
+<!-- marker: deducciones-live -->
