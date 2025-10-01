@@ -7,6 +7,11 @@ using Microsoft.AspNetCore.Localization;
 using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>(options =>
+{
+    // Ajusta el proveedor si tu proyecto no usa Sqlite:
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
 
 // ===== App settings =====
 builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitAuth"));
@@ -104,5 +109,12 @@ app.Use(async (context, next) =>
 });
 
 app.MapRazorPages();
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>();
+    db.Database.Migrate();
+}
 app.Run();
+
+
 
