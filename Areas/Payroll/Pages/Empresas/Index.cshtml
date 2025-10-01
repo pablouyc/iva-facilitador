@@ -1,9 +1,55 @@
 @page
+@model IvaFacilitador.Areas.Payroll.Pages.Empresas.IndexModel
 @{
     ViewData["Title"] = "Empresas";
     ViewData["PayrollSection"] = "Empresas";
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
-<h1>Empresas</h1>
-<p>Sección en construcción.</p>
+<div class="container mt-3">
+    <h4 class="mb-3">Empresas conectadas</h4>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle">
+            <thead>
+                <tr>
+                    <th style="width:90px;">ID</th>
+                    <th>Nombre</th>
+                    <th style="width:260px;">QBO Realm / Id</th>
+                    <th style="width:190px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Empresas == null || !Model.Empresas.Any())
+            {
+                <tr>
+                    <td colspan="4" class="text-muted">No hay empresas conectadas aún.</td>
+                </tr>
+            }
+            else
+            {
+                foreach (var e in Model.Empresas)
+                {
+                    <tr>
+                        <td>@e.Id</td>
+                        <td>@e.Nombre</td>
+                        <td>@(string.IsNullOrWhiteSpace(e.QboId) ? "-" : e.QboId)</td>
+                        <td>
+                            <a class="btn btn-sm btn-outline-secondary disabled" title="Próximamente">Editar</a>
+                            <a class="btn btn-sm btn-outline-danger disabled" title="Próximamente">Eliminar</a>
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+
+    @* Placeholder opcional si vienes con ?handler=Agregar (lo usaremos en el siguiente paso) *@
+    @if (TempData["Empresas_ShowWizard"] as string == "1")
+    {
+        <div class="alert alert-info mt-3">
+            Iniciaremos el asistente de conexión a QBO Payroll aquí (pendiente de backend).
+        </div>
+    }
+</div>

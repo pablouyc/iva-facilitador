@@ -357,3 +357,16 @@
 
 
 
+
+@* Botón propio de Empresas *@
+@if ((ViewData["PayrollSection"] as string) == "Empresas")
+{
+    <div class="ms-auto d-flex gap-2">
+        <a class="btn btn-sm btn-primary"
+           asp-area="Payroll"
+           asp-page="/Empresas/Index"
+           asp-page-handler="Agregar">
+            Agregar
+        </a>
+    </div>
+}
