@@ -13,7 +13,9 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         private readonly IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext _db;
         private readonly IPayrollAuthService _auth;
 
-        public IndexModel(IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db, IPayrollAuthService auth)
+        public IndexModel(
+            IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db,
+            IPayrollAuthService auth)
         {
             _db = db;
             _auth = auth;
@@ -31,19 +33,25 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         public async Task OnGet()
         {
             Empresas = await _db.Companies
-                .Select(c => new Row { Id = c.Id, Nombre = c.Name, QboId = c.QboId })
+                .Select(c => new Row
+                {
+                    Id = c.Id,
+                    Nombre = c.Name,  // Ajusta si tu columna se llama distinto
+                    QboId = c.QboId
+                })
                 .OrderBy(r => r.Nombre)
                 .ToListAsync();
         }
 
-        // NUEVO: al hacer click en "Agregar", te lleva a Intuit (Payroll) usando IntuitPayrollAuth__*
-        public IActionResult OnGetAgregar(string? returnTo)
+        // Handler del botón "Agregar": redirige a Intuit con "returnTo"
+        public IActionResult OnGetAgregar(int companyId = 0)
         {
-            var rt = string.IsNullOrWhiteSpace(returnTo)
-                ? Url.Page("/Empresas/Index", new { area = "Payroll" }) ?? "/Payroll/Empresas"
-                : returnTo;
-            var url = _auth.GetAuthorizeUrl(rt);
+            // Volveremos aquí después del callback:
+            var returnTo = Url.Page("/Empresas/Index", new { area = "Payroll" }) ?? "/Payroll/Empresas";
+
+            var url = _auth.GetAuthorizeUrl(companyId, returnTo);
             return Redirect(url);
         }
     }
 }
+

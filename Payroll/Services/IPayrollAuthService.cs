@@ -2,7 +2,9 @@ namespace IvaFacilitador.Payroll.Services
 {
     public interface IPayrollAuthService
     {
-        /// <summary>Devuelve la URL de autorización de Intuit (Payroll) usando IntuitPayrollAuth__*</summary>
-        string GetAuthorizeUrl(string returnTo);
+        string GetAuthorizeUrl(int companyId, string returnTo);
+        System.Threading.Tasks.Task<(string accessToken, string refreshToken, System.DateTime expiresAtUtc, string? realmId)>
+            ExchangeCodeAsync(string code, string redirectUri);
+        System.Threading.Tasks.Task SaveTokensAsync(int companyId, string? realmId, string accessToken, string refreshToken, System.DateTime expiresAtUtc);
     }
 }

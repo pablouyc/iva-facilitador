@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using IvaFacilitador.Areas.Payroll.ModelosPayroll;
 
 namespace IvaFacilitador.Areas.Payroll.BaseDatosPayroll
 {
-    public class PayrollDbContext : DbContext
+    public partial class PayrollDbContext : DbContext
     {
         public PayrollDbContext(DbContextOptions<PayrollDbContext> options) : base(options) {}
 
@@ -154,3 +155,5 @@ namespace IvaFacilitador.Areas.Payroll.BaseDatosPayroll
         public decimal Amount { get; set; }
     }
 }
+
+

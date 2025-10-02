@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.EntityFrameworkCore;
 using IvaFacilitador.Payroll.Services;
 using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
@@ -8,6 +11,9 @@ using Microsoft.AspNetCore.Localization;
 using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddScoped<IPayrollAuthService, PayrollAuthService>();
+builder.Services.AddHttpClient("intuit");
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IvaFacilitador.Payroll.Services.IPayrollAuthService, IvaFacilitador.Payroll.Services.PayrollAuthService>();
 builder.Services.AddDbContext<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>(options =>
 {
@@ -63,6 +69,50 @@ builder.Services.AddDbContext<PayrollDbContext>(opt =>
 });
 
 var app = builder.Build();
+app.MapGet("/Auth/PayrollCallback", async (
+    HttpContext http,
+    IConfiguration cfg,
+    IMemoryCache cache,
+    IPayrollAuthService auth
+) =>
+{
+    var q = http.Request.Query;
+    var code    = q["code"].ToString();
+    var stateB64= q["state"].ToString();
+    var realmId = q["realmId"].ToString();
+
+    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(stateB64))
+        return Results.BadRequest("Missing code/state.");
+
+    string returnTo = "/Payroll/Empresas";
+    string? nonce = null;
+
+    try
+    {
+        var stateJson = Encoding.UTF8.GetString(Convert.FromBase64String(stateB64));
+        using var doc = JsonDocument.Parse(stateJson);
+        var root = doc.RootElement;
+        if (root.TryGetProperty("returnTo", out var rt)) returnTo = rt.GetString() ?? returnTo;
+        if (root.TryGetProperty("nonce", out var n))     nonce    = n.GetString();
+    }
+    catch { /* estado inválido => seguimos con defaults */ }
+
+    var redirectUri = cfg["IntuitPayrollAuth:RedirectUri"]
+        ?? $"{http.Request.Scheme}://{http.Request.Host}/Auth/PayrollCallback";
+
+    var tokens = await auth.ExchangeCodeAsync(code, redirectUri);
+
+    var key = $"payroll:auth:{nonce ?? Guid.NewGuid().ToString("N")}";
+    cache.Set(key, new {
+        tokens.accessToken,
+        tokens.refreshToken,
+        tokens.expiresAtUtc,
+        realmId = tokens.realmId ?? realmId
+    }, TimeSpan.FromMinutes(15));
+
+    var next = $"{returnTo}?wizard=empresas&nonce={Uri.EscapeDataString(nonce ?? string.Empty)}";
+    return Results.Redirect(next);
+});
 
 // ===== Cultura es-CR =====
 var supportedCultures = new[] { new CultureInfo("es-CR") };
@@ -117,6 +167,9 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 app.Run();
+
+
+
 
 
 
