@@ -59,13 +59,12 @@ builder.Services.AddDbContext<PayrollDbContext>(opt =>
 
 var app = builder.Build();
 
-// ===== Endpoint: Intuit Payroll OAuth callback =====
 app.MapGet("/Auth/PayrollCallback", async (
     HttpContext http,
     IConfiguration cfg,
     IMemoryCache cache,
     IPayrollAuthService auth,
-    PayrollDbContext db
+    IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db
 ) =>
 {
     var q       = http.Request.Query;
@@ -77,41 +76,49 @@ app.MapGet("/Auth/PayrollCallback", async (
         return Results.BadRequest("Missing code/state.");
 
     string returnTo = "/Payroll/Empresas";
-    string? nonce = null;
+    int    companyId = 0;
+    string? nonce    = null;
+
     try
     {
         var stateJson = Encoding.UTF8.GetString(Convert.FromBase64String(stateB64));
         using var doc = JsonDocument.Parse(stateJson);
         var root = doc.RootElement;
         if (root.TryGetProperty("returnTo", out var rt)) returnTo = rt.GetString() ?? returnTo;
-        if (root.TryGetProperty("nonce", out var n))     nonce    = n.GetString();
+        if (root.TryGetProperty("companyId", out var cid)) int.TryParse(cid.ToString(), out companyId);
+        if (root.TryGetProperty("nonce", out var n))      nonce = n.GetString();
     }
-    catch { /* estado inválido => seguir con defaults */ }
+    catch { /* estado inválido => defaults */ }
 
     var redirectUri = cfg["IntuitPayrollAuth:RedirectUri"]
         ?? $"{http.Request.Scheme}://{http.Request.Host}/Auth/PayrollCallback";
 
-    // Intercambia code -> tokens con el servicio de RRHH
     var tokens = await auth.ExchangeCodeAsync(code, redirectUri);
 
-    // Realm final
-    var realm = tokens.realmId ?? realmId;
-    if (string.IsNullOrWhiteSpace(realm))
-        return Results.BadRequest("Missing realmId.");
+    await auth.SaveTokensAsync(
+        companyId,
+        tokens.realmId ?? realmId,
+        tokens.accessToken,
+        tokens.refreshToken,
+        tokens.expiresAtUtc
+    );
 
-    // Asegura Company por realm
-    var comp = db.Companies.FirstOrDefault(c => c.QboId == realm);
-    if (comp == null)
+    // Completar nombre desde QBO si es posible
+    if (companyId != 0 && !string.IsNullOrWhiteSpace(tokens.realmId ?? realmId))
     {
-        comp = new Company { Name = $"Empresa vinculada {realm}", QboId = realm };
-        db.Companies.Add(comp);
-        await db.SaveChangesAsync();
+        var comp = await db.Companies.FindAsync(companyId);
+        if (comp != null)
+        {
+            comp.QboId ??= tokens.realmId ?? realmId;
+            var name = await auth.TryGetCompanyNameAsync(comp.QboId!, tokens.accessToken);
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                comp.Name = name!;
+                await db.SaveChangesAsync();
+            }
+        }
     }
 
-    // Guarda/actualiza tokens
-    await auth.SaveTokensAsync(comp.Id, realm, tokens.accessToken, tokens.refreshToken, tokens.expiresAtUtc);
-
-    // Vuelve al listado
     return Results.Redirect(returnTo);
 });
 
@@ -163,3 +170,6 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
+
+
+
