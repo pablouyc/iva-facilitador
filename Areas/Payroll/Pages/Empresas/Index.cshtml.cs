@@ -4,16 +4,19 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using IvaFacilitador.Payroll.Services;
 
 namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
 {
     public class IndexModel : PageModel
     {
         private readonly IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext _db;
+        private readonly IPayrollAuthService _auth;
 
-        public IndexModel(IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db)
+        public IndexModel(IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db, IPayrollAuthService auth)
         {
             _db = db;
+            _auth = auth;
         }
 
         public class Row
@@ -27,23 +30,20 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
 
         public async Task OnGet()
         {
-            // Solo lectura para UI: Id, Name, QboId (ajusta "Name" si tu entidad usa otro nombre)
             Empresas = await _db.Companies
-                .Select(c => new Row
-                {
-                    Id = c.Id,
-                    Nombre = c.Name,     // <-- si tu modelo usa otro campo (p.ej. RazonSocial), cámbialo aquí
-                    QboId = c.QboId
-                })
+                .Select(c => new Row { Id = c.Id, Nombre = c.Name, QboId = c.QboId })
                 .OrderBy(r => r.Nombre)
                 .ToListAsync();
         }
 
-        // Stub: botón "Agregar" del Topbar aterriza aquí por ahora (sin lógica de Intuit todavía).
-        public IActionResult OnGetAgregar()
+        // NUEVO: al hacer click en "Agregar", te lleva a Intuit (Payroll) usando IntuitPayrollAuth__*
+        public IActionResult OnGetAgregar(string? returnTo)
         {
-            TempData["Empresas_ShowWizard"] = "1";
-            return Page();
+            var rt = string.IsNullOrWhiteSpace(returnTo)
+                ? Url.Page("/Empresas/Index", new { area = "Payroll" }) ?? "/Payroll/Empresas"
+                : returnTo;
+            var url = _auth.GetAuthorizeUrl(rt);
+            return Redirect(url);
         }
     }
 }

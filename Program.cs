@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using IvaFacilitador.Payroll.Services;
 using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 using System.Linq;
 using System.Globalization;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Localization;
 using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddScoped<IvaFacilitador.Payroll.Services.IPayrollAuthService, IvaFacilitador.Payroll.Services.PayrollAuthService>();
 builder.Services.AddDbContext<IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext>(options =>
 {
     // Ajusta el proveedor si tu proyecto no usa Sqlite:
@@ -115,6 +117,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 app.Run();
+
 
 
 
