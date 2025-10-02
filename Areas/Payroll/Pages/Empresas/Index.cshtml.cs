@@ -36,22 +36,18 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 .Select(c => new Row
                 {
                     Id = c.Id,
-                    Nombre = c.Name,  // Ajusta si tu columna se llama distinto
+                    Nombre = c.Name,   // ajusta si tu columna se llama distinto
                     QboId = c.QboId
                 })
                 .OrderBy(r => r.Nombre)
                 .ToListAsync();
         }
 
-        // Handler del botón "Agregar": redirige a Intuit con "returnTo"
-        public IActionResult OnGetAgregar(int companyId = 0)
+        // Handler del botón "Agregar": redirige a Intuit con returnTo fijo
+        public IActionResult OnGetAgregar()
         {
-            // Volveremos aquí después del callback:
-            var returnTo = Url.Page("/Empresas/Index", new { area = "Payroll" }) ?? "/Payroll/Empresas";
-
-            var url = _auth.GetAuthorizeUrl(companyId, returnTo);
+            var url = _auth.GetAuthorizeUrl(0, "/Payroll/Empresas");
             return Redirect(url);
         }
     }
 }
-
