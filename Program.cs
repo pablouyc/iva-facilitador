@@ -12,6 +12,7 @@ using IvaFacilitador.Payroll.Services;
 using IvaFacilitador.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection("IntuitAuth"));
 
 // ===== Servicios base =====
 builder.Services.AddMemoryCache();

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,13 +15,11 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         private readonly IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext _db;
         private readonly IPayrollAuthService _auth;
 
-        public IndexModel(
-            IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db,
-            IPayrollAuthService auth)
+        public IndexModel(IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db, IPayrollAuthService auth, ILogger<IndexModel> logger)
         {
             _db = db;
             _auth = auth;
-        }
+                    _logger = logger;}
 
         public class Row
         {
