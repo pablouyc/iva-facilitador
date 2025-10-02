@@ -10,6 +10,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
 {
     public class IndexModel : PageModel
     {
+        private readonly ILogger<IndexModel> _logger;
         private readonly IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext _db;
         private readonly IPayrollAuthService _auth;
 
@@ -41,6 +42,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 })
                 .OrderBy(r => r.Nombre)
                 .ToListAsync();
+            _logger.LogInformation("Empresas/Index cargó {count} filas", Empresas.Count);
         }
 
         // Handler del botón "Agregar": redirige a Intuit con returnTo fijo
@@ -51,3 +53,4 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
+
