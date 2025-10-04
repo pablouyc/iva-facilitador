@@ -16,7 +16,7 @@
                     <th style="width:90px;">ID</th>
                     <th>Nombre</th>
                     <th style="width:260px;">QBO Realm / Id</th>
-                    <th style="width:190px;">Acciones</th>
+                    <th style="width:260px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -34,9 +34,15 @@
                         <td>@e.Id</td>
                         <td>@e.Nombre</td>
                         <td>@(string.IsNullOrWhiteSpace(e.QboId) ? "-" : e.QboId)</td>
-                        <td>
+                        <td class="d-flex gap-1">
+                            <a class="btn btn-sm btn-primary"
+                               asp-area="Payroll"
+                               asp-page="/Parametrizador/Index"
+                               asp-route-id="@e.Id">
+                                Parametrizar
+                            </a>
                             <a class="btn btn-sm btn-outline-secondary disabled" title="Próximamente">Editar</a>
-                            <a class="btn btn-sm btn-outline-danger disabled" title="Próximamente">Eliminar</a>
+                            <a class="btn btn-sm btn-outline-danger disabled"  title="Próximamente">Eliminar</a>
                         </td>
                     </tr>
                 }
@@ -53,3 +59,5 @@
         </div>
     }
 </div>
+
+

@@ -19,3 +19,10 @@ Areas/Payroll/**/*.bak.*
 audit/
 payroll.db
 
+.vs/
+.vscode/
+Data/*.db
+Data/*.db-*
+Data/*.db-shm
+Data/*.db-wal
+App_Data/
