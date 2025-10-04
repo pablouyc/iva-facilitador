@@ -7,10 +7,7 @@
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
 <div class="container mt-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="m-0">Empresas conectadas</h4>
-        <a class="btn btn-success" href="/Payroll/Empresas?handler=Agregar">Agregar empresa</a>
-    </div>
+    <h4 class="mb-3">Empresas conectadas</h4>
 
     <div class="table-responsive">
         <table class="table table-sm table-striped align-middle">
@@ -20,7 +17,7 @@
                     <th>Nombre</th>
                     <th style="width:220px;">QBO Realm / Id</th>
                     <th style="width:140px;">Estado</th>
-                    <th style="width:260px;">Acciones</th>
+                    <th style="width:190px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -51,7 +48,7 @@
         </table>
     </div>
 
-    @* Wizard/placeholder al venir con ?handler=Agregar *@
+    @* Wizard/placeholder al venir con ?handler=Agregar (lo dispara el botón del Topbar) *@
     @if (TempData["Empresas_ShowWizard"] as string == "1")
     {
         <div class="alert alert-info mt-3">
