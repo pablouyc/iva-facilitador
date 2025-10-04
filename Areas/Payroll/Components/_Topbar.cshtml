@@ -165,13 +165,12 @@
     string mValue    = firstOfMonth.ToString("yyyy-MM",   CultureInfo.InvariantCulture);
     string fromValue = fromDate    .ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
     string toValue   = toDate      .ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
+
     // Status (query override opcional)
     var statusParam = ((string?)Context.Request.Query["status"])?.Trim();
     string statusTextUI = "En curso";
     string statusBadge  = "secondary";
 
-    // Determinar en base a rango si no viene override
-    DateTime todayOnlyDate = todayCR.Date;
     if (!string.IsNullOrEmpty(statusParam))
     {
         var s = statusParam.ToLowerInvariant();
@@ -182,7 +181,7 @@
     }
     else
     {
-        // usar fromDate/toDate ya calculados arriba
+        DateTime todayOnlyDate = todayCR.Date;
         if (toDate.Date < todayOnlyDate) { statusTextUI = "Tarde"; statusBadge = "danger"; }
         else {
             var dias = (toDate.Date - todayOnlyDate).TotalDays;
@@ -191,31 +190,25 @@
         }
     }
 
-    // Persistir status en rutas si vino por query
-    if (!string.IsNullOrEmpty(statusParam)) {
-
-
-    }
-
     // Rutas: companyId para todas; filtros solo para 4 secciones
     var routeAll = new System.Collections.Generic.Dictionary<string,string>(StringComparer.OrdinalIgnoreCase);
     if (!string.IsNullOrEmpty(companyId)) routeAll["companyId"] = companyId;
+    if (!string.IsNullOrEmpty(statusParam)) routeAll["status"] = statusParam;
 
     var routeFilters = new System.Collections.Generic.Dictionary<string,string>(routeAll);
     routeFilters["m"]    = mValue;
     routeFilters["from"] = fromValue;
     routeFilters["to"]   = toValue;
     if (!string.IsNullOrEmpty(qValue)) routeFilters["q"] = qValue;
-        if (!string.IsNullOrEmpty(statusParam)) {
-            routeAll["status"] = statusParam;
-            routeFilters["status"] = statusParam;
-        }
 }
-@{ bool isPlanilla = string.Equals(section, "Planilla total", StringComparison.OrdinalIgnoreCase); bool isApproved = string.Equals(statusTextUI, "Aprobada", StringComparison.OrdinalIgnoreCase); }
+
+@{ bool isPlanilla = string.Equals(section, "Planilla total", StringComparison.OrdinalIgnoreCase);
+   bool isApproved = string.Equals(statusTextUI, "Aprobada", StringComparison.OrdinalIgnoreCase); }
+
 <div class="card topbar payroll-scope">
   <div class="card-body d-flex align-items-center gap-2 flex-wrap">
     <div class="btn-group segmented" role="group" aria-label="Navegación RRHH">
-      <a asp-area="Payroll" asp-page="/Index"                  asp-all-route-data="routeAll"    class="btn btn-outline-secondary btn-sm @aPrin">Principal</a>
+      <a asp-area="Payroll" asp-page="/Index"                  asp-all-route-data="routeAll"     class="btn btn-outline-secondary btn-sm @aPrin">Principal</a>
       <a asp-area="Payroll" asp-page="/PlanillaTotal/Index"    asp-all-route-data="routeFilters" class="btn btn-outline-secondary btn-sm @aPlan">Planilla total</a>
       <a asp-area="Payroll" asp-page="/Deducciones/Index"      asp-all-route-data="routeFilters" class="btn btn-outline-secondary btn-sm @aDed">Deducciones</a>
       <a asp-area="Payroll" asp-page="/Extras/Index"           asp-all-route-data="routeFilters" class="btn btn-outline-secondary btn-sm @aExt">Extras</a>
@@ -237,6 +230,17 @@
         </select>
         <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Aplicar</button></noscript>
       </form>
+
+      @* Botón Agregar visible solo en la sección Empresas *@
+      @if (string.Equals(section, "Empresas", StringComparison.OrdinalIgnoreCase))
+      {
+          <a class="btn btn-sm btn-primary"
+             asp-area="Payroll"
+             asp-page="/Empresas/Index"
+             asp-page-handler="Agregar">
+              Agregar
+          </a>
+      }
     </div>
 
     @* ====== Bloque de filtros (debajo del menú) solo en 4 secciones ====== *@
@@ -244,9 +248,14 @@
     {
         <div class="w-100"></div>
         <form id="payroll-range-form" method="get" action="@Context.Request.Path" class="row g-2 align-items-end mt-2">
-            @if (!string.IsNullOrEmpty(companyId)) {
-              <input type="hidden" name="companyId" value="@companyId" />
-            @if (!string.IsNullOrEmpty(statusParam)) { <input type="hidden" name="status" value="@statusParam" /> } }
+            @if (!string.IsNullOrEmpty(companyId))
+            {
+                <input type="hidden" name="companyId" value="@companyId" />
+            }
+            @if (!string.IsNullOrEmpty(statusParam))
+            {
+                <input type="hidden" name="status" value="@statusParam" />
+            }
 
             <div class="col-auto">
               <label class="form-label form-label-sm">Mes</label>
@@ -275,15 +284,17 @@
             <div class="col-auto">
               <button type="submit" class="btn btn-sm btn-outline-secondary">Aplicar</button>
             </div>
-        
-            @{ /* botones solo en Planilla */ } @if (isPlanilla) {
-  <div class="col-auto ms-auto d-flex align-items-end gap-2">
-    <span class="badge text-bg-@statusBadge">Estado: @statusTextUI</span>
-    @if (!isApproved) { <button type="button" id="btn-pt-approve" class="btn btn-sm btn-success">Aprobar</button> }
-    @if (isApproved)  { <button type="button" id="btn-pt-edit" class="btn btn-sm btn-outline-primary">Editar</button> }
-  </div>
-}
-</form>
+
+            @{ /* botones solo en Planilla */ }
+            @if (isPlanilla)
+            {
+              <div class="col-auto ms-auto d-flex align-items-end gap-2">
+                <span class="badge text-bg-@statusBadge">Estado: @statusTextUI</span>
+                @if (!isApproved) { <button type="button" id="btn-pt-approve" class="btn btn-sm btn-success">Aprobar</button> }
+                @if (isApproved)  { <button type="button" id="btn-pt-edit" class="btn btn-sm btn-outline-primary">Editar</button> }
+              </div>
+            }
+        </form>
 
         <script>
         (function(){
@@ -328,45 +339,29 @@
           if(d1) d1.addEventListener('change', syncQFromRange);
           if(d2) d2.addEventListener('change', syncQFromRange);
         })();
-                  // --- Demo acciones ---
-          function showToast(msg){
-            var wrap = document.createElement('div');
-            wrap.innerHTML = '<div class="toast align-items-center text-bg-dark border-0" role="status" aria-live="polite" aria-atomic="true" style="position:fixed; right:1rem; bottom:1rem; z-index:1080;">'
-              + '<div class="d-flex"><div class="toast-body">'+msg+'</div>'
-              + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div>';
-            var toast = wrap.firstChild;
-            document.body.appendChild(toast);
-            try {
-              var inst = bootstrap.Toast.getOrCreateInstance(toast,{ delay:2000 });
-              inst.show();
-              toast.addEventListener('hidden.bs.toast', function(){ toast.remove(); });
-            } catch(e){ alert(msg); toast.remove(); }
-          }
-          document.getElementById('btn-pt-approve')?.addEventListener('click', function(){
-            showToast('Planilla aprobada (demo)');
-          });
-          document.getElementById('btn-pt-edit')?.addEventListener('click', function(){
-            showToast('Editar planilla (demo)');
-          });
-</script>
+
+        // --- Demo acciones ---
+        function showToast(msg){
+          var wrap = document.createElement('div');
+          wrap.innerHTML = '<div class="toast align-items-center text-bg-dark border-0" role="status" aria-live="polite" aria-atomic="true" style="position:fixed; right:1rem; bottom:1rem; z-index:1080;">'
+            + '<div class="d-flex"><div class="toast-body">'+msg+'</div>'
+            + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div>';
+          var toast = wrap.firstChild;
+          document.body.appendChild(toast);
+          try {
+            var inst = bootstrap.Toast.getOrCreateInstance(toast,{ delay:2000 });
+            inst.show();
+            toast.addEventListener('hidden.bs.toast', function(){ toast.remove(); });
+          } catch(e){ alert(msg); toast.remove(); }
+        }
+        document.getElementById('btn-pt-approve')?.addEventListener('click', function(){
+          showToast('Planilla aprobada (demo)');
+        });
+        document.getElementById('btn-pt-edit')?.addEventListener('click', function(){
+          showToast('Editar planilla (demo)');
+        });
+        </script>
     }
   </div>
 </div>
 
-
-
-
-
-
-@* Botón propio de Empresas *@
-@if ((ViewData["PayrollSection"] as string) == "Empresas")
-{
-    <div class="ms-auto d-flex gap-2">
-        <a class="btn btn-sm btn-primary"
-           asp-area="Payroll"
-           asp-page="/Empresas/Index"
-           asp-page-handler="Agregar">
-            Agregar
-        </a>
-    </div>
-}
