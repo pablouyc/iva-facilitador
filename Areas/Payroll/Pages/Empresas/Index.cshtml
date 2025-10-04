@@ -15,15 +15,16 @@
                 <tr>
                     <th style="width:90px;">ID</th>
                     <th>Nombre</th>
-                    <th style="width:260px;">QBO Realm / Id</th>
-                    <th style="width:260px;">Acciones</th>
+                    <th style="width:220px;">QBO Realm / Id</th>
+                    <th style="width:140px;">Estado</th>
+                    <th style="width:190px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
             @if (Model.Empresas == null || !Model.Empresas.Any())
             {
                 <tr>
-                    <td colspan="4" class="text-muted">No hay empresas conectadas aún.</td>
+                    <td colspan="5" class="text-muted">No hay empresas conectadas aún.</td>
                 </tr>
             }
             else
@@ -34,15 +35,11 @@
                         <td>@e.Id</td>
                         <td>@e.Nombre</td>
                         <td>@(string.IsNullOrWhiteSpace(e.QboId) ? "-" : e.QboId)</td>
-                        <td class="d-flex gap-1">
-                            <a class="btn btn-sm btn-primary"
-                               asp-area="Payroll"
-                               asp-page="/Parametrizador/Index"
-                               asp-route-id="@e.Id">
-                                Parametrizar
-                            </a>
+                        <td>@e.Status</td>
+                        <td>
+                            <a class="btn btn-sm btn-primary" href="/Payroll/Parametrizador/@e.Id">Parametrizar</a>
                             <a class="btn btn-sm btn-outline-secondary disabled" title="Próximamente">Editar</a>
-                            <a class="btn btn-sm btn-outline-danger disabled"  title="Próximamente">Eliminar</a>
+                            <a class="btn btn-sm btn-outline-danger disabled" title="Próximamente">Eliminar</a>
                         </td>
                     </tr>
                 }
@@ -50,14 +47,4 @@
             </tbody>
         </table>
     </div>
-
-    @* Placeholder opcional si vienes con ?handler=Agregar (lo usaremos en el siguiente paso) *@
-    @if (TempData["Empresas_ShowWizard"] as string == "1")
-    {
-        <div class="alert alert-info mt-3">
-            Iniciaremos el asistente de conexión a QBO Payroll aquí (pendiente de backend).
-        </div>
-    }
 </div>
-
-

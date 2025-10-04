@@ -1,55 +1,59 @@
-using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using IvaFacilitador.Payroll.Services;
+using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 
 namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
 {
     public class IndexModel : PageModel
     {
-        private readonly ILogger<IndexModel> _logger;
-        private readonly IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext _db;
-        private readonly IPayrollAuthService _auth;
+        private readonly PayrollDbContext _db;
+        public IndexModel(PayrollDbContext db) => _db = db;
 
-        public IndexModel(IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db, IPayrollAuthService auth, ILogger<IndexModel> logger)
-        {
-            _db = db;
-            _auth = auth;
-                    _logger = logger;}
+        public List<Row> Empresas { get; set; } = new();
 
         public class Row
         {
             public int Id { get; set; }
-            public string Nombre { get; set; } = "";
+            public string? Nombre { get; set; }
             public string? QboId { get; set; }
+            public string Status { get; set; } = "Sin conexión";
         }
-
-        public List<Row> Empresas { get; set; } = new();
 
         public async Task OnGet()
         {
-            Empresas = await _db.Companies
-                .Select(c => new Row
+            var data = await _db.Companies
+                .Select(c => new
                 {
-                    Id = c.Id,
-                    Nombre = c.Name,   // ajusta si tu columna se llama distinto
-                    QboId = c.QboId
+                    c.Id,
+                    c.Name,
+                    c.QboId,
+                    c.PayPolicy,
+                    HasTokens = _db.PayrollQboTokens.Any(t => t.CompanyId == c.Id)
                 })
-                .OrderBy(r => r.Nombre)
                 .ToListAsync();
-            _logger.LogInformation("Empresas/Index cargó {count} filas", Empresas.Count);
+
+            Empresas = data.Select(x => new Row
+            {
+                Id = x.Id,
+                Nombre = x.Name,
+                QboId = x.QboId,
+                Status = !x.HasTokens ? "Sin conexión" : (IsParametrized(x.PayPolicy) ? "Listo" : "Pendiente")
+            }).ToList();
         }
 
-        // Handler del botón "Agregar": redirige a Intuit con returnTo fijo
-        public IActionResult OnGetAgregar()
+        private static bool IsParametrized(string? payPolicy)
         {
-            var url = _auth.GetAuthorizeUrl(0, "/Payroll/Empresas");
-            return Redirect(url);
+            if (string.IsNullOrWhiteSpace(payPolicy)) return false;
+            try
+            {
+                using var doc = JsonDocument.Parse(payPolicy);
+                var root = doc.RootElement;
+                var acc = root.TryGetProperty("defaultExpenseAccountId", out var a) ? a.GetString() : null;
+                var wi  = root.TryGetProperty("defaultWageItemId", out var w) ? w.GetString() : null;
+                return !string.IsNullOrWhiteSpace(acc) && !string.IsNullOrWhiteSpace(wi);
+            }
+            catch { return false; }
         }
     }
 }
-
