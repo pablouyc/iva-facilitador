@@ -68,61 +68,85 @@ app.MapGet("/Auth/PayrollCallback", async (
     IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db
 ) =>
 {
-    var q       = http.Request.Query;
-    var code    = q["code"].ToString();
-    var stateB64= q["state"].ToString();
-    var realmId = q["realmId"].ToString();
+    var q        = http.Request.Query;
+    var code     = q["code"].ToString();
+    var stateB64 = q["state"].ToString();
+    var realmIdQ = q["realmId"].ToString();
 
-    if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(stateB64))
-        return Results.BadRequest("Missing code/state.");
+    if (string.IsNullOrWhiteSpace(code))
+        return Results.BadRequest("Missing code.");
 
     string returnTo = "/Payroll/Empresas";
-    int    companyId = 0;
-    string? nonce    = null;
+    int companyId   = 0;
 
     try
     {
-        var stateJson = Encoding.UTF8.GetString(Convert.FromBase64String(stateB64));
-        using var doc = JsonDocument.Parse(stateJson);
-        var root = doc.RootElement;
-        if (root.TryGetProperty("returnTo", out var rt)) returnTo = rt.GetString() ?? returnTo;
-        if (root.TryGetProperty("companyId", out var cid)) int.TryParse(cid.ToString(), out companyId);
-        if (root.TryGetProperty("nonce", out var n))      nonce = n.GetString();
+        if (!string.IsNullOrWhiteSpace(stateB64))
+        {
+            var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(stateB64));
+            using var doc = System.Text.Json.JsonDocument.Parse(stateJson);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("returnTo", out var rt)) returnTo = rt.GetString() ?? returnTo;
+            if (root.TryGetProperty("companyId", out var cid)) int.TryParse(cid.ToString(), out companyId);
+        }
     }
-    catch { /* estado inválido => defaults */ }
+    catch { /* estado inválido => ignorar */ }
 
     var redirectUri = cfg["IntuitPayrollAuth:RedirectUri"]
         ?? $"{http.Request.Scheme}://{http.Request.Host}/Auth/PayrollCallback";
 
+    // 1) Intercambia code -> tokens
     var tokens = await auth.ExchangeCodeAsync(code, redirectUri);
 
+    // 2) Realm final
+    var realm = tokens.realmId ?? realmIdQ;
+    if (string.IsNullOrWhiteSpace(realm))
+        return Results.BadRequest("Missing realmId.");
+
+    // 3) Asegura Company por realm
+    IvaFacilitador.Areas.Payroll.BaseDatosPayroll.Company? comp = null;
+
+    if (companyId > 0)
+        comp = await db.Companies.FindAsync(companyId);
+
+    if (comp == null)
+        comp = await db.Companies.FirstOrDefaultAsync(c => c.QboId == realm);
+
+    if (comp == null)
+    {
+        comp = new IvaFacilitador.Areas.Payroll.BaseDatosPayroll.Company
+        {
+            Name = $"Empresa vinculada {realm}",
+            QboId = realm
+        };
+        db.Companies.Add(comp);
+        await db.SaveChangesAsync();
+    }
+
+    // 4) Guarda/actualiza tokens con el Id real de la empresa
     await auth.SaveTokensAsync(
-        companyId,
-        tokens.realmId ?? realmId,
+        comp.Id,
+        realm,
         tokens.accessToken,
         tokens.refreshToken,
         tokens.expiresAtUtc
     );
 
-    // Completar nombre desde QBO si es posible
-    if (companyId != 0 && !string.IsNullOrWhiteSpace(tokens.realmId ?? realmId))
+    // 5) Intentar nombre real desde QBO (tolerante a fallos)
+    try
     {
-        var comp = await db.Companies.FindAsync(companyId);
-        if (comp != null)
+        var name = await auth.TryGetCompanyNameAsync(realm, tokens.accessToken);
+        if (!string.IsNullOrWhiteSpace(name))
         {
-            comp.QboId ??= tokens.realmId ?? realmId;
-            var name = await auth.TryGetCompanyNameAsync(comp.QboId!, tokens.accessToken);
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                comp.Name = name!;
-                await db.SaveChangesAsync();
-            }
+            comp.Name = name!;
+            await db.SaveChangesAsync();
         }
     }
+    catch { /* opcional */ }
 
+    // 6) Volver al listado
     return Results.Redirect(returnTo);
 });
-
 // ===== Cultura es-CR =====
 var supportedCultures = new[] { new CultureInfo("es-CR") };
 app.UseRequestLocalization(new RequestLocalizationOptions
