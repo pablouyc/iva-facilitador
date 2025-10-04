@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
@@ -40,6 +41,20 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 QboId = x.QboId,
                 Status = !x.HasTokens ? "Sin conexión" : (IsParametrized(x.PayPolicy) ? "Listo" : "Pendiente")
             }).ToList();
+        }
+
+        // Soporta enlace: /Payroll/Empresas?handler=Agregar
+        public IActionResult OnGetAgregar()
+        {
+            TempData["Empresas_ShowWizard"] = "1";
+            return Page();
+        }
+
+        // Soporta botón dentro de <form> con asp-page-handler="Agregar"
+        public IActionResult OnPostAgregar()
+        {
+            TempData["Empresas_ShowWizard"] = "1";
+            return RedirectToPage();
         }
 
         private static bool IsParametrized(string? payPolicy)
