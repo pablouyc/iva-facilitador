@@ -31,7 +31,7 @@ builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/");
     options.Conventions.AllowAnonymousToPage("/Auth/Login");
-    options.Conventions.AllowAnonymousToPage("/Auth/Callback");
+    options.Conventions.AllowAnonymousToPage("/Auth/PayrollCallback");
 });
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -169,7 +169,7 @@ app.Use(async (context, next) =>
 
     if (context.Request.Cookies.TryGetValue("must_param_realm", out var realmId) && !string.IsNullOrEmpty(realmId))
     {
-        var allowed = new[] { "/Parametrizador", "/Auth/Callback", "/Auth/Disconnect", "/Payroll" };
+        var allowed = new[] { "/Parametrizador", "/Auth/PayrollCallback", "/Auth/Disconnect", "/Payroll" };
         bool esEstatico = path.StartsWith("/css", StringComparison.OrdinalIgnoreCase)
                        || path.StartsWith("/js", StringComparison.OrdinalIgnoreCase)
                        || path.StartsWith("/lib", StringComparison.OrdinalIgnoreCase)
