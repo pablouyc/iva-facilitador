@@ -1,65 +1,65 @@
-@page "/Payroll/Parametrizador/{id?}"
+@page "{id:int?}"
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
     ViewData["Title"] = "Parametrizador de nómina";
+    ViewData["PayrollSection"] = "Empresas";
 }
+@await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
-<h2>Parametrizador de nómina</h2>
+<div class="container mt-3">
+    <h4 class="mb-3">Parametrizador de nómina</h4>
 
-@if (TempData["ok"] is string ok)
-{
-    <div class="alert alert-success">@ok</div>
-}
+    <form method="post" asp-page-handler="Save">
+        <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
 
-<form method="post">
-    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
-    <div class="mb-3">
-        <label class="form-label">Empresa</label>
-        <input class="form-control" value="@($"{Model.CompanyName} ({Model.RealmId})")" readonly />
-    </div>
-
-    <div class="row">
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Cuenta de gasto predeterminada</label>
-            <select asp-for="ExpenseAccountId" class="form-select">
-                <option value="">(sin seleccionar)</option>
-                @foreach (var a in Model.Accounts)
-                {
-                    <option value="@a.Id" selected="@(Model.ExpenseAccountId==a.Id)">@a.Name (@a.Id)</option>
-                }
-            </select>
+        <div class="mb-3">
+            <label class="form-label">Empresa</label>
+            <input class="form-control"
+                   value="@(string.IsNullOrWhiteSpace(Model.CompanyName)
+                             ? $"Empresa vinculada {Model.RealmId}"
+                             : (Model.CompanyName + (string.IsNullOrWhiteSpace(Model.RealmId) ? "" : $" ({Model.RealmId})")))"
+                   readonly />
         </div>
-        <div class="col-md-6 mb-3">
-            <label class="form-label">Ítem de salario (Service)</label>
-            <select asp-for="WageItemId" class="form-select">
-                <option value="">(sin seleccionar)</option>
-                @foreach (var i in Model.Items)
-                {
-                    <option value="@i.Id" selected="@(Model.WageItemId==i.Id)">@i.Name (@i.Id)</option>
-                }
-            </select>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Cuenta de gasto predeterminada</label>
+                <select asp-for="ExpenseAccountId" class="form-select">
+                    <option value="">(sin seleccionar)</option>
+                    @foreach (var a in Model.Accounts)
+                    {
+                        <option value="@a.Id" selected="@(Model.ExpenseAccountId == a.Id)">@a.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Ítem de salario (Service)</label>
+                <select asp-for="WageItemId" class="form-select">
+                    <option value="">(sin seleccionar)</option>
+                    @foreach (var i in Model.Items)
+                    {
+                        <option value="@i.Id" selected="@(Model.WageItemId == i.Id)">@i.Name</option>
+                    }
+                </select>
+            </div>
         </div>
-    </div>
+
+        <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <button class="btn btn-secondary" formmethod="post" formaction="?handler=Sync">Sincronizar desde QBO</button>
+            <a href="/Payroll/Empresas" class="btn btn-outline-secondary">Volver</a>
+        </div>
+    </form>
 
     @if (!Model.HasTokens)
     {
-        <div class="alert alert-warning">
-            Esta empresa aún no está conectada a QuickBooks Payroll. Conéctala para poder sincronizar listas.
+        <div class="alert alert-warning mt-3">
+            Esta empresa aún no está conectada a QBO Payroll.
+            <form method="post" asp-page-handler="Connect" class="d-inline">
+                <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+                <button class="btn btn-sm btn-warning">Conectar con QBO</button>
+            </form>
         </div>
     }
-
-    <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary" asp-page-handler="Save">Guardar</button>
-
-        @if (Model.HasTokens)
-        {
-            <button type="submit" class="btn btn-secondary" asp-page-handler="Sync">Sincronizar desde QBO</button>
-        }
-        else
-        {
-            <button type="submit" class="btn btn-success" asp-page-handler="Connect">Conectar con QuickBooks Payroll</button>
-        }
-
-        <a class="btn btn-outline-secondary" href="/Payroll/Empresas">Volver</a>
-    </div>
-</form>
+</div>

@@ -25,10 +25,10 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
         [BindProperty(SupportsGet = true)]
         public int? id { get; set; }
 
-        public int CompanyId { get; set; }
+        public int    CompanyId   { get; set; }
         public string? CompanyName { get; set; }
-        public string? RealmId { get; set; }
-        public bool HasTokens { get; set; }
+        public string? RealmId     { get; set; }
+        public bool   HasTokens    { get; set; }
 
         public class Opt { public string Id { get; set; } = ""; public string Name { get; set; } = ""; }
 
@@ -70,7 +70,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
             if (id.HasValue) comp = await _db.Companies.FindAsync(new object[] { id!.Value }, ct);
             if (comp == null) return Redirect("/Payroll/Empresas");
 
-            CompanyId = comp.Id;
+            CompanyId   = comp.Id;
             CompanyName = comp.Name;
             LoadDefaultsFromPolicy(comp.PayPolicy);
 
@@ -83,15 +83,32 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
                     var (realm, access) = await LoadTokensAsync(CompanyId, ct);
                     RealmId = realm;
 
+                    // Listas desde QBO
                     var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
                     Accounts = accs.Select(a => new Opt { Id = a.Id, Name = a.Name }).ToList();
 
                     var items = await _api.GetServiceItemsAsync(realm, access, ct);
                     Items = items.Select(i => new Opt { Id = i.Id, Name = i.Name }).ToList();
+
+                    // Refrescar nombre de empresa si está genérico
+                    if (string.IsNullOrWhiteSpace(CompanyName) || CompanyName.StartsWith("Empresa vinculada "))
+                    {
+                        var realName = await _api.GetCompanyNameAsync(realm, access, ct);
+                        if (!string.IsNullOrWhiteSpace(realName))
+                        {
+                            CompanyName = realName;
+
+                            if (!string.Equals(comp.Name, realName, StringComparison.Ordinal))
+                            {
+                                comp.Name = realName!;
+                                await _db.SaveChangesAsync(ct);
+                            }
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning(ex, "No se pudieron obtener listas desde QBO.");
+                    _log.LogWarning(ex, "No se pudieron obtener listas/CompanyInfo desde QBO.");
                 }
             }
 
@@ -108,7 +125,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
 
             var json = JsonSerializer.Serialize(new {
                 defaultExpenseAccountId = ExpenseAccountId,
-                defaultWageItemId = WageItemId
+                defaultWageItemId       = WageItemId
             });
 
             comp.PayPolicy = json;
@@ -138,9 +155,9 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
             if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(redirectUri))
                 return BadRequest("Faltan credenciales de IntuitPayrollAuth.");
 
-            var stateObj = new { companyId = companyId, returnTo = $"/Payroll/Parametrizador/{companyId}" };
+            var stateObj  = new { companyId = companyId, returnTo = $"/Payroll/Parametrizador/{companyId}" };
             var stateJson = JsonSerializer.Serialize(stateObj);
-            var state = Convert.ToBase64String(Encoding.UTF8.GetBytes(stateJson));
+            var state     = Convert.ToBase64String(Encoding.UTF8.GetBytes(stateJson));
 
             var url = "https://appcenter.intuit.com/connect/oauth2" +
                       "?client_id="    + Uri.EscapeDataString(clientId) +
