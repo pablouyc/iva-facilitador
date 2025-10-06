@@ -55,7 +55,9 @@ namespace IvaFacilitador.Payroll.Services
             var tokenEndpoint = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
 
             var client = _http.CreateClient("intuit");
-            var basic  = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+var basic  = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basic);
 
             using var content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -103,7 +105,9 @@ namespace IvaFacilitador.Payroll.Services
                 return null;
 
             var client = _http.CreateClient("intuit");
-            if (client.BaseAddress == null)
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+if (client.BaseAddress == null)
                 client.BaseAddress = new Uri("https://quickbooks.api.intuit.com/");
 
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);

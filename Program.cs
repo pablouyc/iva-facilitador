@@ -45,6 +45,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<IvaFacilitador.Payroll.Services.IPayrollQboApi, IvaFacilitador.Payroll.Services.PayrollQboApi>();
+
+builder.Services.AddScoped<IvaFacilitador.Payroll.Services.IPayrollAuthService, IvaFacilitador.Payroll.Services.PayrollAuthService>();
 // ===== DbContext de Payroll (único) con fallback a Data\payroll.db =====
 builder.Services.AddDbContext<PayrollDbContext>(opt =>
 {
@@ -194,7 +196,47 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/dev/qbo/companyinfo/{companyId:int}", async (
+        int companyId,
+        IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db,
+        IHttpClientFactory httpFactory) =>
+    {
+        try
+        {
+            var tok = db.PayrollQboTokens
+                .Where(t => t.CompanyId == companyId)
+                .OrderByDescending(t => t.Id)
+                .FirstOrDefault();
+
+            if (tok == null)
+                return Results.NotFound($"No hay tokens para CompanyId={companyId}.");
+
+            var client = httpFactory.CreateClient("intuit");
+            if (client.BaseAddress == null)
+                client.BaseAddress = new Uri("https://quickbooks.api.intuit.com/");
+
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(
+                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tok.AccessToken ?? "");
+
+            var url = $"v3/company/{tok.RealmId}/companyinfo/{tok.RealmId}?minorversion=65";
+            var resp = await client.GetAsync(url);
+            var body = await resp.Content.ReadAsStringAsync();
+
+            var header = $"STATUS {(int)resp.StatusCode} {resp.ReasonPhrase}\nURL {client.BaseAddress}{url}\n";
+            var mime   = "application/json";
+
+            // Si no es éxito, igual devolvemos el cuerpo para diagnóstico
+            return Results.Text(header + "\n" + body, mime);
+        }
+        catch (Exception ex)
+        {
+            return Results.Text("EXCEPTION: " + ex.ToString(), "text/plain");
+        }
+    });
+}
 app.Run();
-
-
-
