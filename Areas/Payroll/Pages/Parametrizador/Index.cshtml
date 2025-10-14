@@ -1,65 +1,158 @@
-@page "{id:int?}"
+@page
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
     ViewData["Title"] = "Parametrizador de nómina";
-    ViewData["PayrollSection"] = "Empresas";
 }
-@await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
+<h2>Parametrizador de nómina</h2>
 
-<div class="container mt-3">
-    <h4 class="mb-3">Parametrizador de nómina</h4>
+<form method="post">
+  <fieldset class="mb-4">
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label">Empresa</label>
+        <input name="CompanyName" class="form-control" value="@Request.Form["CompanyName"]" placeholder="Nombre de empresa (editable)"/>
+      </div>
 
-    <form method="post" asp-page-handler="Save">
-        <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+      <div class="col-md-6">
+        <label class="form-label">Cédula</label>
+        <input name="Cedula" class="form-control" value="@Request.Form["Cedula"]" placeholder="Cédula jurídica"/>
+      </div>
 
-        <div class="mb-3">
-            <label class="form-label">Empresa</label>
-            <input class="form-control"
-                   value="@(string.IsNullOrWhiteSpace(Model.CompanyName)
-                             ? $"Empresa vinculada {Model.RealmId}"
-                             : (Model.CompanyName + (string.IsNullOrWhiteSpace(Model.RealmId) ? "" : $" ({Model.RealmId})")))"
-                   readonly />
-        </div>
+      <div class="col-md-6">
+        <label class="form-label">REALMID (QBO)</label>
+        <input name="RealmId" class="form-control" value="@Request.Form["RealmId"]" readonly />
+      </div>
 
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">Cuenta de gasto predeterminada</label>
-                <select asp-for="ExpenseAccountId" class="form-select">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var a in Model.Accounts)
-                    {
-                        <option value="@a.Id" selected="@(Model.ExpenseAccountId == a.Id)">@a.Name</option>
-                    }
+      <div class="col-md-6">
+        <label class="form-label">Periodicidad de pago</label>
+        <select name="Periodicidad" class="form-select">
+          <option value="">(seleccionar)</option>
+          <option value="Mensual">Mensual</option>
+          <option value="Quincenal" selected>Quincenal</option>
+          <option value="Semanal">Semanal</option>
+        </select>
+        <div class="form-text">Default: Quincena = 1–15 y 16–fin; Semanal = lunes–domingo.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">¿Separa planilla por sectores?</label>
+        <select name="SplitBySector" class="form-select">
+          <option value="false" selected>No</option>
+          <option value="true">Sí</option>
+        </select>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset class="mb-4">
+    <legend class="h6">Sectores</legend>
+    <div id="sectoresWrap" class="d-flex flex-column gap-2">
+      <div class="input-group">
+        <input name="Sectores[0]" class="form-control" placeholder="Nombre del sector (mínimo 1)"/>
+        <button type="button" class="btn btn-outline-secondary" onclick="addSector()">Añadir</button>
+        <button type="button" class="btn btn-outline-danger" onclick="removeSector(this)">Eliminar</button>
+      </div>
+    </div>
+    <div class="form-text">Añade los sectores necesarios; debe quedar al menos uno.</div>
+  </fieldset>
+
+  <fieldset class="mb-4">
+    <legend class="h6">Cuentas contables de planilla</legend>
+    <div class="row g-3 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label">Cuenta de gasto predeterminada (QBO)</label>
+        <select name="DefaultExpenseAccountId" class="form-select">
+          <option value="">(sin seleccionar)</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Ítem de salario (Service) - opcional</label>
+        <select name="ServiceItemId" class="form-select">
+          <option value="">(sin seleccionar)</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Filtro por tipo o texto (como en QBO)</label>
+        <input id="accFilter" class="form-control" placeholder="Ej: Expense, COGS o texto"/>
+      </div>
+    </div>
+
+    <div class="mt-3">
+      <div class="form-text mb-2">Mapeo por sector: si está activado “Separa por sectores”, se genera un mapeo por cada sector.</div>
+      <div id="mapWrap" class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr><th>Sector</th><th>Cuenta en QBO</th></tr>
+          </thead>
+          <tbody id="mapBody">
+            <tr>
+              <td>(General)</td>
+              <td>
+                <select name="Map[General]" class="form-select map-select">
+                  <option value="">(sin seleccionar)</option>
                 </select>
-            </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </fieldset>
 
-            <div class="col-md-6">
-                <label class="form-label">Ítem de salario (Service)</label>
-                <select asp-for="WageItemId" class="form-select">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var i in Model.Items)
-                    {
-                        <option value="@i.Id" selected="@(Model.WageItemId == i.Id)">@i.Name</option>
-                    }
-                </select>
-            </div>
-        </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" formaction="?handler=Save">Guardar</button>
+    <button class="btn btn-secondary" formaction="?handler=Sync">Sincronizar desde QBO</button>
+    <a class="btn btn-outline-secondary" href="..">Volver</a>
+  </div>
+</form>
 
-        <div class="mt-3 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Guardar</button>
-            <button class="btn btn-secondary" formmethod="post" formaction="?handler=Sync">Sincronizar desde QBO</button>
-            <a href="/Payroll/Empresas" class="btn btn-outline-secondary">Volver</a>
-        </div>
-    </form>
-
-    @if (!Model.HasTokens)
-    {
-        <div class="alert alert-warning mt-3">
-            Esta empresa aún no está conectada a QBO Payroll.
-            <form method="post" asp-page-handler="Connect" class="d-inline">
-                <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
-                <button class="btn btn-sm btn-warning">Conectar con QBO</button>
-            </form>
-        </div>
+<script>
+  function addSector(){
+    const wrap = document.getElementById('sectoresWrap');
+    const idx  = wrap.querySelectorAll('.input-group').length;
+    const row  = document.createElement('div');
+    row.className = 'input-group';
+    row.innerHTML = `
+      <input name="Sectores[${idx}]" class="form-control" placeholder="Nombre del sector"/>
+      <button type="button" class="btn btn-outline-secondary" onclick="addSector()">Añadir</button>
+      <button type="button" class="btn btn-outline-danger" onclick="removeSector(this)">Eliminar</button>`;
+    wrap.appendChild(row);
+    syncMapSectors();
+  }
+  function removeSector(btn){
+    const wrap = document.getElementById('sectoresWrap');
+    const rows = wrap.querySelectorAll('.input-group');
+    if (rows.length <= 1) return;
+    btn.closest('.input-group').remove();
+    wrap.querySelectorAll('.input-group input').forEach((inp, i) => inp.name = `Sectores[${i}]`);
+    syncMapSectors();
+  }
+  function syncMapSectors(){
+    const split = document.querySelector('select[name="SplitBySector"]').value === 'true';
+    const body  = document.getElementById('mapBody');
+    const selectHtml = () => '<select name="Map[__SECTOR__]" class="form-select map-select"><option value="">(sin seleccionar)</option></select>';
+    body.innerHTML = '';
+    if(!split){
+      body.innerHTML = '<tr><td>(General)</td><td>' + selectHtml().replace('__SECTOR__','General') + '</td></tr>';
+      return;
     }
-</div>
+    const sectors = Array.from(document.querySelectorAll('#sectoresWrap input[name^="Sectores["]')).map(i => (i.value||'').trim()).filter(Boolean);
+    if (sectors.length === 0) sectors.push('(Sector 1)');
+    for (const s of sectors){
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+s+'</td><td>' + selectHtml().replace('__SECTOR__', s) + '</td>';
+      body.appendChild(tr);
+    }
+  }
+  document.querySelector('select[name="SplitBySector"]').addEventListener('change', syncMapSectors);
+  document.getElementById('accFilter').addEventListener('input', () => {
+    const q = (document.getElementById('accFilter').value || '').toLowerCase();
+    document.querySelectorAll('select.map-select option').forEach(opt => {
+      if (!opt.value) { opt.hidden = false; return; }
+      const txt = (opt.textContent || '').toLowerCase();
+      opt.hidden = (q && !txt.includes(q));
+    });
+  });
+  syncMapSectors();
+</script>
