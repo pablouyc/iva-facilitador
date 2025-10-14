@@ -3,6 +3,7 @@ using System;
 using IvaFacilitador.Data.Payroll;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace IvaFacilitador.Migrations
 {
     [DbContext(typeof(PayrollDbContext))]
-    partial class PayrollDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251014020105_AddPayrollBase_Payroll")]
+    partial class AddPayrollBase_Payroll
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -62,7 +65,7 @@ namespace IvaFacilitador.Migrations
                     b.HasIndex("EmpresaId", "Cedula")
                         .IsUnique();
 
-                    b.ToTable("Colaborador");
+                    b.ToTable("Colaboradores");
                 });
 
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.CuentaContable", b =>
@@ -123,9 +126,6 @@ namespace IvaFacilitador.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PayPolicy")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("RealmId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -134,6 +134,9 @@ namespace IvaFacilitador.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("BLOB");
+
+                    b.Property<bool>("SepararContabilidadPorSectores")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("TEXT");
@@ -219,43 +222,6 @@ namespace IvaFacilitador.Migrations
                     b.ToTable("Feriados");
                 });
 
-            modelBuilder.Entity("IvaFacilitador.Domain.Payroll.PayrollQboToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AccessToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("EmpresaId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ExpiresAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RealmId")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RefreshToken")
-                        .HasColumnType("TEXT");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmpresaId", "RealmId")
-                        .IsUnique();
-
-                    b.ToTable("PayrollQboTokens");
-                });
-
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.Periodo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -293,45 +259,7 @@ namespace IvaFacilitador.Migrations
                     b.ToTable("Periodos");
                 });
 
-<<<<<<< HEAD
-            modelBuilder.Entity("IvaFacilitador.Areas.Payroll.ModelosPayroll.PayrollQboToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AccessToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RealmId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RefreshToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Scope")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TokenType")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PayrollQboTokens");
-                });
-
-            modelBuilder.Entity("IvaFacilitador.Areas.Payroll.BaseDatosPayroll.Employee", b =>
-=======
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.PeriodoColaborador", b =>
->>>>>>> 67d5566 (Deploy: Parametrizador Payroll enlazado a memoria (PayPolicy + PayrollQboToken) y migraciones aplicadas)
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -439,17 +367,6 @@ namespace IvaFacilitador.Migrations
                 {
                     b.HasOne("IvaFacilitador.Domain.Payroll.Empresa", "Empresa")
                         .WithMany("Feriados")
-                        .HasForeignKey("EmpresaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Empresa");
-                });
-
-            modelBuilder.Entity("IvaFacilitador.Domain.Payroll.PayrollQboToken", b =>
-                {
-                    b.HasOne("IvaFacilitador.Domain.Payroll.Empresa", "Empresa")
-                        .WithMany()
                         .HasForeignKey("EmpresaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

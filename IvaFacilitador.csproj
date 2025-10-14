@@ -14,5 +14,6 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.9" />
     <Compile Remove="tools\**\*.cs" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.9" />
   </ItemGroup>
 </Project>

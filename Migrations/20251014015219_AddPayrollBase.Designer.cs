@@ -3,6 +3,8 @@ using System;
 using IvaFacilitador.Data.Payroll;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,50 +12,56 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace IvaFacilitador.Migrations
 {
     [DbContext(typeof(PayrollDbContext))]
-    partial class PayrollDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251014015219_AddPayrollBase")]
+    partial class AddPayrollBase
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.Colaborador", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Cargo")
                         .HasMaxLength(100)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Cedula")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid>("EmpresaId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Funcion")
                         .HasMaxLength(120)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(160)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(160)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
 
                     b.Property<decimal>("SalarioBase")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid?>("SectorId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -62,44 +70,45 @@ namespace IvaFacilitador.Migrations
                     b.HasIndex("EmpresaId", "Cedula")
                         .IsUnique();
 
-                    b.ToTable("Colaborador");
+                    b.ToTable("Colaboradores");
                 });
 
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.CuentaContable", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("EmpresaId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("QboAccountId")
                         .IsRequired()
                         .HasMaxLength(80)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(80)");
 
                     b.Property<string>("QboAccountName")
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
 
                     b.Property<Guid?>("SectorId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Tipo")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
                     b.HasIndex("SectorId");
 
                     b.HasIndex("EmpresaId", "SectorId", "Tipo")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[SectorId] IS NOT NULL");
 
                     b.ToTable("CuentasContables");
                 });
@@ -108,35 +117,35 @@ namespace IvaFacilitador.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Cedula")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PayPolicy")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("RealmId")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
+
+                    b.Property<bool>("SepararContabilidadPorSectores")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -152,10 +161,10 @@ namespace IvaFacilitador.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("Fecha")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal?>("Horas")
                         .HasColumnType("decimal(18,2)");
@@ -165,18 +174,18 @@ namespace IvaFacilitador.Migrations
 
                     b.Property<string>("Nota")
                         .HasMaxLength(240)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(240)");
 
                     b.Property<Guid>("PeriodoColaboradorId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Tipo")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -190,26 +199,26 @@ namespace IvaFacilitador.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("EmpresaId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("FactorPago")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("Fecha")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(160)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(160)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 
@@ -219,72 +228,35 @@ namespace IvaFacilitador.Migrations
                     b.ToTable("Feriados");
                 });
 
-            modelBuilder.Entity("IvaFacilitador.Domain.Payroll.PayrollQboToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AccessToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("EmpresaId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("ExpiresAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RealmId")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RefreshToken")
-                        .HasColumnType("TEXT");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmpresaId", "RealmId")
-                        .IsUnique();
-
-                    b.ToTable("PayrollQboTokens");
-                });
-
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.Periodo", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("EmpresaId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Estado")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.Property<string>("Etiqueta")
                         .HasMaxLength(60)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(60)");
 
                     b.Property<DateTime>("FechaFin")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaInicio")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Tipo")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -293,60 +265,22 @@ namespace IvaFacilitador.Migrations
                     b.ToTable("Periodos");
                 });
 
-<<<<<<< HEAD
-            modelBuilder.Entity("IvaFacilitador.Areas.Payroll.ModelosPayroll.PayrollQboToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AccessToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RealmId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RefreshToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Scope")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TokenType")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PayrollQboTokens");
-                });
-
-            modelBuilder.Entity("IvaFacilitador.Areas.Payroll.BaseDatosPayroll.Employee", b =>
-=======
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.PeriodoColaborador", b =>
->>>>>>> 67d5566 (Deploy: Parametrizador Payroll enlazado a memoria (PayPolicy + PayrollQboToken) y migraciones aplicadas)
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ColaboradorId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("PeriodoId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 
@@ -362,23 +296,23 @@ namespace IvaFacilitador.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("Activo")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("EmpresaId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(120)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("BLOB");
+                        .HasColumnType("rowversion");
 
                     b.HasKey("Id");
 
@@ -439,17 +373,6 @@ namespace IvaFacilitador.Migrations
                 {
                     b.HasOne("IvaFacilitador.Domain.Payroll.Empresa", "Empresa")
                         .WithMany("Feriados")
-                        .HasForeignKey("EmpresaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Empresa");
-                });
-
-            modelBuilder.Entity("IvaFacilitador.Domain.Payroll.PayrollQboToken", b =>
-                {
-                    b.HasOne("IvaFacilitador.Domain.Payroll.Empresa", "Empresa")
-                        .WithMany()
                         .HasForeignKey("EmpresaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

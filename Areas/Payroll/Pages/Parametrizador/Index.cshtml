@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 @page "{id:int?}"
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
@@ -63,3 +64,210 @@
         </div>
     }
 </div>
+=======
+ @page
+@model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using System.Collections.Generic
+
+@{
+    ViewData["Title"] = "Parametrizador de Payroll";
+
+    // Null-safety locales
+    var sectores     = Model?.Sectores ?? new List<string>();
+    var accounts     = Model?.Accounts ?? new List<IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel.Opt>();
+    var mapDefault   = Model?.AccountMapDefault ?? new Dictionary<string,string?>();
+    var mapPorSector = Model?.AccountMapPorSector ?? new Dictionary<string, Dictionary<string,string?>>();
+    var tipos        = IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel.TiposCuenta;
+    var realmId      = Model?.RealmId ?? "";
+    var companyName  = Model?.CompanyName ?? "";
+}
+
+<h2 class="mb-3">Parametrizador de Payroll</h2>
+
+@if (TempData["ok"] is string okMsg)
+{
+    <div class="alert alert-success">@okMsg</div>
+}
+
+<form method="post" asp-page-handler="SavePolicy" class="card p-3 mb-4">
+    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+
+    <fieldset>
+        <legend>Empresa</legend>
+
+        <div class="row g-2 mb-2">
+            <div class="col-md-6">
+                <label class="form-label">Nombre (desde QBO, editable)</label>
+                <input class="form-control" name="CompanyName" value="@companyName" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Realm ID (QBO)</label>
+                <input class="form-control" value="@realmId" readonly />
+            </div>
+        </div>
+
+        <div class="row g-2 mb-2">
+            <div class="col-md-4">
+                <label class="form-label">Cédula</label>
+                <input class="form-control" name="TaxId" value="@(Model?.TaxId ?? "")" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Periodo de pagos</label>
+                <select class="form-select" name="PayFrequency">
+                    @{
+                        var pf = Model?.PayFrequency ?? "Mensual";
+                    }
+                    <option value="Mensual"  selected="@(pf=="Mensual"  ? "selected" : null)">Mensual</option>
+                    <option value="Quincenal" selected="@(pf=="Quincenal" ? "selected" : null)">Quincenal (1–15 y 16–fin)</option>
+                    <option value="Semanal"  selected="@(pf=="Semanal"  ? "selected" : null)">Semanal (lunes–domingo)</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="SepararPorSector" value="true"
+                           @(Model?.SepararPorSector == true ? "checked" : null) />
+                    <label class="form-check-label">Dividir contabilidad por sectores</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Sectores</label>
+
+            @if (sectores.Count == 0)
+            {
+                <div class="input-group mb-1">
+                    <input class="form-control" name="Sectores[0]" value="General" />
+                </div>
+            }
+            else
+            {
+                @for (var i = 0; i < sectores.Count; i++)
+                {
+                    <div class="input-group mb-1">
+                        <input class="form-control" name="Sectores[@i]" value="@sectores[i]" />
+                    </div>
+                }
+            }
+
+            <small class="text-muted">Debe existir al menos un sector (por ejemplo: “General”).</small>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary">Guardar parámetros básicos</button>
+            <button class="btn btn-outline-secondary" formaction="?handler=Sync" formmethod="post">Sincronizar QBO</button>
+            <button class="btn btn-outline-success" formaction="?handler=Connect" formmethod="post">Conectar con QBO</button>
+        </div>
+    </fieldset>
+</form>
+
+<form method="post" asp-page-handler="SaveAccounts" class="card p-3">
+    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+    <fieldset>
+        <legend>Cuentas contables de planilla</legend>
+
+        <div class="mb-2">
+            <label class="form-label">Filtro rápido</label>
+            <input id="accFilter" class="form-control" placeholder="Filtrar por texto..." oninput="filterAllSelects()" />
+        </div>
+
+        <div class="mb-3">
+            <h6>Default (aplica a todos los sectores si no hay override)</h6>
+            <table class="table table-sm align-middle">
+                <thead>
+                <tr>
+                    <th style="width:220px">Tipo</th>
+                    <th>Cuenta QBO</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var t in tipos)
+                {
+                    string? sel = null;
+                    if (mapDefault.TryGetValue(t, out var s)) sel = s;
+
+                    <tr>
+                        <td><span class="badge bg-secondary">@t</span></td>
+                        <td>
+                            <select class="form-select map-select" name="AccountMapDefault[@t]">
+                                <option value="">— seleccionar —</option>
+                                @foreach (var a in accounts)
+                                {
+                                    <option value="@a.Id" selected="@(sel != null && sel == a.Id ? "selected" : null)">@a.Name</option>
+                                }
+                            </select>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model?.SepararPorSector == true)
+        {
+            <div class="mb-2">
+                <h6>Overrides por sector (solo llena lo que cambie; el resto hereda de Default)</h6>
+                <table class="table table-sm align-middle">
+                    <thead>
+                    <tr>
+                        <th>Sector</th>
+                        @foreach (var t in tipos) { <th>@t</th> }
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var s in sectores)
+                    {
+                        <tr>
+                            <td><strong>@s</strong></td>
+                            @foreach (var t in tipos)
+                            {
+                                string? sel = null;
+                                if (mapPorSector != null &&
+                                    mapPorSector.TryGetValue(s, out var sectorMap) &&
+                                    sectorMap != null &&
+                                    sectorMap.TryGetValue(t, out var selTmp))
+                                {
+                                    sel = selTmp;
+                                }
+
+                                <td>
+                                    <select class="form-select map-select" name="AccountMapPorSector[@s][@t]">
+                                        <option value="">— (usar Default) —</option>
+                                        @foreach (var a in accounts)
+                                        {
+                                            <option value="@a.Id" selected="@(sel != null && sel == a.Id ? "selected" : null)">@a.Name</option>
+                                        }
+                                    </select>
+                                </td>
+                            }
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary">Guardar cuentas</button>
+        </div>
+    </fieldset>
+</form>
+
+@section Scripts {
+<script>
+  // Filtro por texto para todas las listas (client-side)
+  function filterAllSelects(){
+    const needle = (document.getElementById('accFilter').value || '').toLowerCase();
+    document.querySelectorAll('select.map-select').forEach(sel => {
+      for (const opt of sel.options){
+        if (!opt.value) { opt.hidden = false; continue; } // placeholder
+        const text = (opt.text || '').toLowerCase();
+        opt.hidden = (needle && !text.includes(needle));
+      }
+    });
+  }
+</script>
+}
+
+>>>>>>> 67d5566 (Deploy: Parametrizador Payroll enlazado a memoria (PayPolicy + PayrollQboToken) y migraciones aplicadas)

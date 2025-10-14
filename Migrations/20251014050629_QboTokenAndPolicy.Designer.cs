@@ -3,6 +3,7 @@ using System;
 using IvaFacilitador.Data.Payroll;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace IvaFacilitador.Migrations
 {
     [DbContext(typeof(PayrollDbContext))]
-    partial class PayrollDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251014050629_QboTokenAndPolicy")]
+    partial class QboTokenAndPolicy
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -293,45 +296,7 @@ namespace IvaFacilitador.Migrations
                     b.ToTable("Periodos");
                 });
 
-<<<<<<< HEAD
-            modelBuilder.Entity("IvaFacilitador.Areas.Payroll.ModelosPayroll.PayrollQboToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("AccessToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RealmId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RefreshToken")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Scope")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TokenType")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PayrollQboTokens");
-                });
-
-            modelBuilder.Entity("IvaFacilitador.Areas.Payroll.BaseDatosPayroll.Employee", b =>
-=======
             modelBuilder.Entity("IvaFacilitador.Domain.Payroll.PeriodoColaborador", b =>
->>>>>>> 67d5566 (Deploy: Parametrizador Payroll enlazado a memoria (PayPolicy + PayrollQboToken) y migraciones aplicadas)
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
