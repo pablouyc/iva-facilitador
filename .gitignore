@@ -26,3 +26,9 @@ Data/*.db-*
 Data/*.db-shm
 Data/*.db-wal
 App_Data/
+
+# Payroll local DB
+*.db
+# conflict backups
+_conflict_backup_*
+
