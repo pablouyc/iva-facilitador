@@ -1,64 +1,258 @@
-@page "{id:int?}"
+@page "{id?}"
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
     ViewData["Title"] = "Parametrizador de nómina";
+    var sectores = Model.Sectores ?? new List<string>();
 }
 
-<h2 class="mb-4">Parametrizador de nómina</h2>
+<h2>Parametrizador de nómina</h2>
+
+@if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
+{
+  <div class="alert alert-success">@ok</div>
+}
+@if (TempData["err"] is string err && !string.IsNullOrWhiteSpace(err))
+{
+  <div class="alert alert-danger">@err</div>
+}
 
 <form method="post">
-    @Html.AntiForgeryToken()
-    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+  <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
 
-    <fieldset class="mb-4">
-        <div class="row g-3">
-            <div class="col-12">
-                <label class="form-label">Empresa</label>
-                <input class="form-control" value="@Model.CompanyName" readonly />
-            </div>
+  <fieldset class="mb-4">
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label">Empresa</label>
+        <input name="CompanyName" class="form-control" value="@Model.CompanyName" placeholder="Nombre de empresa (editable)" />
+      </div>
 
-            <div class="col-md-6">
-                <label class="form-label">Cuenta de gasto predeterminada</label>
-                <select asp-for="ExpenseAccountId" class="form-select">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var a in Model.Accounts)
-                    {
-                        <option value="@a.Id">@a.Name</option>
-                    }
-                </select>
-            </div>
+      <div class="col-md-6">
+        <label class="form-label">Cédula jurídica</label>
+        <input name="Cedula" class="form-control" value="@Model.Cedula" placeholder="Cédula jurídica" />
+      </div>
 
-            <div class="col-md-6">
-                <label class="form-label">Ítem de salario (Service)</label>
-                <select asp-for="WageItemId" class="form-select">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var it in Model.Items)
-                    {
-                        <option value="@it.Id">@it.Name</option>
-                    }
-                </select>
-            </div>
+      <div class="col-md-6">
+        <label class="form-label">REALMID (QBO)</label>
+        <input class="form-control" value="@Model.RealmId" readonly />
+      </div>
 
-            <div class="col-md-6">
-                <label class="form-label">REALMID (QBO)</label>
-                <input class="form-control" value="@Model.RealmId" readonly />
-            </div>
+      <div class="col-md-6">
+        <label class="form-label">Periodicidad de pago</label>
+        <select name="Periodicidad" class="form-select">
+          @{
+              var opciones = new[] { "Mensual", "Quincenal", "Semanal" };
+              foreach (var p in opciones)
+              {
+                  var isSel = string.Equals(Model.Periodicidad, p, StringComparison.OrdinalIgnoreCase);
+                  if (isSel)
+                  {
+                      <option value="@p" selected>@p</option>
+                  }
+                  else
+                  {
+                      <option value="@p">@p</option>
+                  }
+              }
+          }
+        </select>
+        <div class="form-text">Default: Quincena = 1–15 y 16–fin; Semanal = lunes–domingo.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">¿Separar planilla contable por sectores?</label>
+        <div class="form-check form-switch mt-2">
+          <input name="MapPorSector" id="chkMapSector" class="form-check-input" type="checkbox" value="true" @(Model.MapPorSector ? "checked" : null) />
+          <label class="form-check-label" for="chkMapSector">Sí, separar por sector</label>
         </div>
-    </fieldset>
-
-    <div class="d-flex gap-2">
-        <button class="btn btn-primary" formaction="?handler=Save">Guardar</button>
-
-        @if (Model.HasTokens)
-        {
-            <button class="btn btn-outline-secondary" formaction="?handler=Sync">Sincronizar desde QBO</button>
-        }
-        else
-        {
-            <button class="btn btn-outline-primary" formaction="?handler=Connect">Conectar con QBO</button>
-        }
-
-        <a class="btn btn-light" href="/Payroll/Empresas">Volver</a>
+      </div>
     </div>
+  </fieldset>
+
+  <fieldset class="mb-4">
+    <legend class="fs-6">Sectores</legend>
+
+    <div id="sectoresEditor" class="mb-3">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th style="width:60%">Nombre del sector</th>
+              <th style="width:40%"></th>
+            </tr>
+          </thead>
+          <tbody id="tbSectores">
+            @if (sectores.Count == 0)
+            {
+                sectores = new List<string>{ "General" };
+            }
+            @for (int i = 0; i < sectores.Count; i++)
+            {
+                var name = sectores[i] ?? "";
+                <tr>
+                  <td>
+                    <input class="form-control" name="SectorNames[]" value="@name" placeholder="p. ej., Ventas, Producción, General" />
+                  </td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveRow(this, -1)">↑</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveRow(this, 1)">↓</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)">Eliminar</button>
+                  </td>
+                </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <button type="button" class="btn btn-outline-primary" onclick="addSector()">Agregar sector</button>
+      <div class="form-text mt-2">Puedes dejar solo “General” si no usarás sectores.</div>
+    </div>
+  </fieldset>
+
+  <fieldset class="mb-4">
+    <legend class="fs-6">Cuentas contables</legend>
+
+    <!-- Bloque: cuenta general cuando NO se separa por sector -->
+    <div id="blkGeneral" style="display:@(Model.MapPorSector ? "none" : "block")">
+      <label class="form-label">Cuenta de gasto (general)</label>
+      <select class="form-select" name="GeneralExpenseAccountId">
+        @{
+            // opción placeholder
+            if (string.IsNullOrWhiteSpace(Model.GeneralExpenseAccountId))
+            {
+                <option value="" selected>(sin seleccionar)</option>
+            }
+            else
+            {
+                <option value="">(sin seleccionar)</option>
+            }
+
+            foreach (var opt in Model.AccountOptions ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+            {
+                // Los SelectListItem incluyen también el placeholder, lo evitamos duplicado
+                if (string.IsNullOrEmpty(opt.Value)) { continue; }
+                var isSel = string.Equals(opt.Value, Model.GeneralExpenseAccountId, StringComparison.Ordinal);
+                if (isSel)
+                {
+                    <option value="@opt.Value" selected>@opt.Text</option>
+                }
+                else
+                {
+                    <option value="@opt.Value">@opt.Text</option>
+                }
+            }
+        }
+      </select>
+      <div class="form-text">Si activas “por sectores”, esta cuenta no se usa.</div>
+    </div>
+
+    <!-- Bloque: mapeo por sector -->
+    <div id="blkPorSector" style="display:@(Model.MapPorSector ? "block" : "none")" class="mt-3">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th style="width:40%">Sector</th>
+              <th style="width:60%">Cuenta de gasto</th>
+            </tr>
+          </thead>
+          <tbody id="tbMap">
+            @for (int i = 0; i < sectores.Count; i++)
+            {
+                var s = sectores[i] ?? "";
+                Model.SectorAccounts.TryGetValue(s, out var selId);
+                <tr>
+                  <td>
+                    <!-- guardamos el nombre del sector en paralelo -->
+                    <input type="hidden" name="SectorNamesMap[]" value="@s" />
+                    <span>@s</span>
+                  </td>
+                  <td>
+                    <select class="form-select" name="SectorAccountIds[]">
+                      @{
+                          // placeholder
+                          if (string.IsNullOrWhiteSpace(selId))
+                          {
+                              <option value="" selected>(sin seleccionar)</option>
+                          }
+                          else
+                          {
+                              <option value="">(sin seleccionar)</option>
+                          }
+
+                          foreach (var opt in Model.AccountOptions ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                          {
+                              if (string.IsNullOrEmpty(opt.Value)) { continue; }
+                              var isSel = string.Equals(opt.Value, selId, StringComparison.Ordinal);
+                              if (isSel)
+                              {
+                                  <option value="@opt.Value" selected>@opt.Text</option>
+                              }
+                              else
+                              {
+                                  <option value="@opt.Value">@opt.Text</option>
+                              }
+                          }
+                      }
+                    </select>
+                  </td>
+                </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="form-text">El listado de filas se basa en los “Sectores” de arriba.</div>
+    </div>
+  </fieldset>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary" formaction="?handler=Save">Guardar</button>
+
+    @if (Model.HasTokens)
+    {
+      <button type="submit" class="btn btn-outline-secondary" formaction="?handler=Sync">Sincronizar desde QBO</button>
+    }
+    else
+    {
+      <button type="submit" class="btn btn-outline-secondary" formaction="?handler=Connect">Conectar con QBO</button>
+    }
+
+    <a class="btn btn-light" href="/Payroll/Empresas">Volver</a>
+  </div>
 </form>
 
+<script>
+  const tbSectores = document.getElementById('tbSectores');
+  const blkGeneral = document.getElementById('blkGeneral');
+  const blkPorSector = document.getElementById('blkPorSector');
+  const chkMap = document.getElementById('chkMapSector');
+
+  chkMap?.addEventListener('change', () => {
+    if (chkMap.checked) { blkGeneral.style.display = 'none'; blkPorSector.style.display = 'block'; }
+    else { blkGeneral.style.display = 'block'; blkPorSector.style.display = 'none'; }
+  });
+
+  function addSector() {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="form-control" name="SectorNames[]" placeholder="Nombre del sector" /></td>
+      <td class="text-end">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveRow(this, -1)">↑</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveRow(this, 1)">↓</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this)">Eliminar</button>
+      </td>`;
+    tbSectores.appendChild(tr);
+  }
+
+  function removeRow(btn){
+    const tr = btn.closest('tr');
+    if (tr) tr.remove();
+  }
+
+  function moveRow(btn, dir){
+    const tr = btn.closest('tr');
+    if (!tr) return;
+    const parent = tr.parentElement;
+    if (dir < 0 && tr.previousElementSibling) parent.insertBefore(tr, tr.previousElementSibling);
+    if (dir > 0 && tr.nextElementSibling) parent.insertBefore(tr.nextElementSibling, tr);
+  }
+</script>
