@@ -1,177 +1,277 @@
-@page "/Payroll/Parametrizador/{id?}"
+@page "{id:int?}"
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
     ViewData["Title"] = "Parametrizador de nómina";
+    var keys = IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel.Keys; // ["SalarioBruto","Extras","CCSS","Deducciones","SalarioNeto"]
 }
 
 <h2 class="mb-4">Parametrizador de nómina</h2>
 
-@if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
-{
-    <div class="alert alert-success">@ok</div>
-}
-
 <form method="post">
-    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+  <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
 
-    <fieldset class="mb-4">
-        <legend class="h5">Empresa</legend>
-
-        <div class="row g-3">
-            <div class="col-12">
-                <label class="form-label">Nombre</label>
-                <input name="CompanyName" class="form-control" value="@(Model.CompanyName ?? "")" />
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Cédula</label>
-                <input name="Cedula" class="form-control" value="@(Model.Cedula ?? "")" placeholder="Cédula jurídica" />
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">REALMID (QBO)</label>
-                <input class="form-control" value="@(Model.RealmId ?? "")" readonly />
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Periodicidad de pago</label>
-                <select name="Periodicidad" class="form-select">
-                    <option value="Mensual"   selected="@(Model.Periodicidad == "Mensual"   ? "selected" : null)">Mensual</option>
-                    <option value="Quincenal" selected="@(Model.Periodicidad == "Quincenal" ? "selected" : null)">Quincenal</option>
-                    <option value="Semanal"   selected="@(Model.Periodicidad == "Semanal"   ? "selected" : null)">Semanal</option>
-                </select>
-                <div class="form-text">Default: Quincena = 1–15 y 16–fin; Semanal = lunes–domingo.</div>
-            </div>
-        </div>
-    </fieldset>
-
-    <fieldset class="mb-4">
-        <legend class="h5 d-flex align-items-center gap-3">
-            Sectores
-            <span class="form-check">
-                <input class="form-check-input" type="checkbox" id="chkSep" name="SepSectores" value="true"
-                       checked="@(Model.SepararPorSectores ? "checked" : null)" />
-                <label class="form-check-label" for="chkSep">Separar planilla contable por sectores</label>
-            </span>
-        </legend>
-
-        <p class="text-muted mb-2">Puedes dejar solo “General” si no usarás sectores.</p>
-
-        <div id="sectores-wrap" class="vstack gap-2 mb-3">
-            @if (Model.SectorKeys != null && Model.SectorKeys.Count > 0)
-            {
-                foreach (var s in Model.SectorKeys)
-                {
-                    <input name="Sectores" class="form-control" value="@s.Name" />
-                }
-            }
-            else
-            {
-                <input name="Sectores" class="form-control" value="General" />
-            }
-        </div>
-
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAddSector">+ Agregar sector</button>
-    </fieldset>
-
-    <fieldset class="mb-4">
-        <legend class="h5">Cuentas contables</legend>
-
-        <div class="alert alert-info py-2">
-            Define las cuentas para estas categorías: <strong>SalarioBruto, Extras, CCSS, Deducciones, SalarioNeto</strong>.
-        </div>
-
-        <!-- General -->
-        <div id="box-general" class="mb-3" style="display:@(Model.SepararPorSectores ? "none" : "block")">
-            <h6>Cuentas generales (cuando NO se separa por sectores)</h6>
-            @foreach (var cat in Model.Categories)
-            {
-                <div class="row g-2 align-items-center mb-2">
-                    <div class="col-md-4"><label class="col-form-label">@cat</label></div>
-                    <div class="col-md-8">
-                        <select name="@($"gen_{cat}")" class="form-select">
-                            <option value="">(sin seleccionar)</option>
-                            @foreach (var acc in Model.Accounts)
-                            {
-                                var sel = (Model.GeneralMap != null
-                                           && Model.GeneralMap.TryGetValue(cat, out var v)
-                                           && v == acc.Id) ? "selected" : null;
-                                <option value="@acc.Id" selected="@(sel)">@(acc.Name)</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-            }
-        </div>
-
-        <!-- Por sectores -->
-        <div id="box-sectores" style="display:@(Model.SepararPorSectores ? "block" : "none")">
-            <h6>Cuentas por sector</h6>
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead>
-                        <tr>
-                            <th>Sector</th>
-                            @foreach (var cat in Model.Categories)
-                            {
-                                <th>@cat</th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var s in Model.SectorKeys)
-                        {
-                            var sectorName = s.Name;
-                            var key = s.Key;   // ya viene normalizado desde el modelo
-                            <tr>
-                                <td style="min-width:180px">@sectorName</td>
-                                @foreach (var cat in Model.Categories)
-                                {
-                                    var current = Model.TryGetSectorSelection(sectorName, cat);
-                                    <td style="min-width:220px">
-                                        <select class="form-select" name="@($"acc_{key}_{cat}")">
-                                            <option value="">(sin seleccionar)</option>
-                                            @foreach (var acc in Model.Accounts)
-                                            {
-                                                var sel = (current == acc.Id) ? "selected" : null;
-                                                <option value="@acc.Id" selected="@(sel)">@(acc.Name)</option>
-                                            }
-                                        </select>
-                                    </td>
-                                }
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </fieldset>
-
-    <div class="d-flex gap-2">
-        <button class="btn btn-primary" formaction="?handler=Save">Guardar</button>
-        <button class="btn btn-outline-secondary" formaction="?handler=Sync">Sincronizar desde QBO</button>
-        <a class="btn btn-light" href="/Payroll/Empresas">Volver</a>
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Empresa</label>
+      <input name="CompanyName" class="form-control" value="@Model.CompanyName" />
     </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Cédula</label>
+      <input name="Cedula" class="form-control" value="@Model.Cedula" />
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">REALMID (QBO)</label>
+      <input class="form-control" value="@Model.RealmId" readonly />
+    </div>
+  </div>
+
+  <hr class="my-4" />
+
+  <fieldset>
+    <legend class="h5 mb-3">Cuentas contables</legend>
+
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" id="chkSplit" name="SplitBySector" @(Model.SplitBySector ? "checked" : null) />
+      <label class="form-check-label" for="chkSplit">
+        Separar planilla contable por sectores
+      </label>
+    </div>
+
+    <!-- Sectores (editable, con añadir/eliminar). Solo visible si Split o si se quiere definir nombres -->
+    <div id="sectoresBox" class="mb-3" style="display:@(Model.SplitBySector ? "block" : "none")">
+      <label class="form-label">Sectores</label>
+
+      <div id="sectoresList" class="vstack gap-2">
+        @for (var i = 0; i < Model.Sectores.Count; i++)
+        {
+          var s = Model.Sectores[i];
+          <div class="input-group sector-row" data-idx="@i">
+            <input class="form-control sector-input" name="Sectores" value="@s" />
+            <button class="btn btn-outline-danger btn-remove-sector" type="button" title="Eliminar" aria-label="Eliminar sector">✖</button>
+          </div>
+        }
+      </div>
+
+      <button type="button" id="btnAddSector" class="btn btn-outline-secondary mt-2">+ Agregar sector</button>
+      <div class="form-text">Puedes dejar solo “General” si no usarás sectores.</div>
+    </div>
+
+    <!-- Aviso columnas -->
+    <div class="alert alert-info mb-3">
+      Define las cuentas para estas categorías:
+      <strong>SalarioBruto, Extras, CCSS, Deducciones, SalarioNeto</strong>.
+    </div>
+
+    <!-- Grid de mapeo -->
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th style="width:160px">Sector</th>
+            @foreach (var k in keys)
+            {
+              <th>@k</th>
+            }
+          </tr>
+        </thead>
+        <tbody id="mapBody">
+          @{
+              // Determinamos filas iniciales: si no separa por sector -> 1 fila General
+              var rows = Model.SplitBySector ? Model.Sectores : new List<string> { (Model.Sectores?.FirstOrDefault() ?? "General") };
+              var rowIdx = 0;
+          }
+          @foreach (var sectorName in rows)
+          {
+              <tr data-row="@rowIdx">
+                <td>
+                  <input type="hidden" name="@( $"SectorRow_{rowIdx}" )" value="@sectorName" />
+                  <span class="sector-name">@sectorName</span>
+                </td>
+
+                @foreach (var k in keys)
+                {
+                  var selectId = $"sel_{rowIdx}_{k}";
+                  var selected = Model.SelectedFor(sectorName, k);
+                  <td>
+                    <select class="form-select acc-select" id="@selectId" name="@( $"Map_{rowIdx}_{k}" )" data-key="@k">
+                      <option value="">(sin seleccionar)</option>
+                      @if (Model.Accounts != null && Model.Accounts.Count > 0)
+                      {
+                        foreach (var a in Model.Accounts)
+                        {
+                          if (!string.IsNullOrEmpty(selected) && string.Equals(selected, a.Id, StringComparison.Ordinal))
+                          {
+                            @:<option value="@a.Id" selected>@a.Name</option>
+                          }
+                          else
+                          {
+                            @:<option value="@a.Id">@a.Name</option>
+                          }
+                        }
+                      }
+                    </select>
+                  </td>
+                }
+              </tr>
+              rowIdx++;
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+      <button class="btn btn-primary" formaction="?handler=Save">Guardar</button>
+
+      <button class="btn btn-outline-secondary" formaction="?handler=Sync">Sincronizar desde QBO</button>
+
+      @if (!Model.HasTokens)
+      {
+        <button class="btn btn-outline-info" formaction="?handler=Connect">Conectar QBO</button>
+      }
+
+      <a class="btn btn-light" href="/Payroll/Empresas">Volver</a>
+    </div>
+  </fieldset>
 </form>
 
 @section Scripts {
 <script>
-document.getElementById('btnAddSector')?.addEventListener('click', () => {
-    const wrap = document.getElementById('sectores-wrap');
-    const input = document.createElement('input');
-    input.name = 'Sectores';
-    input.className = 'form-control';
-    input.placeholder = 'Nombre de sector';
-    wrap.appendChild(input);
-});
+(function(){
+  const splitChk    = document.getElementById('chkSplit');
+  const sectoresBox = document.getElementById('sectoresBox');
+  const list        = document.getElementById('sectoresList');
+  const mapBody     = document.getElementById('mapBody');
+  const btnAdd      = document.getElementById('btnAddSector');
 
-const chk = document.getElementById('chkSep');
-const boxGen = document.getElementById('box-general');
-const boxSec = document.getElementById('box-sectores');
-chk?.addEventListener('change', (e) => {
-    const on = e.target.checked;
-    boxGen.style.display = on ? 'none' : 'block';
-    boxSec.style.display = on ? 'block' : 'none';
-});
+  // --- helpers ---
+  function ensureMinOne(){
+    const rows = list.querySelectorAll('.sector-row');
+    rows.forEach((r,i)=>{
+      const btn = r.querySelector('.btn-remove-sector');
+      btn.disabled = (rows.length <= 1);
+    });
+  }
+
+  function sectorNames(){
+    const inputs = list.querySelectorAll('.sector-input');
+    const names = [];
+    inputs.forEach(i => {
+      const v = (i.value||'').trim();
+      if(v) names.push(v);
+    });
+    if(names.length === 0) names.push('General');
+    return names;
+  }
+
+  function rebuildGrid(){
+    // Si no separa: una sola fila "General" (o el primero de la lista)
+    const names = splitChk.checked ? sectorNames() : [ sectorNames()[0] || 'General' ];
+    const keys  = ["SalarioBruto","Extras","CCSS","Deducciones","SalarioNeto"];
+
+    // Construimos tbody sin C# en atributos "option" -> lo rellenaremos con options luego
+    let html = '';
+    names.forEach((name, idx) => {
+      html += `<tr data-row="${idx}">
+        <td><input type="hidden" name="SectorRow_${idx}" value="${name}"/><span class="sector-name">${name}</span></td>`;
+      keys.forEach(k => {
+        html += `<td>
+          <select class="form-select acc-select" id="sel_${idx}_${k}" name="Map_${idx}_${k}" data-key="${k}">
+            <option value="">(sin seleccionar)</option>
+          </select>
+        </td>`;
+      });
+      html += `</tr>`;
+    });
+    mapBody.innerHTML = html;
+
+    // Si ya hay cuentas en el HTML (generadas por Razor), clónalas a cada select;
+    // si no, las cargamos por AJAX.
+    const anyOption = document.querySelector('select.acc-select option[value]:not([value=""])');
+    if(anyOption){
+      // Copia las <option> (salvo la primera) de la PRIMERA lista original que tenga data desde Razor
+      const selectsWithData = document.querySelectorAll('select.acc-select');
+      let source = null;
+      selectsWithData.forEach(s => {
+        if (s.options.length > 1 && !source) source = s;
+      });
+      if(source){
+        const copy = Array.from(source.options).slice(1); // omite "(sin seleccionar)"
+        document.querySelectorAll('select.acc-select').forEach(sel=>{
+          const first = sel.options[0];
+          sel.innerHTML = '';
+          sel.appendChild(first);
+          copy.forEach(op => sel.appendChild(op.cloneNode(true)));
+        });
+      }
+    }else{
+      // cargar por AJAX desde el handler (?handler=Accounts&id=..)
+      const url = `@Url.Page(null, "Accounts", new { id = Model.CompanyId })`;
+      fetch(url)
+        .then(r => r.json())
+        .then(arr => {
+          if(!Array.isArray(arr)) return;
+          document.querySelectorAll('select.acc-select').forEach(sel=>{
+            const first = sel.options[0];
+            sel.innerHTML = '';
+            sel.appendChild(first);
+            arr.forEach(it=>{
+              const o = document.createElement('option');
+              o.value = it.id || '';
+              o.textContent = it.name || '';
+              sel.appendChild(o);
+            });
+          });
+        })
+        .catch(()=>{ /* silencioso */ });
+    }
+  }
+
+  // --- eventos ---
+  splitChk.addEventListener('change', ()=>{
+    sectoresBox.style.display = splitChk.checked ? 'block' : 'none';
+    rebuildGrid();
+  });
+
+  btnAdd?.addEventListener('click', ()=>{
+    const idx = list.querySelectorAll('.sector-row').length;
+    const div = document.createElement('div');
+    div.className = 'input-group sector-row';
+    div.dataset.idx = idx;
+    div.innerHTML = `
+      <input class="form-control sector-input" name="Sectores" value="Nuevo sector" />
+      <button class="btn btn-outline-danger btn-remove-sector" type="button" title="Eliminar">✖</button>`;
+    list.appendChild(div);
+    ensureMinOne();
+    rebuildGrid();
+  });
+
+  list.addEventListener('click', (ev)=>{
+    if(ev.target.closest('.btn-remove-sector')){
+      const row = ev.target.closest('.sector-row');
+      if(list.querySelectorAll('.sector-row').length > 1){
+        row.remove();
+        ensureMinOne();
+        rebuildGrid();
+      }
+    }
+  });
+
+  list.addEventListener('input', (ev)=>{
+    if(ev.target.classList.contains('sector-input')){
+      // Refleja el nombre editado abajo
+      const idx = Array.from(list.querySelectorAll('.sector-row')).indexOf(ev.target.closest('.sector-row'));
+      const tr  = mapBody.querySelector(`tr[data-row="${idx}"]`);
+      if(tr){
+        tr.querySelector('.sector-name').textContent = ev.target.value || 'General';
+        tr.querySelector(`input[name="SectorRow_${idx}"]`).value = ev.target.value || 'General';
+      }
+    }
+  });
+
+  // Inicial
+  ensureMinOne();
+})();
 </script>
 }
