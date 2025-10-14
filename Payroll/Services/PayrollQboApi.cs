@@ -1,104 +1,86 @@
+using System.Collections.Generic;
+using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace IvaFacilitador.Payroll.Services
 {
+    public record QboAccount(string Id, string Name, string? AccountType, string? AccountSubType);
+    public record QboItem(string Id, string Name);
+
     public interface IPayrollQboApi
     {
-        Task<IReadOnlyList<QbAccount>> GetExpenseAccountsAsync(string realmId, string accessToken, CancellationToken ct = default);
-        Task<IReadOnlyList<QbItem>>    GetServiceItemsAsync   (string realmId, string accessToken, CancellationToken ct = default);
-
-        // NUEVO
-        Task<string?> GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default);
+        Task<List<QboAccount>> GetExpenseAccountsAsync(string realmId, string accessToken, CancellationToken ct = default);
+        Task<List<QboItem>>    GetServiceItemsAsync(string realmId, string accessToken, CancellationToken ct = default);
     }
-
-    public class QbAccount { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string? AccountType { get; set; } }
-    public class QbItem    { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public string? Type        { get; set; } }
 
     public class PayrollQboApi : IPayrollQboApi
     {
         private readonly IHttpClientFactory _http;
-        private readonly IConfiguration _cfg;
-        private string ApiBase() => (_cfg["IntuitPayrollAuth:Environment"] ?? "production").Equals("sandbox", StringComparison.OrdinalIgnoreCase)
-            ? "https://sandbox-quickbooks.api.intuit.com"
-            : "https://quickbooks.api.intuit.com";
 
-        public PayrollQboApi(IHttpClientFactory http, IConfiguration cfg)
+        public PayrollQboApi(IHttpClientFactory http) => _http = http;
+
+        private HttpClient Client(string accessToken)
         {
-            _http = http; _cfg = cfg;
+            var c = _http.CreateClient("intuit"); // Configurado en Program.cs con AddHttpClient
+            c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            c.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            return c;
         }
 
-        private async Task<JsonDocument> RunQueryAsync(string realmId, string accessToken, string sql, CancellationToken ct)
+        private async Task<JsonDocument> QueryAsync(string realmId, string accessToken, string sql, CancellationToken ct)
         {
-            var url = $"{ApiBase()}/v3/company/{realmId}/query?query={Uri.EscapeDataString(sql)}&minorversion=65";
-            var client = _http.CreateClient("intuit");
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            using var res = await client.GetAsync(url, ct);
-            res.EnsureSuccessStatusCode();
-            using var s = await res.Content.ReadAsStreamAsync(ct);
-            return await JsonDocument.ParseAsync(s, cancellationToken: ct);
+            var url = $"https://quickbooks.api.intuit.com/v3/company/{realmId}/query?minorversion=65";
+            using var body = new StringContent(sql, Encoding.UTF8, "application/text");
+            var resp = await Client(accessToken).PostAsync(url, body, ct);
+            resp.EnsureSuccessStatusCode();
+            var json = await resp.Content.ReadAsStringAsync(ct);
+            return JsonDocument.Parse(json);
         }
 
-        public async Task<IReadOnlyList<QbAccount>> GetExpenseAccountsAsync(string realmId, string accessToken, CancellationToken ct = default)
+        public async Task<List<QboAccount>> GetExpenseAccountsAsync(string realmId, string accessToken, CancellationToken ct = default)
         {
-            var sql = "select Id, Name, AccountType from Account where AccountType in ('Expense','Cost of Goods Sold')";
-            using var doc = await RunQueryAsync(realmId, accessToken, sql, ct);
-            var list = new List<QbAccount>();
-            var root = doc.RootElement;
-            if (root.TryGetProperty("QueryResponse", out var qr) && qr.TryGetProperty("Account", out var arr))
+            var sql = "select Id, Name, AccountType, AccountSubType from Account " +
+                      "where Active = true and (AccountType = 'Expense' or AccountType = 'OtherExpense' or AccountType = 'CostOfGoodsSold')";
+
+            using var doc = await QueryAsync(realmId, accessToken, sql, ct);
+            var list = new List<QboAccount>();
+
+            if (doc.RootElement.TryGetProperty("QueryResponse", out var qr) &&
+                qr.TryGetProperty("Account", out var arr))
             {
-                foreach (var el in arr.EnumerateArray())
+                foreach (var a in arr.EnumerateArray())
                 {
-                    list.Add(new QbAccount
-                    {
-                        Id = el.GetProperty("Id").GetString() ?? "",
-                        Name = el.GetProperty("Name").GetString() ?? "",
-                        AccountType = el.TryGetProperty("AccountType", out var at) ? at.GetString() : null
-                    });
+                    var id   = a.GetProperty("Id").GetString() ?? "";
+                    var name = a.GetProperty("Name").GetString() ?? id;
+                    var type = a.TryGetProperty("AccountType", out var t) ? t.GetString() : null;
+                    var sub  = a.TryGetProperty("AccountSubType", out var s) ? s.GetString() : null;
+                    list.Add(new QboAccount(id, name, type, sub));
                 }
             }
             return list;
         }
 
-        public async Task<IReadOnlyList<QbItem>> GetServiceItemsAsync(string realmId, string accessToken, CancellationToken ct = default)
+        public async Task<List<QboItem>> GetServiceItemsAsync(string realmId, string accessToken, CancellationToken ct = default)
         {
-            var sql = "select Id, Name, Type from Item where Type = 'Service'";
-            using var doc = await RunQueryAsync(realmId, accessToken, sql, ct);
-            var list = new List<QbItem>();
-            var root = doc.RootElement;
-            if (root.TryGetProperty("QueryResponse", out var qr) && qr.TryGetProperty("Item", out var arr))
+            var sql = "select Id, Name, Type from Item where Active = true and Type = 'Service'";
+            using var doc = await QueryAsync(realmId, accessToken, sql, ct);
+            var list = new List<QboItem>();
+
+            if (doc.RootElement.TryGetProperty("QueryResponse", out var qr) &&
+                qr.TryGetProperty("Item", out var arr))
             {
-                foreach (var el in arr.EnumerateArray())
+                foreach (var it in arr.EnumerateArray())
                 {
-                    list.Add(new QbItem
-                    {
-                        Id = el.GetProperty("Id").GetString() ?? "",
-                        Name = el.GetProperty("Name").GetString() ?? "",
-                        Type = el.TryGetProperty("Type", out var tp) ? tp.GetString() : null
-                    });
+                    var id   = it.GetProperty("Id").GetString() ?? "";
+                    var name = it.GetProperty("Name").GetString() ?? id;
+                    list.Add(new QboItem(id, name));
                 }
             }
             return list;
-        }
-
-        // === NUEVO ===
-        public async Task<string?> GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default)
-        {
-            // QBO soporta CompanyInfo por consulta
-            var sql = "select CompanyName, LegalName from CompanyInfo";
-            using var doc = await RunQueryAsync(realmId, accessToken, sql, ct);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("QueryResponse", out var qr) && qr.TryGetProperty("CompanyInfo", out var arr))
-            {
-                var first = arr.EnumerateArray().FirstOrDefault();
-                if (first.ValueKind != JsonValueKind.Undefined)
-                {
-                    var companyName = first.TryGetProperty("CompanyName", out var cn) ? cn.GetString() : null;
-                    var legalName   = first.TryGetProperty("LegalName",   out var ln) ? ln.GetString() : null;
-                    return !string.IsNullOrWhiteSpace(companyName) ? companyName : legalName;
-                }
-            }
-            return null;
         }
     }
 }

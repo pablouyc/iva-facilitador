@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,13 +14,12 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
     {
         private readonly PayrollDbContext _db;
         private readonly IPayrollQboApi _api;
+        private readonly IPayrollAuthService _auth;
         private readonly ILogger<IndexModel> _log;
         private readonly IConfiguration _cfg;
 
-        public IndexModel(PayrollDbContext db, IPayrollQboApi api, ILogger<IndexModel> log, IConfiguration cfg)
-        {
-            _db = db; _api = api; _log = log; _cfg = cfg;
-        }
+        public IndexModel(PayrollDbContext db, IPayrollQboApi api, ILogger<IndexModel> log, IConfiguration cfg, IPayrollAuthService auth)
+        { _db = db; _api = api; _log = log; _cfg = cfg; _auth = auth; }
 
         // ====== Parámetros ======
         [BindProperty(SupportsGet = true)]
@@ -147,7 +146,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
             {
                 try
                 {
-                    var (realm, access) = await LoadTokensAsync(CompanyId, ct);
+                    var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(CompanyId, ct);
                     RealmId = realm;
 
                     var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
@@ -266,7 +265,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
 
             try
             {
-                var (realm, access) = await LoadTokensAsync(comp.Id, ct);
+                var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(CompanyId, ct);
                 var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
                 var list = accs?.Select(a => new { id = a.Id ?? "", name = a.Name ?? "" }).ToList() ?? new();
                 return new JsonResult(list);

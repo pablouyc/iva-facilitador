@@ -1,4 +1,4 @@
-@page "{id:int?}"
+﻿@page "{id:int?}"
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
     ViewData["Title"] = "Parametrizador de nómina";
@@ -124,7 +124,7 @@
     <div class="d-flex gap-2 mt-3">
       <button class="btn btn-primary" formaction="?handler=Save">Guardar</button>
 
-      <button class="btn btn-outline-secondary" formaction="?handler=Sync">Sincronizar desde QBO</button>
+      
 
       @if (!Model.HasTokens)
       {

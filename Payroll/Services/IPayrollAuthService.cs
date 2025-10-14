@@ -1,17 +1,40 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace IvaFacilitador.Payroll.Services
 {
     public interface IPayrollAuthService
     {
-        string GetAuthorizeUrl(int companyId, string returnTo);
+        // Devuelve (realmId, accessToken) válido para la empresa (refresca si hace falta)
+        Task<(string realmId, string accessToken)> GetRealmAndValidAccessTokenAsync(
+            int companyId,
+            CancellationToken ct = default
+        );
 
-        System.Threading.Tasks.Task<(string accessToken, string refreshToken, DateTime expiresAtUtc, string? realmId)>
-            ExchangeCodeAsync(string code, string redirectUri);
+        // Intercambia el 'code' del callback por tokens de acceso/refresh
+        Task<(string? realmId, string accessToken, string refreshToken, DateTimeOffset expiresAtUtc)>
+            ExchangeCodeAsync(
+                string code,
+                string redirectUri,
+                CancellationToken ct = default
+            );
 
-        System.Threading.Tasks.Task SaveTokensAsync(int companyId, string? realmId, string accessToken, string refreshToken, DateTime expiresAtUtc);
+        // Persiste tokens para la empresa especificada (crea un nuevo registro histórico)
+        Task SaveTokensAsync(
+            int companyId,
+            string? realmId,
+            string accessToken,
+            string refreshToken,
+            DateTimeOffset expiresAtUtc,
+            CancellationToken ct = default
+        );
 
-        System.Threading.Tasks.Task<string?> TryGetCompanyNameAsync(string realmId, string accessToken);
+        // Intenta obtener el nombre de la compañía desde CompanyInfo (opcional)
+        Task<string?> TryGetCompanyNameAsync(
+            string realmId,
+            string accessToken,
+            CancellationToken ct = default
+        );
     }
 }
