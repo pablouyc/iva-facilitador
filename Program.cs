@@ -17,9 +17,12 @@ builder.Services.Configure<IntuitOAuthSettings>(builder.Configuration.GetSection
 // ===== Servicios base =====
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient("intuit");
-builder.Services.AddScoped<IPayrollAuthService, PayrollAuthService>();
 
-// Stores/servicios ya existentes en tu app
+// Payroll: DI (una sola vez, sin duplicados)
+builder.Services.AddScoped<IPayrollAuthService, PayrollAuthService>();
+builder.Services.AddScoped<IPayrollQboApi, PayrollQboApi>();
+
+// Stores/servicios ya existentes en tu app (NO tocados)
 builder.Services.AddSingleton<ICompanyStore, FileCompanyStore>();
 builder.Services.AddSingleton<ICompanyProfileStore, FileCompanyProfileStore>();
 builder.Services.AddSingleton<ITokenStore, FileTokenStore>();
@@ -44,9 +47,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<IvaFacilitador.Payroll.Services.IPayrollQboApi, IvaFacilitador.Payroll.Services.PayrollQboApi>();
 
-builder.Services.AddScoped<IvaFacilitador.Payroll.Services.IPayrollAuthService, IvaFacilitador.Payroll.Services.PayrollAuthService>();
 // ===== DbContext de Payroll (único) con fallback a Data\payroll.db =====
 builder.Services.AddDbContext<PayrollDbContext>(opt =>
 {
@@ -67,7 +68,7 @@ app.MapGet("/Auth/PayrollCallback", async (
     IConfiguration cfg,
     IMemoryCache cache,
     IPayrollAuthService auth,
-    IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db
+    PayrollDbContext db
 ) =>
 {
     var q        = http.Request.Query;
@@ -85,8 +86,8 @@ app.MapGet("/Auth/PayrollCallback", async (
     {
         if (!string.IsNullOrWhiteSpace(stateB64))
         {
-            var stateJson = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(stateB64));
-            using var doc = System.Text.Json.JsonDocument.Parse(stateJson);
+            var stateJson = Encoding.UTF8.GetString(Convert.FromBase64String(stateB64));
+            using var doc = JsonDocument.Parse(stateJson);
             var root = doc.RootElement;
             if (root.TryGetProperty("returnTo", out var rt)) returnTo = rt.GetString() ?? returnTo;
             if (root.TryGetProperty("companyId", out var cid)) int.TryParse(cid.ToString(), out companyId);
@@ -106,7 +107,7 @@ app.MapGet("/Auth/PayrollCallback", async (
         return Results.BadRequest("Missing realmId.");
 
     // 3) Asegura Company por realm
-    IvaFacilitador.Areas.Payroll.BaseDatosPayroll.Company? comp = null;
+    Company? comp = null;
 
     if (companyId > 0)
         comp = await db.Companies.FindAsync(companyId);
@@ -116,7 +117,7 @@ app.MapGet("/Auth/PayrollCallback", async (
 
     if (comp == null)
     {
-        comp = new IvaFacilitador.Areas.Payroll.BaseDatosPayroll.Company
+        comp = new Company
         {
             Name = $"Empresa vinculada {realm}",
             QboId = realm
@@ -149,6 +150,7 @@ app.MapGet("/Auth/PayrollCallback", async (
     // 6) Volver al listado
     return Results.Redirect(returnTo);
 });
+
 // ===== Cultura es-CR =====
 var supportedCultures = new[] { new CultureInfo("es-CR") };
 app.UseRequestLocalization(new RequestLocalizationOptions
@@ -200,7 +202,7 @@ if (app.Environment.IsDevelopment())
 {
     app.MapGet("/dev/qbo/companyinfo/{companyId:int}", async (
         int companyId,
-        IvaFacilitador.Areas.Payroll.BaseDatosPayroll.PayrollDbContext db,
+        PayrollDbContext db,
         IHttpClientFactory httpFactory) =>
     {
         try
@@ -230,7 +232,6 @@ if (app.Environment.IsDevelopment())
             var header = $"STATUS {(int)resp.StatusCode} {resp.ReasonPhrase}\nURL {client.BaseAddress}{url}\n";
             var mime   = "application/json";
 
-            // Si no es éxito, igual devolvemos el cuerpo para diagnóstico
             return Results.Text(header + "\n" + body, mime);
         }
         catch (Exception ex)
@@ -239,4 +240,5 @@ if (app.Environment.IsDevelopment())
         }
     });
 }
+
 app.Run();
