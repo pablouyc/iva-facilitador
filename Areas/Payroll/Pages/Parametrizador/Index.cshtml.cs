@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+﻿﻿using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -262,8 +262,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
 
         public IActionResult OnPostConnect()
         {
-            // Este handler sigue disponible para el botón "Conectar con QBO"
-            // (si prefieres usar el flujo de Program.cs de OAuth, deja este como respaldo).
+            // Respaldo por si quieres gatillar el flujo OAuth desde aquí.
             return Redirect("/Auth/PayrollCallback");
         }
     }

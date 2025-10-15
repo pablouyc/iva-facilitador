@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -160,7 +160,7 @@ namespace IvaFacilitador.Payroll.Services
                         return ln.GetString();
                 }
 
-                // Fallback: consulta por SQL
+                // Fallback por SQL
                 var qUrl = $"{ApiBase()}/v3/company/{realmId}/query?query={Uri.EscapeDataString("select CompanyName, LegalName from CompanyInfo")}&minorversion=65";
                 using var res2 = await client.GetAsync(qUrl, ct);
                 if (!res2.IsSuccessStatusCode) return null;
