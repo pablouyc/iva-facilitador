@@ -133,18 +133,15 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
                     var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
                     Accounts = accs?.Select(a => new Opt { Id = a.Id ?? "", Name = a.Name ?? "" }).ToList() ?? new();
 
-                    if (string.IsNullOrWhiteSpace(CompanyName) ||
-                        CompanyName.StartsWith("Empresa vinculada ", StringComparison.OrdinalIgnoreCase))
+                    // Traer SIEMPRE el nombre real desde QBO (si está disponible) y persistir si cambió.
+                    var realName = await _api.GetCompanyNameAsync(realm, access, ct);
+                    if (!string.IsNullOrWhiteSpace(realName))
                     {
-                        var realName = await _api.GetCompanyNameAsync(realm, access, ct);
-                        if (!string.IsNullOrWhiteSpace(realName))
+                        CompanyName = realName;
+                        if (!string.Equals(comp.Name, realName, StringComparison.Ordinal))
                         {
-                            CompanyName = realName;
-                            if (!string.Equals(comp.Name, realName, StringComparison.Ordinal))
-                            {
-                                comp.Name = realName!;
-                                await _db.SaveChangesAsync(ct);
-                            }
+                            comp.Name = realName!;
+                            await _db.SaveChangesAsync(ct);
                         }
                     }
                 }
@@ -162,6 +159,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
             return Page();
         }
 
+        // Endpoint para recargar cuentas vía fetch/AJAX (usado por la vista).
         public async Task<IActionResult> OnGetAccountsAsync(CancellationToken ct)
         {
             var comp = await _db.Companies.OrderBy(c => c.Id).FirstOrDefaultAsync(ct);
@@ -183,6 +181,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
             }
         }
 
+        // Guardado de la política (con o sin sectores)
         public async Task<IActionResult> OnPostSaveAsync(CancellationToken ct)
         {
             if (!Request.Form.TryGetValue("CompanyId", out var cid) || !int.TryParse(cid.ToString(), out var companyId))
@@ -267,3 +266,4 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
         }
     }
 }
+

@@ -1,15 +1,20 @@
 // Payroll/Services/PayrollQboApi.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace IvaFacilitador.Payroll.Services
 {
     public interface IPayrollQboApi
     {
-        // Mantengo el nombre por compatibilidad, pero devuelve TODAS las cuentas.
+        // Mantengo el nombre por compatibilidad: devuelve TODAS las cuentas activas.
         Task<List<QboAccount>> GetExpenseAccountsAsync(string realmId, string accessToken, CancellationToken ct = default);
         Task<List<QboItem>>    GetServiceItemsAsync(string realmId, string accessToken, CancellationToken ct = default);
         Task<string?>          GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default);
@@ -39,17 +44,26 @@ namespace IvaFacilitador.Payroll.Services
             $"https://quickbooks.api.intuit.com/v3/company/{realmId}/query?minorversion=65";
 
         private static StringContent QboContent(string query) =>
-            new StringContent(query, Encoding.UTF8, "application/text");
+            new StringContent(query, Encoding.UTF8, "text/plain");
 
         /// <summary>
         /// Devuelve **todas** las cuentas activas (sin filtrar por tipo).
-        /// Se mantiene el nombre del método por compatibilidad con el PageModel.
+        /// Si la cuenta tiene número (AcctNum), el Name resultante será:
+        /// "{AcctNum} {FullyQualifiedName}". Si no, usa FullyQualifiedName o Name.
         /// </summary>
-        public async Task<List<QboAccount>> GetExpenseAccountsAsync(string realmId, string accessToken, CancellationToken ct = default)
+        public async Task<List<QboAccount>> GetExpenseAccountsAsync(
+            string realmId,
+            string accessToken,
+            CancellationToken ct = default)
         {
-            var query = "select Id, Name, FullyQualifiedName from Account where Active = true order by FullyQualifiedName";
-            var url   = BuildQueryUrl(realmId);
-            var http  = CreateClient(accessToken);
+            var query =
+                "select Id, Name, FullyQualifiedName, AcctNum " +
+                "from Account " +
+                "where Active = true " +
+                "order by FullyQualifiedName";
+
+            var url  = BuildQueryUrl(realmId);
+            var http = CreateClient(accessToken);
 
             using var content = QboContent(query);
             using var resp    = await http.PostAsync(url, content, ct);
@@ -70,24 +84,44 @@ namespace IvaFacilitador.Payroll.Services
             {
                 foreach (var el in arr.EnumerateArray())
                 {
-                    var id   = el.GetProperty("Id").GetString() ?? "";
-                    var name = el.TryGetProperty("FullyQualifiedName", out var fqn)
-                                ? (fqn.GetString() ?? "")
-                                : (el.TryGetProperty("Name", out var n) ? (n.GetString() ?? "") : "");
+                    var id = el.GetProperty("Id").GetString() ?? "";
+                    if (string.IsNullOrWhiteSpace(id)) continue;
 
-                    if (!string.IsNullOrWhiteSpace(id))
-                        list.Add(new QboAccount { Id = id, Name = name });
+                    var fqn = el.TryGetProperty("FullyQualifiedName", out var fqnEl) ? fqnEl.GetString() ?? "" : "";
+                    var nm  = el.TryGetProperty("Name", out var nEl) ? nEl.GetString() ?? "" : "";
+                    var num = el.TryGetProperty("AcctNum", out var numEl) ? numEl.GetString() ?? "" : "";
+
+                    var baseName = !string.IsNullOrWhiteSpace(fqn) ? fqn : nm;
+                    var display  = !string.IsNullOrWhiteSpace(num) ? $"{num} {baseName}" : baseName;
+
+                    list.Add(new QboAccount
+                    {
+                        Id = id,
+                        Name = display,
+                        AcctNum = num,
+                        FullyQualifiedName = baseName
+                    });
                 }
             }
 
-            return list.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            return list
+                .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
-        public async Task<List<QboItem>> GetServiceItemsAsync(string realmId, string accessToken, CancellationToken ct = default)
+        public async Task<List<QboItem>> GetServiceItemsAsync(
+            string realmId,
+            string accessToken,
+            CancellationToken ct = default)
         {
-            var query = "select Id, Name from Item where Type = 'Service' and Active = true order by Name";
-            var url   = BuildQueryUrl(realmId);
-            var http  = CreateClient(accessToken);
+            var query =
+                "select Id, Name " +
+                "from Item " +
+                "where Type = 'Service' and Active = true " +
+                "order by Name";
+
+            var url  = BuildQueryUrl(realmId);
+            var http = CreateClient(accessToken);
 
             using var content = QboContent(query);
             using var resp    = await http.PostAsync(url, content, ct);
@@ -108,17 +142,23 @@ namespace IvaFacilitador.Payroll.Services
             {
                 foreach (var el in arr.EnumerateArray())
                 {
-                    var id   = el.GetProperty("Id").GetString() ?? "";
+                    var id = el.GetProperty("Id").GetString() ?? "";
+                    if (string.IsNullOrWhiteSpace(id)) continue;
+
                     var name = el.TryGetProperty("Name", out var n) ? (n.GetString() ?? "") : "";
-                    if (!string.IsNullOrWhiteSpace(id))
-                        list.Add(new QboItem { Id = id, Name = name });
+                    list.Add(new QboItem { Id = id, Name = name });
                 }
             }
 
-            return list.OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            return list
+                .OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
-        public async Task<string?> GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default)
+        public async Task<string?> GetCompanyNameAsync(
+            string realmId,
+            string accessToken,
+            CancellationToken ct = default)
         {
             var query = "select CompanyName from CompanyInfo";
             var url   = BuildQueryUrl(realmId);
@@ -152,8 +192,13 @@ namespace IvaFacilitador.Payroll.Services
 
     public sealed class QboAccount
     {
-        public string? Id   { get; set; }
+        public string? Id { get; set; }
+        /// <summary>Texto para mostrar en la UI (p.ej. "62011 Gastos …").</summary>
         public string? Name { get; set; }
+        /// <summary>Número de cuenta (si existe en QBO).</summary>
+        public string? AcctNum { get; set; }
+        /// <summary>Nombre completo jerárquico (QBO: FullyQualifiedName).</summary>
+        public string? FullyQualifiedName { get; set; }
     }
 
     public sealed class QboItem
@@ -162,3 +207,4 @@ namespace IvaFacilitador.Payroll.Services
         public string? Name { get; set; }
     }
 }
+

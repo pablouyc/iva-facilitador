@@ -1,70 +1,85 @@
-﻿@page "{id:int?}"
+@page "{id:int?}"
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
     ViewData["Title"] = "Parametrizador de nómina";
-    var sectors = Model.SectorNames ?? new List<string> { "General" };
-
-    string Selected(string row, string key) => Model.SelectedFor(row, key) ?? "";
-    string SectorInputName(int i) => $"SectorName_{i}";
-    string MapName(int i, string key) => $"Map_{i}_{key}";
+    var accounts = Model.Accounts ?? new List<IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel.Opt>();
+    var sectorNames = Model.SectorNames ?? new List<string> { "General" };
 }
 
 <h1>Parametrizador de nómina</h1>
-
-@if (TempData["ok"] is string ok && !string.IsNullOrWhiteSpace(ok))
-{
-    <div class="alert alert-success">@ok</div>
-}
 
 <form method="post" asp-page-handler="Save">
     <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
 
     <div class="mb-3">
         <label class="form-label">Empresa</label>
-        <input class="form-control" name="CompanyName" value="@(Model.CompanyName ?? "")" />
+        <input type="text" class="form-control" name="CompanyName" value="@(Model.CompanyName ?? "")" />
         <div class="form-text">REALMID (QBO): @(Model.RealmId ?? "—")</div>
     </div>
 
-    <h5>Cuentas contables</h5>
+    <div class="mb-3">
+        <label class="form-label">Cédula</label>
+        <input type="text" class="form-control" name="Cedula" value="" />
+    </div>
 
-    <div class="form-check mb-2">
+    <h5 class="mt-4">Cuentas contables</h5>
+
+    <div class="form-check form-switch mb-3">
         <input class="form-check-input" type="checkbox" id="SplitBySector" name="SplitBySector" @(Model.SplitBySector ? "checked" : "") />
         <label class="form-check-label" for="SplitBySector">Separar planilla contable por sectores</label>
     </div>
 
-    <div class="mb-2">
+    <div id="sectorsControls" class="mb-3">
         <label class="form-label">Sectores</label>
-        <div class="text-muted">Puedes dejar solo “General” si no usarás sectores.</div>
+        <div class="input-group mb-2">
+            <input type="text" id="NewSectorName" class="form-control" placeholder="(opcional) Escribe el nombre y guarda para crear un sector" />
+            <button type="button" id="AddSectorBtn" class="btn btn-outline-primary">+ Agregar sector</button>
+        </div>
+        <div class="form-text">Puedes dejar solo "General" si no usarás sectores.</div>
     </div>
 
-    <table class="table align-middle">
-        <thead>
-            <tr>
-                <th style="width: 18%">Sector</th>
-                <th>SalarioBruto</th>
-                <th>Extras</th>
-                <th>CCSS</th>
-                <th>Deducciones</th>
-                <th>SalarioNeto</th>
-            </tr>
-        </thead>
-        <tbody>
-        @{
-            for (var i = 0; i < sectors.Count; i++)
-            {
-                var rowName = sectors[i];
-        <tr>
+    <div class="alert alert-info">
+        Define las cuentas para estas categorías:
+        <strong>SalarioBruto, Extras, CCSS, Deducciones, SalarioNeto.</strong>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th style="width: 200px;">Sector</th>
+                    <th>SalarioBruto</th>
+                    <th>Extras</th>
+                    <th>CCSS</th>
+                    <th>Deducciones</th>
+                    <th>SalarioNeto</th>
+                    <th style="width: 48px;"></th>
+                </tr>
+            </thead>
+            <tbody id="SectorsBody">
+@{
+    for (var i = 0; i < sectorNames.Count; i++)
+    {
+        var sector = sectorNames[i];
+        var canRemove = !string.Equals(sector, "General", StringComparison.OrdinalIgnoreCase);
+
+        string? sel = null;
+
+        <tr data-row-index="@i" class="sector-row">
             <td>
-                <input class="form-control" name="@SectorInputName(i)" value="@rowName" />
+                <input type="hidden" name="SectorName_@(i)" value="@sector" />
+                <span class="badge bg-secondary">@sector</span>
             </td>
 
             <td>
-                <select class="form-select" name="@MapName(i, "SalarioBruto")">
+                @{
+                    sel = Model.SelectedFor(sector, "SalarioBruto");
+                }
+                <select class="form-select" name="Map_@(i)_SalarioBruto">
                     <option value="">(sin seleccionar)</option>
-                    @foreach (var a in Model.Accounts)
+                    @foreach (var a in accounts)
                     {
-                        var sel = Selected(rowName, "SalarioBruto") == a.Id;
-                        if (sel)
+                        if (a.Id == sel)
                         {
                             <option value="@a.Id" selected>@a.Name</option>
                         }
@@ -77,12 +92,14 @@
             </td>
 
             <td>
-                <select class="form-select" name="@MapName(i, "Extras")">
+                @{
+                    sel = Model.SelectedFor(sector, "Extras");
+                }
+                <select class="form-select" name="Map_@(i)_Extras">
                     <option value="">(sin seleccionar)</option>
-                    @foreach (var a in Model.Accounts)
+                    @foreach (var a in accounts)
                     {
-                        var sel = Selected(rowName, "Extras") == a.Id;
-                        if (sel)
+                        if (a.Id == sel)
                         {
                             <option value="@a.Id" selected>@a.Name</option>
                         }
@@ -95,12 +112,14 @@
             </td>
 
             <td>
-                <select class="form-select" name="@MapName(i, "CCSS")">
+                @{
+                    sel = Model.SelectedFor(sector, "CCSS");
+                }
+                <select class="form-select" name="Map_@(i)_CCSS">
                     <option value="">(sin seleccionar)</option>
-                    @foreach (var a in Model.Accounts)
+                    @foreach (var a in accounts)
                     {
-                        var sel = Selected(rowName, "CCSS") == a.Id;
-                        if (sel)
+                        if (a.Id == sel)
                         {
                             <option value="@a.Id" selected>@a.Name</option>
                         }
@@ -113,12 +132,14 @@
             </td>
 
             <td>
-                <select class="form-select" name="@MapName(i, "Deducciones")">
+                @{
+                    sel = Model.SelectedFor(sector, "Deducciones");
+                }
+                <select class="form-select" name="Map_@(i)_Deducciones">
                     <option value="">(sin seleccionar)</option>
-                    @foreach (var a in Model.Accounts)
+                    @foreach (var a in accounts)
                     {
-                        var sel = Selected(rowName, "Deducciones") == a.Id;
-                        if (sel)
+                        if (a.Id == sel)
                         {
                             <option value="@a.Id" selected>@a.Name</option>
                         }
@@ -131,12 +152,14 @@
             </td>
 
             <td>
-                <select class="form-select" name="@MapName(i, "SalarioNeto")">
+                @{
+                    sel = Model.SelectedFor(sector, "SalarioNeto");
+                }
+                <select class="form-select" name="Map_@(i)_SalarioNeto">
                     <option value="">(sin seleccionar)</option>
-                    @foreach (var a in Model.Accounts)
+                    @foreach (var a in accounts)
                     {
-                        var sel = Selected(rowName, "SalarioNeto") == a.Id;
-                        if (sel)
+                        if (a.Id == sel)
                         {
                             <option value="@a.Id" selected>@a.Name</option>
                         }
@@ -146,27 +169,155 @@
                         }
                     }
                 </select>
+            </td>
+
+            <td class="text-end">
+                @if (canRemove)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-danger RemoveSectorBtn" title="Eliminar sector">&times;</button>
+                }
             </td>
         </tr>
-            }
-        }
-        </tbody>
-    </table>
-
-    <div class="mb-3">
-        <label class="form-label">Nuevo sector</label>
-        <input class="form-control" name="@SectorInputName(sectors.Count)" placeholder="(opcional) Escribe el nombre y guarda" />
+    }
+}
+            </tbody>
+        </table>
     </div>
 
     <div class="mt-3">
-        <button class="btn btn-primary" type="submit">Guardar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
         <a class="btn btn-secondary" href="/Payroll/Empresas">Volver</a>
     </div>
 </form>
 
 @section Scripts {
-    <script>
-        // Si no hay tokens, los combos vendrán vacíos. No hacemos llamada AJAX aquí.
-        // Cuando existan tokens, el PageModel ya carga Accounts en GET.
-    </script>
+<script>
+(() => {
+    // Estado inicial
+    let nextRowIndex = @sectorNames.Count;
+
+    const accounts = [
+    @foreach (var a in accounts)
+    {
+        @: { id: "@a.Id".replace(/"/g, "&quot;"), name: "@a.Name".replace(/"/g, "&quot;") },
+    }
+    ];
+
+    const keys = ["SalarioBruto","Extras","CCSS","Deducciones","SalarioNeto"];
+    const sectorsBody     = document.getElementById("SectorsBody");
+    const splitBySectorEl = document.getElementById("SplitBySector");
+    const controlsBox     = document.getElementById("sectorsControls");
+    const newSectorInput  = document.getElementById("NewSectorName");
+    const addSectorBtn    = document.getElementById("AddSectorBtn");
+
+    function createSelect(name){
+        const sel = document.createElement("select");
+        sel.className = "form-select";
+        sel.name = name;
+
+        const opt0 = document.createElement("option");
+        opt0.value = "";
+        opt0.textContent = "(sin seleccionar)";
+        sel.appendChild(opt0);
+
+        for (const a of accounts) {
+            const op = document.createElement("option");
+            op.value = a.id;
+            op.textContent = a.name;
+            sel.appendChild(op);
+        }
+        return sel;
+    }
+
+    function addSectorRow(sectorName) {
+        const exists = [...sectorsBody.querySelectorAll("tr.sector-row input[name^='SectorName_']")]
+            .some(h => h.value.trim().toLowerCase() === sectorName.trim().toLowerCase());
+        if (exists) return;
+
+        const i = nextRowIndex++;
+        const tr = document.createElement("tr");
+        tr.className = "sector-row";
+        tr.dataset.rowIndex = i;
+
+        const tdName = document.createElement("td");
+        const hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = `SectorName_${i}`;
+        hidden.value = sectorName;
+        tdName.appendChild(hidden);
+        const badge = document.createElement("span");
+        badge.className = "badge bg-secondary";
+        badge.textContent = sectorName;
+        tdName.appendChild(badge);
+        tr.appendChild(tdName);
+
+        for (const k of keys) {
+            const td = document.createElement("td");
+            td.appendChild(createSelect(`Map_${i}_${k}`));
+            tr.appendChild(td);
+        }
+
+        const tdX = document.createElement("td");
+        tdX.className = "text-end";
+        if (sectorName.toLowerCase() !== "general") {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "btn btn-sm btn-outline-danger RemoveSectorBtn";
+            btn.innerHTML = "&times;";
+            tdX.appendChild(btn);
+        }
+        tr.appendChild(tdX);
+
+        sectorsBody.appendChild(tr);
+    }
+
+    function setRowDisabled(tr, disabled) {
+        tr.querySelectorAll("select, input").forEach(el => {
+            el.disabled = disabled;
+        });
+    }
+
+    function updateMode() {
+        const split = splitBySectorEl.checked;
+        controlsBox.style.display = split ? "" : "none";
+
+        const rows = [...sectorsBody.querySelectorAll("tr.sector-row")];
+        rows.forEach((tr) => {
+            const isGeneral = tr.querySelector("input[name^='SectorName_']")?.value.toLowerCase() === "general";
+            if (!split) {
+                tr.style.display = isGeneral ? "" : "none";
+                setRowDisabled(tr, !isGeneral);
+            } else {
+                tr.style.display = "";
+                setRowDisabled(tr, false);
+            }
+        });
+    }
+
+    // Inicialización
+    updateMode();
+
+    splitBySectorEl.addEventListener("change", updateMode);
+
+    addSectorBtn.addEventListener("click", () => {
+        const name = (newSectorInput.value || "").trim();
+        if (!name) return;
+        if (name.toLowerCase() === "general") { newSectorInput.value = ""; return; }
+        addSectorRow(name);
+        newSectorInput.value = "";
+        updateMode();
+    });
+
+    sectorsBody.addEventListener("click", (ev) => {
+        const btn = ev.target.closest(".RemoveSectorBtn");
+        if (!btn) return;
+        const tr = btn.closest("tr.sector-row");
+        if (!tr) return;
+        const isGeneral = tr.querySelector("input[name^='SectorName_']")?.value.toLowerCase() === "general";
+        if (isGeneral) return;
+        tr.remove();
+    });
+})();
+</script>
 }
+
