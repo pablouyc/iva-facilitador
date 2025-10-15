@@ -1,10 +1,12 @@
-﻿﻿using System.Text.Json;
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 using IvaFacilitador.Payroll.Services;
+using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 
 namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
 {
@@ -12,154 +14,267 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
     {
         private readonly PayrollDbContext _db;
         private readonly IPayrollQboApi _api;
-        private readonly IPayrollAuthService _auth;
         private readonly ILogger<IndexModel> _log;
+        private readonly IConfiguration _cfg;
 
-        public IndexModel(
-            PayrollDbContext db,
-            IPayrollQboApi api,
-            IPayrollAuthService auth,
-            ILogger<IndexModel> log)
+        public IndexModel(PayrollDbContext db, IPayrollQboApi api, ILogger<IndexModel> log, IConfiguration cfg)
         {
-            _db   = db;
-            _api  = api;
-            _auth = auth;
-            _log  = log;
+            _db = db; _api = api; _log = log; _cfg = cfg;
         }
 
+        // ====== Parámetros ======
         [BindProperty(SupportsGet = true)]
         public int? id { get; set; }
 
-        public int    CompanyId    { get; set; }
+        public int CompanyId { get; set; }
         public string? CompanyName { get; set; }
-        public string? RealmId     { get; set; }
-        public bool   HasTokens    { get; set; }
+        public string? Cedula { get; set; }
+        public string? RealmId { get; set; }
+        public bool HasTokens { get; set; }
 
+        // Período (UI: Mensual / Quincenal / Semanal)
+        public string Periodo { get; set; } = "Mensual";
+
+        // Toggle contabilidad por sector
+        [BindProperty]
+        public bool SplitBySector { get; set; }
+
+        // Sectores (mínimo 1)
+        public List<string> Sectores { get; set; } = new() { "General" };
+
+        // Claves contables
+        public static readonly string[] Keys = new[] { "SalarioBruto", "Extras", "CCSS", "Deducciones", "SalarioNeto" };
+
+        // Opciones de cuentas (de QBO)
         public class Opt { public string Id { get; set; } = ""; public string Name { get; set; } = ""; }
         public List<Opt> Accounts { get; set; } = new();
 
-        [BindProperty] public bool SplitBySector { get; set; }
-        public Dictionary<string, string> GeneralAccounts { get; set; } = new();
-        public Dictionary<string, Dictionary<string, string>> AccountsBySector { get; set; } = new();
-        public List<string> SectorNames { get; set; } = new();
+        // Mapeos cargados desde PayPolicy
+        public Dictionary<string, string> GeneralAccounts { get; set; } = new(); // key -> accId
+        public Dictionary<string, Dictionary<string, string>> AccountsBySector { get; set; } = new(); // sector -> (key->accId)
 
+        // --------- Helpers de tokens ----------
+        private async Task<(string realm, string access)> LoadTokensAsync(int companyId, CancellationToken ct)
+        {
+            var tk = await _db.PayrollQboTokens
+                              .Where(t => t.CompanyId == companyId)
+                              .OrderByDescending(t => t.Id)
+                              .FirstOrDefaultAsync(ct);
+            if (tk == null) throw new InvalidOperationException("No hay tokens de Payroll para esta empresa.");
+            return (tk.RealmId ?? "", tk.AccessToken);
+        }
+        private async Task<bool> TokensExistAsync(int companyId, CancellationToken ct) =>
+            await _db.PayrollQboTokens.AnyAsync(t => t.CompanyId == companyId, ct);
+
+        // --------- Carga de PayPolicy ----------
         private void LoadFromPolicy(string? json)
         {
-            SplitBySector = false;
-            GeneralAccounts = new();
-            AccountsBySector = new();
-            SectorNames = new();
-
-            if (string.IsNullOrWhiteSpace(json)) { SectorNames.Add("General"); return; }
-
+            if (string.IsNullOrWhiteSpace(json)) return;
             try
             {
                 using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
 
-                if (root.TryGetProperty("splitBySector", out var s))
-                    SplitBySector = s.GetBoolean();
+                SplitBySector = root.TryGetProperty("splitBySector", out var sb) && sb.GetBoolean();
 
-                if (SplitBySector)
+                // Sectores
+                var sectors = new List<string>();
+                if (root.TryGetProperty("sectors", out var arr) && arr.ValueKind == JsonValueKind.Array)
                 {
-                    if (root.TryGetProperty("bySector", out var bySec) && bySec.ValueKind == JsonValueKind.Object)
+                    foreach (var e in arr.EnumerateArray())
                     {
-                        foreach (var sec in bySec.EnumerateObject())
+                        var s = e.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) sectors.Add(s!);
+                    }
+                }
+                if (sectors.Count > 0) Sectores = sectors;
+
+                // Cuentas
+                if (root.TryGetProperty("accounts", out var accNode))
+                {
+                    if (accNode.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var prop in gen.EnumerateObject())
+                            GeneralAccounts[prop.Name] = prop.Value.GetString() ?? "";
+                    }
+                    if (accNode.TryGetProperty("perSector", out var per) && per.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var sec in per.EnumerateObject())
                         {
                             var map = new Dictionary<string, string>();
-                            if (sec.Value.ValueKind == JsonValueKind.Object)
-                            {
-                                foreach (var p in sec.Value.EnumerateObject())
-                                    map[p.Name] = p.Value.GetString() ?? "";
-                            }
+                            foreach (var prop2 in sec.Value.EnumerateObject())
+                                map[prop2.Name] = prop2.Value.GetString() ?? "";
                             AccountsBySector[sec.Name] = map;
                         }
                     }
+                }
 
-                    SectorNames = AccountsBySector.Keys.Any()
-                        ? AccountsBySector.Keys.OrderBy(x => x).ToList()
-                        : new List<string> { "General" };
-                }
-                else
-                {
-                    if (root.TryGetProperty("accounts", out var accNode) && accNode.ValueKind == JsonValueKind.Object)
-                    {
-                        foreach (var p in accNode.EnumerateObject())
-                            GeneralAccounts[p.Name] = p.Value.GetString() ?? "";
-                    }
-                    SectorNames = new List<string> { "General" };
-                }
+                // Cedula y Periodo
+                if (root.TryGetProperty("cedula", out var c))
+                    Cedula = c.GetString();
+                if (root.TryGetProperty("periodo", out var perNode))
+                    Periodo = perNode.GetString() ?? "Mensual";
             }
-            catch
+            catch (Exception ex)
             {
-                SectorNames = new List<string> { "General" };
+                _log.LogWarning(ex, "No se pudo leer PayPolicy");
             }
         }
 
-        public string? SelectedFor(string rowName, string key)
+        // Valor preseleccionado en el grid (si existe)
+        public string? SelectedFor(string sectorName, string key)
         {
             if (SplitBySector)
             {
-                if (AccountsBySector.TryGetValue(rowName, out var d) && d.TryGetValue(key, out var v))
+                if (AccountsBySector.TryGetValue(sectorName, out var d) && d.TryGetValue(key, out var v))
                     return v;
-                return null;
             }
             else
             {
                 if (GeneralAccounts.TryGetValue(key, out var v)) return v;
-                return null;
             }
+            return null;
         }
 
+        // --------- GET ----------
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             var comp = await _db.Companies.OrderBy(c => c.Id).FirstOrDefaultAsync(ct);
             if (id.HasValue) comp = await _db.Companies.FindAsync(new object[] { id!.Value }, ct);
             if (comp == null) return Redirect("/Payroll/Empresas");
 
-            CompanyId   = comp.Id;
+            CompanyId = comp.Id;
             CompanyName = comp.Name;
-
             LoadFromPolicy(comp.PayPolicy);
 
-            HasTokens = await _db.PayrollQboTokens.AnyAsync(t => t.CompanyId == CompanyId, ct);
+            HasTokens = await TokensExistAsync(CompanyId, ct);
             if (HasTokens)
             {
                 try
                 {
-                    var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(CompanyId, ct);
+                    var (realm, access) = await LoadTokensAsync(CompanyId, ct);
                     RealmId = realm;
 
+                    // Traemos plan de cuentas (Name ya viene como "123 • FQN" desde el servicio)
                     var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
                     Accounts = accs?.Select(a => new Opt { Id = a.Id ?? "", Name = a.Name ?? "" }).ToList() ?? new();
 
-                    // Traer SIEMPRE el nombre real desde QBO (si está disponible) y persistir si cambió.
-                    var realName = await _api.GetCompanyNameAsync(realm, access, ct);
-                    if (!string.IsNullOrWhiteSpace(realName))
+                    // Autocompletar nombre real si quedó "Empresa vinculada ..."
+                    if (string.IsNullOrWhiteSpace(CompanyName) ||
+                        CompanyName.StartsWith("Empresa vinculada ", StringComparison.OrdinalIgnoreCase))
                     {
-                        CompanyName = realName;
-                        if (!string.Equals(comp.Name, realName, StringComparison.Ordinal))
+                        var realName = await _api.GetCompanyNameAsync(realm, access, ct);
+                        if (!string.IsNullOrWhiteSpace(realName))
                         {
-                            comp.Name = realName!;
+                            CompanyName = realName;
+                            comp.Name = realName;
                             await _db.SaveChangesAsync(ct);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    _log.LogWarning(ex, "No se pudieron cargar CompanyInfo/cuentas desde QBO.");
+                    _log.LogWarning(ex, "No se pudieron cargar cuentas o nombre de empresa desde QBO.");
                 }
             }
-            else
-            {
-                Accounts = new();
-            }
 
-            if (SectorNames.Count == 0) SectorNames.Add("General");
             return Page();
         }
 
-        // Endpoint para recargar cuentas vía fetch/AJAX (usado por la vista).
+        // --------- POST: Guardar ----------
+        public async Task<IActionResult> OnPostSaveAsync(CancellationToken ct)
+        {
+            if (!Request.Form.TryGetValue("CompanyId", out var cid) || !int.TryParse(cid.ToString(), out var companyId))
+                return BadRequest("companyId inválido.");
+
+            var comp = await _db.Companies.FindAsync(new object[] { companyId }, ct);
+            if (comp == null) return NotFound();
+
+            // Empresa
+            CompanyName = Request.Form["CompanyName"].ToString() ?? string.Empty;
+            Cedula      = Request.Form["Cedula"].ToString()      ?? string.Empty;
+            Periodo     = Request.Form["PeriodoPayroll"];
+            if (string.IsNullOrWhiteSpace(Periodo)) Periodo = "Mensual";
+
+            if (!string.IsNullOrWhiteSpace(CompanyName) &&
+                !string.Equals(CompanyName, comp.Name, StringComparison.Ordinal))
+            {
+                comp.Name = CompanyName!;
+            }
+
+            // Toggle
+            SplitBySector = string.Equals(Request.Form["SplitBySector"], "on", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(Request.Form["SplitBySector"], "true", StringComparison.OrdinalIgnoreCase);
+
+            // Sectores (mínimo 1)
+            Sectores = Request.Form["Sectores"]
+                        .Select(s => (s ?? string.Empty).Trim())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+            if (Sectores.Count == 0) Sectores = new List<string> { "General" };
+
+            // Recoger filas del grid
+            var rows = new List<(int idx, string name)>();
+            foreach (var kv in Request.Form)
+            {
+                if (kv.Key.StartsWith("SectorRow_", StringComparison.OrdinalIgnoreCase))
+                {
+                    var tail = kv.Key["SectorRow_".Length..];
+                    if (int.TryParse(tail, out var idx))
+                        rows.Add((idx, kv.Value.ToString()));
+                }
+            }
+            rows = rows.OrderBy(x => x.idx).ToList();
+
+            // Map general y por sector
+            var genMap = new Dictionary<string, string>();
+            var perSector = new Dictionary<string, Dictionary<string, string>>();
+
+            foreach (var row in rows)
+            {
+                var rowMap = new Dictionary<string, string>();
+                foreach (var k in Keys)
+                {
+                    var key = $"Map_{row.idx}_{k}";
+                    var val = Request.Form[key].ToString();
+                    if (!string.IsNullOrWhiteSpace(val)) rowMap[k] = val!;
+                }
+
+                if (SplitBySector) perSector[row.name] = rowMap;
+                else { genMap = rowMap; break; }
+            }
+
+            // Persistir en PayPolicy
+            var policy = new
+            {
+                splitBySector = SplitBySector,
+                sectors = Sectores,
+                cedula = Cedula,
+                periodo = Periodo,
+                accounts = new
+                {
+                    general = genMap,
+                    perSector = perSector
+                }
+            };
+            comp.PayPolicy = JsonSerializer.Serialize(policy);
+            await _db.SaveChangesAsync(ct);
+
+            TempData["ok"] = "Parámetros de nómina guardados.";
+            return Redirect($"/Payroll/Parametrizador/{companyId}");
+        }
+
+        // --------- POST: sincronizar ----------
+        public async Task<IActionResult> OnPostSyncAsync(CancellationToken ct)
+        {
+            if (!Request.Form.TryGetValue("CompanyId", out var cid) || !int.TryParse(cid.ToString(), out var companyId))
+                return BadRequest("companyId inválido.");
+            id = companyId;
+            return await OnGetAsync(ct);
+        }
+
+        // --------- GET: AJAX cuentas ----------
         public async Task<IActionResult> OnGetAccountsAsync(CancellationToken ct)
         {
             var comp = await _db.Companies.OrderBy(c => c.Id).FirstOrDefaultAsync(ct);
@@ -168,8 +283,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
 
             try
             {
-                CompanyId = comp.Id;
-                var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(CompanyId, ct);
+                var (realm, access) = await LoadTokensAsync(comp.Id, ct);
                 var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
                 var list = accs?.Select(a => new { id = a.Id ?? "", name = a.Name ?? "" }).ToList() ?? new();
                 return new JsonResult(list);
@@ -181,89 +295,35 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
             }
         }
 
-        // Guardado de la política (con o sin sectores)
-        public async Task<IActionResult> OnPostSaveAsync(CancellationToken ct)
+        // --------- POST: conectar Intuit ----------
+        public IActionResult OnPostConnect()
         {
             if (!Request.Form.TryGetValue("CompanyId", out var cid) || !int.TryParse(cid.ToString(), out var companyId))
                 return BadRequest("companyId inválido.");
 
-            var comp = await _db.Companies.FindAsync(new object[] { companyId }, ct);
-            if (comp == null) return NotFound();
+            var clientId    = _cfg["IntuitPayrollAuth:ClientId"]    ?? _cfg["IntuitPayrollAuth__ClientId"];
+            var redirectUri = _cfg["IntuitPayrollAuth:RedirectUri"] ?? _cfg["IntuitPayrollAuth__RedirectUri"];
+            var scopes      = _cfg["IntuitPayrollAuth:Scopes"]      ?? _cfg["IntuitPayrollAuth__Scopes"] ?? "com.intuit.quickbooks.accounting";
 
-            CompanyName = Request.Form["CompanyName"];
-            if (!string.IsNullOrWhiteSpace(CompanyName) && !string.Equals(CompanyName, comp.Name, StringComparison.Ordinal))
-                comp.Name = CompanyName!;
+            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(redirectUri))
+                return BadRequest("Faltan credenciales de IntuitPayrollAuth.");
 
-            SplitBySector = string.Equals(Request.Form["SplitBySector"], "true", StringComparison.OrdinalIgnoreCase) ||
-                            string.Equals(Request.Form["SplitBySector"], "on",   StringComparison.OrdinalIgnoreCase);
+            var stateObj  = new { companyId = companyId, returnTo = $"/Payroll/Parametrizador/{companyId}" };
+            var stateJson = System.Text.Json.JsonSerializer.Serialize(stateObj);
+            var state     = Convert.ToBase64String(Encoding.UTF8.GetBytes(stateJson));
 
-            var sectorIndexToName = new Dictionary<string, string>();
-            foreach (var k in Request.Form.Keys.Where(k => k.StartsWith("SectorName_", StringComparison.Ordinal)))
-            {
-                var idx = k.Substring("SectorName_".Length);
-                var name = Request.Form[k].ToString().Trim();
-                if (string.IsNullOrWhiteSpace(name)) name = "General";
-                sectorIndexToName[idx] = name;
-            }
+            var url = "https://appcenter.intuit.com/connect/oauth2" +
+                      "?client_id=" + Uri.EscapeDataString(clientId) +
+                      "&response_type=code" +
+                      "&scope=" + Uri.EscapeDataString(scopes) +
+                      "&redirect_uri=" + Uri.EscapeDataString(redirectUri) +
+                      "&state=" + Uri.EscapeDataString(state) +
+                      "&prompt=consent";
 
-            var keys = new[] { "SalarioBruto", "Extras", "CCSS", "Deducciones", "SalarioNeto" };
-
-            if (SplitBySector)
-            {
-                var bySector = new Dictionary<string, Dictionary<string, string>>();
-                foreach (var pair in sectorIndexToName)
-                {
-                    var idx  = pair.Key;
-                    var name = pair.Value;
-
-                    var map = new Dictionary<string, string>();
-                    foreach (var k in keys)
-                    {
-                        var formKey = $"Map_{idx}_{k}";
-                        var val = Request.Form[formKey].ToString();
-                        if (!string.IsNullOrWhiteSpace(val)) map[k] = val;
-                    }
-                    bySector[name] = map;
-                }
-
-                var json = JsonSerializer.Serialize(new
-                {
-                    splitBySector = true,
-                    bySector
-                });
-
-                comp.PayPolicy = json;
-            }
-            else
-            {
-                var map = new Dictionary<string, string>();
-                string idx = sectorIndexToName.Keys.OrderBy(x => x).FirstOrDefault() ?? "0";
-                foreach (var k in keys)
-                {
-                    var formKey = $"Map_{idx}_{k}";
-                    var val = Request.Form[formKey].ToString();
-                    if (!string.IsNullOrWhiteSpace(val)) map[k] = val;
-                }
-
-                var json = JsonSerializer.Serialize(new
-                {
-                    splitBySector = false,
-                    accounts = map
-                });
-
-                comp.PayPolicy = json;
-            }
-
-            await _db.SaveChangesAsync(ct);
-            TempData["ok"] = "Parámetros guardados.";
-            return Redirect($"/Payroll/Parametrizador/{companyId}");
-        }
-
-        public IActionResult OnPostConnect()
-        {
-            // Respaldo por si quieres gatillar el flujo OAuth desde aquí.
-            return Redirect("/Auth/PayrollCallback");
+            return Redirect(url);
         }
     }
 }
+
+
 
