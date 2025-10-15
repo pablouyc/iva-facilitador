@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -39,8 +40,14 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
         [BindProperty]
         public bool SplitBySector { get; set; }
 
-        // Sectores (mínimo 1)
+        // Sectores (mínimo 1 visualmente)
         public List<string> Sectores { get; set; } = new() { "General" };
+
+        // ✔ Propiedad que la vista usa: nombres de fila efectivos según el switch
+        public List<string> SectorNames =>
+            SplitBySector
+                ? (Sectores?.Any() == true ? Sectores : new List<string> { "General" })
+                : new List<string> { Sectores?.FirstOrDefault() ?? "General" };
 
         // Claves contables
         public static readonly string[] Keys = new[] { "SalarioBruto", "Extras", "CCSS", "Deducciones", "SalarioNeto" };
@@ -155,7 +162,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
                     var (realm, access) = await LoadTokensAsync(CompanyId, ct);
                     RealmId = realm;
 
-                    // Traemos plan de cuentas (Name ya viene como "123 • FQN" desde el servicio)
+                    // Traemos plan de cuentas (Name ya viene como "NÚMERO • NombreCompleto" desde el servicio)
                     var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
                     Accounts = accs?.Select(a => new Opt { Id = a.Id ?? "", Name = a.Name ?? "" }).ToList() ?? new();
 
@@ -193,8 +200,8 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
             // Empresa
             CompanyName = Request.Form["CompanyName"].ToString() ?? string.Empty;
             Cedula      = Request.Form["Cedula"].ToString()      ?? string.Empty;
-            Periodo     = Request.Form["PeriodoPayroll"];
-            if (string.IsNullOrWhiteSpace(Periodo)) Periodo = "Mensual";
+            var periodoVal = Request.Form["PeriodoPayroll"].ToString();
+            Periodo = !string.IsNullOrWhiteSpace(periodoVal) ? periodoVal : "Mensual";
 
             if (!string.IsNullOrWhiteSpace(CompanyName) &&
                 !string.Equals(CompanyName, comp.Name, StringComparison.Ordinal))
@@ -237,7 +244,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
                 foreach (var k in Keys)
                 {
                     var key = $"Map_{row.idx}_{k}";
-                    var val = Request.Form[key].ToString();
+                    var val = Request.Form.ContainsKey(key) ? Request.Form[key].ToString() : string.Empty; // evita CS8601
                     if (!string.IsNullOrWhiteSpace(val)) rowMap[k] = val!;
                 }
 
@@ -324,6 +331,3 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
         }
     }
 }
-
-
-
