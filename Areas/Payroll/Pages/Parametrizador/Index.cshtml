@@ -1,322 +1,224 @@
 @page "{id:int?}"
 @model IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel
 @{
-    ViewData["Title"] = "Parametrizador de nómina";
+    ViewData["Title"] = "Parametrizador de planilla";
     var accounts = Model.Accounts ?? new List<IvaFacilitador.Areas.Payroll.Pages.Parametrizador.IndexModel.Opt>();
-    var sectorNames = Model.SectorNames ?? new List<string> { "General" };
+    // Claves de renglones contables (orden fijo)
+    var keys = new[] { "SalarioBruto", "Extras", "CCSS", "Deducciones", "SalarioNeto" };
+    string Checked(bool v) => v ? "checked" : "";
 }
 
-<h1>Parametrizador de nómina</h1>
+<div class="container my-3">
 
-<form method="post" asp-page-handler="Save">
-    <input type="hidden" name="CompanyId" value="@Model.CompanyId" />
+    <!-- ===================== EMPRESA ===================== -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold">Empresa</div>
+        <div class="card-body">
+            <input type="hidden" name="CompanyId" value="@Model.CompanyId" form="frmMain" />
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">Nombre</label>
+                    <input class="form-control" name="CompanyName" value="@Model.CompanyName" form="frmMain" />
+                    <div class="form-text">REALMID (QBO): @(Model.RealmId ?? "—")</div>
+                </div>
 
-    <div class="mb-3">
-        <label class="form-label">Empresa</label>
-        <input type="text" class="form-control" name="CompanyName" value="@(Model.CompanyName ?? "")" />
-        <div class="form-text">REALMID (QBO): @(Model.RealmId ?? "—")</div>
-    </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cédula (ID)</label>
+                    <input class="form-control" name="Cedula" value="" form="frmMain" />
+                </div>
 
-    <div class="mb-3">
-        <label class="form-label">Cédula</label>
-        <input type="text" class="form-control" name="Cedula" value="" />
-    </div>
-
-    <h5 class="mt-4">Cuentas contables</h5>
-
-    <div class="form-check form-switch mb-3">
-        <input class="form-check-input" type="checkbox" id="SplitBySector" name="SplitBySector" @(Model.SplitBySector ? "checked" : "") />
-        <label class="form-check-label" for="SplitBySector">Separar planilla contable por sectores</label>
-    </div>
-
-    <div id="sectorsControls" class="mb-3">
-        <label class="form-label">Sectores</label>
-        <div class="input-group mb-2">
-            <input type="text" id="NewSectorName" class="form-control" placeholder="(opcional) Escribe el nombre y guarda para crear un sector" />
-            <button type="button" id="AddSectorBtn" class="btn btn-outline-primary">+ Agregar sector</button>
+                <div class="col-md-3">
+                    <label class="form-label">Período</label>
+                    <select class="form-select" name="PayPeriod" form="frmMain">
+                        <option value="Mensual">Mensual</option>
+                        <option value="Quincenal">Quincenal</option>
+                        <option value="Semanal">Semanal</option>
+                    </select>
+                </div>
+            </div>
         </div>
-        <div class="form-text">Puedes dejar solo "General" si no usarás sectores.</div>
     </div>
 
-    <div class="alert alert-info">
-        Define las cuentas para estas categorías:
-        <strong>SalarioBruto, Extras, CCSS, Deducciones, SalarioNeto.</strong>
+    <!-- ===================== SECTORES ===================== -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold d-flex justify-content-between">
+            <span>Sectores</span>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddSector">Agregar sector</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="sectorList" class="d-flex flex-wrap gap-2">
+                @{
+                    // Pintamos chips editables (input + botón eliminar)
+                    for (var i = 0; i < Model.SectorNames.Count; i++)
+                    {
+                        var secName = Model.SectorNames[i];
+                        <div class="input-group input-group-sm" data-sec="@i" style="width: 280px;">
+                            <span class="input-group-text">Sector</span>
+                            <input class="form-control" name="SectorName_@i" value="@secName" form="frmMain" />
+                            <button type="button" class="btn btn-outline-danger" title="Eliminar" onclick="removeSector(@i)">✕</button>
+                        </div>
+                    }
+                    if (Model.SectorNames.Count == 0)
+                    {
+                        // Asegurar al menos 'General'
+                        <div class="input-group input-group-sm" data-sec="0" style="width: 280px;">
+                            <span class="input-group-text">Sector</span>
+                            <input class="form-control" name="SectorName_0" value="General" form="frmMain" />
+                            <button type="button" class="btn btn-outline-danger" title="Eliminar" onclick="removeSector(0)">✕</button>
+                        </div>
+                    }
+                }
+            </div>
+            <input type="hidden" id="nextSectorIdx" value="@Model.SectorNames.Count" />
+        </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr>
-                    <th style="width: 200px;">Sector</th>
-                    <th>SalarioBruto</th>
-                    <th>Extras</th>
-                    <th>CCSS</th>
-                    <th>Deducciones</th>
-                    <th>SalarioNeto</th>
-                    <th style="width: 48px;"></th>
-                </tr>
-            </thead>
-            <tbody id="SectorsBody">
-@{
-    for (var i = 0; i < sectorNames.Count; i++)
-    {
-        var sector = sectorNames[i];
-        var canRemove = !string.Equals(sector, "General", StringComparison.OrdinalIgnoreCase);
+    <!-- ===================== CONTABILIDAD ===================== -->
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Contabilidad</div>
+        <div class="card-body">
+            <!-- Switch separar por sectores -->
+            <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="SplitBySector" name="SplitBySector" value="true" form="frmMain" @Checked(Model.SplitBySector) />
+                <label class="form-check-label" for="SplitBySector">Separar contabilidad por sectores</label>
+            </div>
 
-        string? sel = null;
-
-        <tr data-row-index="@i" class="sector-row">
-            <td>
-                <input type="hidden" name="SectorName_@(i)" value="@sector" />
-                <span class="badge bg-secondary">@sector</span>
-            </td>
-
-            <td>
-                @{
-                    sel = Model.SelectedFor(sector, "SalarioBruto");
-                }
-                <select class="form-select" name="Map_@(i)_SalarioBruto">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var a in accounts)
-                    {
-                        if (a.Id == sel)
-                        {
-                            <option value="@a.Id" selected>@a.Name</option>
-                        }
-                        else
-                        {
-                            <option value="@a.Id">@a.Name</option>
-                        }
-                    }
-                </select>
-            </td>
-
-            <td>
-                @{
-                    sel = Model.SelectedFor(sector, "Extras");
-                }
-                <select class="form-select" name="Map_@(i)_Extras">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var a in accounts)
-                    {
-                        if (a.Id == sel)
-                        {
-                            <option value="@a.Id" selected>@a.Name</option>
-                        }
-                        else
-                        {
-                            <option value="@a.Id">@a.Name</option>
-                        }
-                    }
-                </select>
-            </td>
-
-            <td>
-                @{
-                    sel = Model.SelectedFor(sector, "CCSS");
-                }
-                <select class="form-select" name="Map_@(i)_CCSS">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var a in accounts)
-                    {
-                        if (a.Id == sel)
-                        {
-                            <option value="@a.Id" selected>@a.Name</option>
-                        }
-                        else
-                        {
-                            <option value="@a.Id">@a.Name</option>
-                        }
-                    }
-                </select>
-            </td>
-
-            <td>
-                @{
-                    sel = Model.SelectedFor(sector, "Deducciones");
-                }
-                <select class="form-select" name="Map_@(i)_Deducciones">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var a in accounts)
-                    {
-                        if (a.Id == sel)
-                        {
-                            <option value="@a.Id" selected>@a.Name</option>
-                        }
-                        else
-                        {
-                            <option value="@a.Id">@a.Name</option>
-                        }
-                    }
-                </select>
-            </td>
-
-            <td>
-                @{
-                    sel = Model.SelectedFor(sector, "SalarioNeto");
-                }
-                <select class="form-select" name="Map_@(i)_SalarioNeto">
-                    <option value="">(sin seleccionar)</option>
-                    @foreach (var a in accounts)
-                    {
-                        if (a.Id == sel)
-                        {
-                            <option value="@a.Id" selected>@a.Name</option>
-                        }
-                        else
-                        {
-                            <option value="@a.Id">@a.Name</option>
-                        }
-                    }
-                </select>
-            </td>
-
-            <td class="text-end">
-                @if (canRemove)
+            <div id="gridContab">
+                @if (!Model.SplitBySector)
                 {
-                    <button type="button" class="btn btn-sm btn-outline-danger RemoveSectorBtn" title="Eliminar sector">&times;</button>
+                    <!-- Vista NO separada por sectores: una sola fila de selects -->
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width:240px">Renglón</th>
+                                    <th>Cuenta contable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var k in keys)
+                                {
+                                    var label = k switch
+                                    {
+                                        "SalarioBruto" => "Salario Bruto",
+                                        "Extras" => "Extras",
+                                        "CCSS" => "CCSS",
+                                        "Deducciones" => "Deducciones",
+                                        "SalarioNeto" => "Salario Neto",
+                                        _ => k
+                                    };
+                                    var selected = Model.SelectedFor("General", k);
+                                    <tr>
+                                        <td>@label</td>
+                                        <td>
+                                            <select class="form-select form-select-sm" name="Map_0_@k" form="frmMain">
+                                                <option value="">(sin seleccionar)</option>
+                                                @foreach (var a in accounts)
+                                                {
+                                                    @if (selected == a.Id) { <option value="@a.Id" selected>@a.Name</option> } else { <option value="@a.Id">@a.Name</option> }
+                                                }
+                                            </select>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 }
-            </td>
-        </tr>
-    }
-}
-            </tbody>
-        </table>
+                else
+                {
+                    <!-- Vista separada por sectores: una tabla por cada sector -->
+                    @for (var i = 0; i < (Model.SectorNames.Count == 0 ? 1 : Model.SectorNames.Count); i++)
+                    {
+                        var secName = (Model.SectorNames.Count == 0) ? "General" : Model.SectorNames[i];
+
+                        <div class="mb-4 border rounded">
+                            <div class="p-2 bg-light fw-semibold">Sector: @secName</div>
+                            <div class="table-responsive p-2">
+                                <table class="table table-sm align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:240px">Renglón</th>
+                                            <th>Cuenta contable</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var k in keys)
+                                        {
+                                            var label = k switch
+                                            {
+                                                "SalarioBruto" => "Salario Bruto",
+                                                "Extras" => "Extras",
+                                                "CCSS" => "CCSS",
+                                                "Deducciones" => "Deducciones",
+                                                "SalarioNeto" => "Salario Neto",
+                                                _ => k
+                                            };
+                                            var selected = Model.SelectedFor(secName, k);
+                                            <tr>
+                                                <td>@label</td>
+                                                <td>
+                                                    <select class="form-select form-select-sm" name="Map_@(i)_@k" form="frmMain">
+                                                        <option value="">(sin seleccionar)</option>
+                                                        @foreach (var a in accounts)
+                                                        {
+                                                            @if (selected == a.Id) { <option value="@a.Id" selected>@a.Name</option> } else { <option value="@a.Id">@a.Name</option> }
+                                                        }
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
     </div>
 
-    <div class="mt-3">
+    <!-- ===================== ACCIONES ===================== -->
+    <form id="frmMain" method="post" asp-page-handler="Save" class="d-flex gap-2">
         <button type="submit" class="btn btn-primary">Guardar</button>
         <a class="btn btn-secondary" href="/Payroll/Empresas">Volver</a>
-    </div>
-</form>
+    </form>
+</div>
 
 @section Scripts {
 <script>
-(() => {
-    // Estado inicial
-    let nextRowIndex = @sectorNames.Count;
+(function () {
+    const sectorList = document.getElementById('sectorList');
+    const nextIdxEl  = document.getElementById('nextSectorIdx');
+    const btnAdd     = document.getElementById('btnAddSector');
+    const split      = document.getElementById('SplitBySector');
 
-    const accounts = [
-    @foreach (var a in accounts)
-    {
-        @: { id: "@a.Id".replace(/"/g, "&quot;"), name: "@a.Name".replace(/"/g, "&quot;") },
-    }
-    ];
-
-    const keys = ["SalarioBruto","Extras","CCSS","Deducciones","SalarioNeto"];
-    const sectorsBody     = document.getElementById("SectorsBody");
-    const splitBySectorEl = document.getElementById("SplitBySector");
-    const controlsBox     = document.getElementById("sectorsControls");
-    const newSectorInput  = document.getElementById("NewSectorName");
-    const addSectorBtn    = document.getElementById("AddSectorBtn");
-
-    function createSelect(name){
-        const sel = document.createElement("select");
-        sel.className = "form-select";
-        sel.name = name;
-
-        const opt0 = document.createElement("option");
-        opt0.value = "";
-        opt0.textContent = "(sin seleccionar)";
-        sel.appendChild(opt0);
-
-        for (const a of accounts) {
-            const op = document.createElement("option");
-            op.value = a.id;
-            op.textContent = a.name;
-            sel.appendChild(op);
+    btnAdd?.addEventListener('click', () => {
+        let idx = parseInt(nextIdxEl.value || "0", 10);
+        const wrap = document.createElement('div');
+        wrap.className = 'input-group input-group-sm';
+        wrap.style.width = '280px';
+        wrap.setAttribute('data-sec', String(idx));
+        wrap.innerHTML = `
+            <span class="input-group-text">Sector</span>
+            <input class="form-control" name="SectorName_${idx}" value="Nuevo sector" form="frmMain" />
+            <button type="button" class="btn btn-outline-danger" title="Eliminar" onclick="removeSector(${idx})">✕</button>
+        `;
+        sectorList.appendChild(wrap);
+        nextIdxEl.value = String(idx + 1);
+        if (split?.checked) {
+            // No regeneramos server-side; al guardar, el servidor toma todos los SectorName_*
+            // y arma las tablas por sector nuevamente.
         }
-        return sel;
-    }
-
-    function addSectorRow(sectorName) {
-        const exists = [...sectorsBody.querySelectorAll("tr.sector-row input[name^='SectorName_']")]
-            .some(h => h.value.trim().toLowerCase() === sectorName.trim().toLowerCase());
-        if (exists) return;
-
-        const i = nextRowIndex++;
-        const tr = document.createElement("tr");
-        tr.className = "sector-row";
-        tr.dataset.rowIndex = i;
-
-        const tdName = document.createElement("td");
-        const hidden = document.createElement("input");
-        hidden.type = "hidden";
-        hidden.name = `SectorName_${i}`;
-        hidden.value = sectorName;
-        tdName.appendChild(hidden);
-        const badge = document.createElement("span");
-        badge.className = "badge bg-secondary";
-        badge.textContent = sectorName;
-        tdName.appendChild(badge);
-        tr.appendChild(tdName);
-
-        for (const k of keys) {
-            const td = document.createElement("td");
-            td.appendChild(createSelect(`Map_${i}_${k}`));
-            tr.appendChild(td);
-        }
-
-        const tdX = document.createElement("td");
-        tdX.className = "text-end";
-        if (sectorName.toLowerCase() !== "general") {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "btn btn-sm btn-outline-danger RemoveSectorBtn";
-            btn.innerHTML = "&times;";
-            tdX.appendChild(btn);
-        }
-        tr.appendChild(tdX);
-
-        sectorsBody.appendChild(tr);
-    }
-
-    function setRowDisabled(tr, disabled) {
-        tr.querySelectorAll("select, input").forEach(el => {
-            el.disabled = disabled;
-        });
-    }
-
-    function updateMode() {
-        const split = splitBySectorEl.checked;
-        controlsBox.style.display = split ? "" : "none";
-
-        const rows = [...sectorsBody.querySelectorAll("tr.sector-row")];
-        rows.forEach((tr) => {
-            const isGeneral = tr.querySelector("input[name^='SectorName_']")?.value.toLowerCase() === "general";
-            if (!split) {
-                tr.style.display = isGeneral ? "" : "none";
-                setRowDisabled(tr, !isGeneral);
-            } else {
-                tr.style.display = "";
-                setRowDisabled(tr, false);
-            }
-        });
-    }
-
-    // Inicialización
-    updateMode();
-
-    splitBySectorEl.addEventListener("change", updateMode);
-
-    addSectorBtn.addEventListener("click", () => {
-        const name = (newSectorInput.value || "").trim();
-        if (!name) return;
-        if (name.toLowerCase() === "general") { newSectorInput.value = ""; return; }
-        addSectorRow(name);
-        newSectorInput.value = "";
-        updateMode();
     });
 
-    sectorsBody.addEventListener("click", (ev) => {
-        const btn = ev.target.closest(".RemoveSectorBtn");
-        if (!btn) return;
-        const tr = btn.closest("tr.sector-row");
-        if (!tr) return;
-        const isGeneral = tr.querySelector("input[name^='SectorName_']")?.value.toLowerCase() === "general";
-        if (isGeneral) return;
-        tr.remove();
-    });
+    window.removeSector = function (idx) {
+        const chip = sectorList.querySelector(`[data-sec="${idx}"]`);
+        if (chip) chip.remove();
+        // Al guardar, el servidor considerará solo los SectorName_* existentes.
+    }
 })();
 </script>
 }
