@@ -32,3 +32,6 @@ App_Data/
 # conflict backups
 _conflict_backup_*
 
+
+# Backups locales
+*.bak.*
