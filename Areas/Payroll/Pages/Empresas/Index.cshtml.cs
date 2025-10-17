@@ -1,7 +1,7 @@
+
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -36,12 +36,22 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
             public string Status { get; set; } = "Sin conexión";
         }
 
+        // Blindado: nunca debe tirar 500
         public async Task OnGet(CancellationToken ct)
         {
-            // 1) Autocuración: si el nombre es "Empresa vinculada ..." y hay tokens, traer nombre real desde QBO.
-            await FixCompanyNamesFromQboAsync(ct);
+            try
+            {
+                // 1) Autocuración: si el nombre es "Empresa vinculada ..." y hay tokens, traer nombre real desde QBO.
+                await FixCompanyNamesFromQboAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                // Si algo falla aquí, lo registramos y seguimos a la grilla.
+                _log.LogWarning(ex, "Empresas/OnGet: falló la autocuración de nombres, continúo dibujando la grilla.");
+                TempData["Empresas_Warn"] = "No se pudo validar los nombres con QBO en este momento. La lista se mostrará igualmente.";
+            }
 
-            // 2) Cargar grilla
+            // 2) Cargar grilla (si esto falla, sí es un problema de base/EF y hay que mirar logs)
             var data = await _db.Companies
                 .Select(c => new
                 {
@@ -125,15 +135,8 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
 
         // ====== Botón "Agregar" (redirección a Intuit) ======
-        public IActionResult OnGetAgregar()
-        {
-            return RedirectToIntuit();
-        }
-
-        public IActionResult OnPostAgregar()
-        {
-            return RedirectToIntuit();
-        }
+        public IActionResult OnGetAgregar() => RedirectToIntuit();
+        public IActionResult OnPostAgregar() => RedirectToIntuit();
 
         private IActionResult RedirectToIntuit()
         {
@@ -163,4 +166,3 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
-
