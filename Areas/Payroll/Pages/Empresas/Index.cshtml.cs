@@ -1,10 +1,13 @@
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
+using IvaFacilitador.Payroll.Services;
 
 namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
 {
@@ -12,11 +15,15 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
     {
         private readonly PayrollDbContext _db;
         private readonly IConfiguration _cfg;
+        private readonly IPayrollAuthService _auth;
+        private readonly ILogger<IndexModel> _log;
 
-        public IndexModel(PayrollDbContext db, IConfiguration cfg)
+        public IndexModel(PayrollDbContext db, IConfiguration cfg, IPayrollAuthService auth, ILogger<IndexModel> log)
         {
-            _db = db;
+            _db  = db;
             _cfg = cfg;
+            _auth = auth;
+            _log = log;
         }
 
         public List<Row> Empresas { get; set; } = new();
@@ -29,8 +36,12 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
             public string Status { get; set; } = "Sin conexión";
         }
 
-        public async Task OnGet()
+        public async Task OnGet(CancellationToken ct)
         {
+            // 1) Autocuración: si el nombre es "Empresa vinculada ..." y hay tokens, traer nombre real desde QBO.
+            await FixCompanyNamesFromQboAsync(ct);
+
+            // 2) Cargar grilla
             var data = await _db.Companies
                 .Select(c => new
                 {
@@ -40,7 +51,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                     c.PayPolicy,
                     HasTokens = _db.PayrollQboTokens.Any(t => t.CompanyId == c.Id)
                 })
-                .ToListAsync();
+                .ToListAsync(ct);
 
             Empresas = data.Select(x => new Row
             {
@@ -67,15 +78,58 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
             catch { return false; }
         }
 
-        // ========= Handlers: Agregar =========
+        /// <summary>
+        /// Repara silenciosamente nombres "Empresa vinculada ..." usando companyinfo de QBO si hay tokens.
+        /// </summary>
+        private async Task FixCompanyNamesFromQboAsync(CancellationToken ct)
+        {
+            // Empresas a corregir (placeholder + con tokens)
+            var candidates = await _db.Companies
+                .Where(c => _db.PayrollQboTokens.Any(t => t.CompanyId == c.Id))
+                .Where(c => string.IsNullOrWhiteSpace(c.Name) ||
+                            c.Name.StartsWith("Empresa vinculada", StringComparison.OrdinalIgnoreCase))
+                .ToListAsync(ct);
 
-        // GET: /Payroll/Empresas?handler=Agregar
+            if (candidates.Count == 0) return;
+
+            var changed = false;
+
+            foreach (var comp in candidates)
+            {
+                try
+                {
+                    var tok = await _db.PayrollQboTokens
+                        .Where(t => t.CompanyId == comp.Id)
+                        .OrderByDescending(t => t.Id)
+                        .FirstOrDefaultAsync(ct);
+
+                    if (tok == null || string.IsNullOrWhiteSpace(tok.RealmId) || string.IsNullOrWhiteSpace(tok.AccessToken))
+                        continue;
+
+                    var realName = await _auth.TryGetCompanyNameAsync(tok.RealmId!, tok.AccessToken, ct);
+                    if (!string.IsNullOrWhiteSpace(realName) &&
+                        !string.Equals(comp.Name, realName, StringComparison.Ordinal))
+                    {
+                        comp.Name = realName!;
+                        changed = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning(ex, "No se pudo actualizar el nombre de la empresa {CompanyId} desde QBO.", comp.Id);
+                }
+            }
+
+            if (changed)
+                await _db.SaveChangesAsync(ct);
+        }
+
+        // ====== Botón "Agregar" (redirección a Intuit) ======
         public IActionResult OnGetAgregar()
         {
             return RedirectToIntuit();
         }
 
-        // POST de respaldo si alguna vez se usa un <form>
         public IActionResult OnPostAgregar()
         {
             return RedirectToIntuit();
@@ -89,12 +143,10 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
 
             if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(redirectUri))
             {
-                TempData["Empresas_ShowWizard"] = "1";
-                TempData["Empresas_Warn"] = "Faltan credenciales de IntuitPayrollAuth (ClientId / RedirectUri).";
+                TempData["Empresas_Warn"] = "Faltan credenciales de IntuitPayrollAuth (ClientId/RedirectUri).";
                 return Page();
             }
 
-            // companyId=0 => en el callback se creará la empresa si no existe
             var stateObj  = new { companyId = 0, returnTo = "/Payroll/Empresas" };
             var stateJson = JsonSerializer.Serialize(stateObj);
             var state     = Convert.ToBase64String(Encoding.UTF8.GetBytes(stateJson));
@@ -111,3 +163,4 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
+
