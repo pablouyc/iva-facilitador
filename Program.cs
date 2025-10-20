@@ -100,7 +100,6 @@ app.MapGet("/Auth/PayrollCallback", async (
 
     // 1) Intercambia code -> tokens
     var tokens = await auth.ExchangeCodeAsync(code, redirectUri);
-
     // 2) Realm final
     var realm = tokens.realmId ?? realmIdQ;
     if (string.IsNullOrWhiteSpace(realm))
@@ -139,11 +138,8 @@ app.MapGet("/Auth/PayrollCallback", async (
     try
     {
         var name = await auth.TryGetCompanyNameAsync(realm, tokens.accessToken);
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            comp.Name = name!;
-            await db.SaveChangesAsync();
-        }
+     Console.WriteLine($"[Payroll][Callback] realm={realm} name={{name}}");
+        if (!string.IsNullOrWhiteSpace(name)) { comp.Name = name!; await db.SaveChangesAsync(); Console.WriteLine($"[Payroll][DB] Updated CompanyId={comp.Id} Name={comp.Name}"); }
     }
     catch { /* opcional */ }
 
@@ -242,6 +238,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+
+
 
 
 

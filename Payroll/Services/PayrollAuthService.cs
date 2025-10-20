@@ -145,9 +145,10 @@ namespace IvaFacilitador.Payroll.Services
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
 
         var url = $"{ApiBase()}/v3/company/{realmId}/companyinfo/{realmId}?minorversion=65";
+     Console.WriteLine($"[Payroll][companyinfo] base={ApiBase()} realm={realmId} url={url}");
         using var res = await client.GetAsync(url, ct);
-        if (res.IsSuccessStatusCode)
-        {
+     Console.WriteLine($"[Payroll][companyinfo] status={(int)res.StatusCode} {res.ReasonPhrase}");
+     if (res.IsSuccessStatusCode) {
             using var s   = await res.Content.ReadAsStreamAsync(ct);
             using var doc = await System.Text.Json.JsonDocument.ParseAsync(s, cancellationToken: ct);
             var root = doc.RootElement;
@@ -159,13 +160,14 @@ namespace IvaFacilitador.Payroll.Services
                 if (ci.TryGetProperty("LegalName", out var ln) && ln.ValueKind == System.Text.Json.JsonValueKind.String)
                     return ln.GetString();
             }
-        }
-
-        // Fallback por query
+        } else { var body = await res.Content.ReadAsStringAsync(ct); Console.WriteLine("[Payroll][companyinfo] body: " + (body?.Substring(0, Math.Min(600, body.Length)))); }
+     // Fallback por query
         var q = "select CompanyName, LegalName from CompanyInfo";
         var qUrl = $"{ApiBase()}/v3/company/{realmId}/query?query={Uri.EscapeDataString(q)}&minorversion=65";
-        using var res2 = await client.GetAsync(qUrl, ct);
-        if (!res2.IsSuccessStatusCode) return null;
+     Console.WriteLine($"[Payroll][query] url={qUrl}");
+     using var res2 = await client.GetAsync(qUrl, ct);
+     Console.WriteLine($"[Payroll][query] status={(int)res2.StatusCode} {res2.ReasonPhrase}");
+        if (!res2.IsSuccessStatusCode) { var body2 = await res2.Content.ReadAsStringAsync(ct); Console.WriteLine("[Payroll][query] body: " + (body2?.Substring(0, Math.Min(600, body2.Length)))); return null; }
 
         using var s2   = await res2.Content.ReadAsStreamAsync(ct);
         using var doc2 = await System.Text.Json.JsonDocument.ParseAsync(s2, cancellationToken: ct);
@@ -217,5 +219,6 @@ namespace IvaFacilitador.Payroll.Services
         }
     }
 }
+
 
 

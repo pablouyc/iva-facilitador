@@ -109,15 +109,14 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 try
                 {
                     var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(comp.Id, ct);
-
-                    if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(access)) continue;
+     Console.WriteLine($"[Payroll][FixNames] CompanyId={comp.Id} realm={realm}");if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(access)) continue;
 
                     var realName = await _auth.TryGetCompanyNameAsync(realm, access, ct);
+     Console.WriteLine($"[Payroll][FixNames] TryGetCompanyNameAsync -> {realName}");
                     if (!string.IsNullOrWhiteSpace(realName) &&
                         !string.Equals(comp.Name, realName, StringComparison.Ordinal))
                     {
-                        comp.Name = realName!;
-                        changed = true;
+                        comp.Name = realName!; changed = true; Console.WriteLine($"[Payroll][FixNames][DB] Updated CompanyId={comp.Id} Name={comp.Name}");
                     }
                 }
                 catch (Exception ex)
@@ -162,6 +161,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
+
 
 
 
