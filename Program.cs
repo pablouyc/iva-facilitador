@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json;
 using System.Globalization;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -242,3 +242,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+

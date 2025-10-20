@@ -16,13 +16,14 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
     {
         private readonly PayrollDbContext _db;
         private readonly IPayrollQboApi _api;
+        private readonly IPayrollAuthService _auth;
         private readonly ILogger<IndexModel> _log;
         private readonly IConfiguration _cfg;
 
-        public IndexModel(PayrollDbContext db, IPayrollQboApi api, ILogger<IndexModel> log, IConfiguration cfg)
+        public IndexModel(PayrollDbContext db, IPayrollQboApi api, ILogger<IndexModel> log, IConfiguration cfg, IPayrollAuthService auth)
         {
             _db = db; _api = api; _log = log; _cfg = cfg;
-        }
+        _auth = auth;}
 
         // ====== Parámetros ======
         [BindProperty(SupportsGet = true)]
@@ -61,14 +62,9 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
 
         // --------- Helpers de tokens ----------
         private async Task<(string realm, string access)> LoadTokensAsync(int companyId, CancellationToken ct)
-        {
-            var tk = await _db.PayrollQboTokens
-                              .Where(t => t.CompanyId == companyId)
-                              .OrderByDescending(t => t.Id)
-                              .FirstOrDefaultAsync(ct);
-            if (tk == null) throw new InvalidOperationException("No hay tokens de Payroll para esta empresa.");
-            return (tk.RealmId ?? "", tk.AccessToken);
-        }
+{
+    return await _auth.GetRealmAndValidAccessTokenAsync(companyId, ct);
+}
         private async Task<bool> TokensExistAsync(int companyId, CancellationToken ct) =>
             await _db.PayrollQboTokens.AnyAsync(t => t.CompanyId == companyId, ct);
 
@@ -345,3 +341,4 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
         }
     }
 }
+
