@@ -108,15 +108,11 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
             {
                 try
                 {
-                    var tok = await _db.PayrollQboTokens
-                        .Where(t => t.CompanyId == comp.Id)
-                        .OrderByDescending(t => t.Id)
-                        .FirstOrDefaultAsync(ct);
+                    var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(comp.Id, ct);
 
-                    if (tok == null || string.IsNullOrWhiteSpace(tok.RealmId) || string.IsNullOrWhiteSpace(tok.AccessToken))
-                        continue;
+                    if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(access)) continue;
 
-                    var realName = await _auth.TryGetCompanyNameAsync(tok.RealmId!, tok.AccessToken, ct);
+                    var realName = await _auth.TryGetCompanyNameAsync(realm, access, ct);
                     if (!string.IsNullOrWhiteSpace(realName) &&
                         !string.Equals(comp.Name, realName, StringComparison.Ordinal))
                     {
@@ -166,3 +162,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
+
+
+
