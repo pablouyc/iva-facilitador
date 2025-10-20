@@ -1,4 +1,4 @@
-﻿﻿using System;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -134,59 +134,57 @@ namespace IvaFacilitador.Payroll.Services
         }
 
         public async Task<string?> TryGetCompanyNameAsync(
-            string realmId,
-            string accessToken,
-            CancellationToken ct = default)
+    string realmId,
+    string accessToken,
+    CancellationToken ct = default)
+{
+    try
+    {
+        var client = _http.CreateClient("intuit");
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+
+        var url = $"{ApiBase()}/v3/company/{realmId}/companyinfo/{realmId}?minorversion=65";
+        using var res = await client.GetAsync(url, ct);
+        if (res.IsSuccessStatusCode)
         {
-            try
+            using var s   = await res.Content.ReadAsStreamAsync(ct);
+            using var doc = await System.Text.Json.JsonDocument.ParseAsync(s, cancellationToken: ct);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("CompanyInfo", out var ci) && ci.ValueKind == System.Text.Json.JsonValueKind.Object)
             {
-                var url = $"{ApiBase()}/v3/company/{realmId}/companyinfo/{realmId}?minorversion=65";
-                var client = _http.CreateClient("intuit");
-                client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", accessToken);
-
-                using var res = await client.GetAsync(url, ct);
-                res.EnsureSuccessStatusCode();
-
-                using var s   = await res.Content.ReadAsStreamAsync(ct);
-                using var doc = await JsonDocument.ParseAsync(s, cancellationToken: ct);
-                var root = doc.RootElement;
-
-                if (root.TryGetProperty("CompanyInfo", out var ci) && ci.ValueKind == JsonValueKind.Object)
-                {
-                    if (ci.TryGetProperty("CompanyName", out var cn) && cn.ValueKind == JsonValueKind.String)
-                        return cn.GetString();
-                    if (ci.TryGetProperty("LegalName", out var ln) && ln.ValueKind == JsonValueKind.String)
-                        return ln.GetString();
-                }
-
-                // Fallback por SQL
-                var qUrl = $"{ApiBase()}/v3/company/{realmId}/query?query={Uri.EscapeDataString("select CompanyName, LegalName from CompanyInfo")}&minorversion=65";
-                using var res2 = await client.GetAsync(qUrl, ct);
-                if (!res2.IsSuccessStatusCode) return null;
-
-                using var s2   = await res2.Content.ReadAsStreamAsync(ct);
-                using var doc2 = await JsonDocument.ParseAsync(s2, cancellationToken: ct);
-                var root2 = doc2.RootElement;
-                if (root2.TryGetProperty("QueryResponse", out var qr) && qr.ValueKind == JsonValueKind.Object)
-                {
-                    if (qr.TryGetProperty("CompanyInfo", out var ci2) && ci2.ValueKind == JsonValueKind.Array && ci2.GetArrayLength() > 0)
-                    {
-                        var item = ci2[0];
-                        if (item.TryGetProperty("CompanyName", out var cn2) && cn2.ValueKind == JsonValueKind.String)
-                            return cn2.GetString();
-                        if (item.TryGetProperty("LegalName", out var ln2) && ln2.ValueKind == JsonValueKind.String)
-                            return ln2.GetString();
-                    }
-                }
+                if (ci.TryGetProperty("CompanyName", out var cn) && cn.ValueKind == System.Text.Json.JsonValueKind.String)
+                    return cn.GetString();
+                if (ci.TryGetProperty("LegalName", out var ln) && ln.ValueKind == System.Text.Json.JsonValueKind.String)
+                    return ln.GetString();
             }
-            catch
-            {
-                // tolerante a fallos
-            }
-            return null;
         }
 
+        // Fallback por query
+        var q = "select CompanyName, LegalName from CompanyInfo";
+        var qUrl = $"{ApiBase()}/v3/company/{realmId}/query?query={Uri.EscapeDataString(q)}&minorversion=65";
+        using var res2 = await client.GetAsync(qUrl, ct);
+        if (!res2.IsSuccessStatusCode) return null;
+
+        using var s2   = await res2.Content.ReadAsStreamAsync(ct);
+        using var doc2 = await System.Text.Json.JsonDocument.ParseAsync(s2, cancellationToken: ct);
+        var root2 = doc2.RootElement;
+        if (root2.TryGetProperty("QueryResponse", out var qr) && qr.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            if (qr.TryGetProperty("CompanyInfo", out var ci2) && ci2.ValueKind == System.Text.Json.JsonValueKind.Array && ci2.GetArrayLength() > 0)
+            {
+                var item = ci2[0];
+                if (item.TryGetProperty("CompanyName", out var cn2) && cn2.ValueKind == System.Text.Json.JsonValueKind.String)
+                    return cn2.GetString();
+                if (item.TryGetProperty("LegalName", out var ln2) && ln2.ValueKind == System.Text.Json.JsonValueKind.String)
+                    return ln2.GetString();
+            }
+        }
+    }
+    catch { }
+    return null;
+}
         // ======== Helpers ========
 
         private async Task<(string accessToken, string refreshToken, DateTimeOffset expiresAtUtc)>
@@ -219,3 +217,5 @@ namespace IvaFacilitador.Payroll.Services
         }
     }
 }
+
+
