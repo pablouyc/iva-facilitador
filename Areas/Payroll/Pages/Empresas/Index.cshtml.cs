@@ -96,8 +96,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
             // Empresas a corregir (placeholder + con tokens)
             var candidates = await _db.Companies
                 .Where(c => _db.PayrollQboTokens.Any(t => t.CompanyId == c.Id))
-                .Where(c => string.IsNullOrWhiteSpace(c.Name) ||
-                            c.Name.StartsWith("Empresa vinculada", StringComparison.OrdinalIgnoreCase))
+                .Where(c => c.Name == null || EF.Functions.Like(c.Name!, "Empresa vinculada%"))
                 .ToListAsync(ct);
 
             if (candidates.Count == 0) return;
@@ -161,6 +160,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
+
 
 
 
