@@ -148,7 +148,28 @@ namespace IvaFacilitador.Payroll.Services
      Console.WriteLine($"[Payroll][companyinfo] base={ApiBase()} realm={realmId} url={url}");
         using var res = await client.GetAsync(url, ct);
      Console.WriteLine($"[Payroll][companyinfo] status={(int)res.StatusCode} {res.ReasonPhrase}");
-     if (res.IsSuccessStatusCode) {
+     if (res.IsSuccessStatusCode){
+    var __payload = await res.Content.ReadAsStringAsync(ct);
+if (string.IsNullOrEmpty(__payload)) { Console.WriteLine("[Payroll][companyinfo] empty payload"); return null; }
+if (string.IsNullOrEmpty(__payload)) { Console.WriteLine("[Payroll][companyinfo] empty payload"); return null; }
+if (string.IsNullOrEmpty(__payload)) { Console.WriteLine("[Payroll][companyinfo] empty payload"); return null; }
+    Console.WriteLine("[Payroll][companyinfo] ok body: " + (__payload?.Substring(0, Math.Min(400, __payload.Length))));
+    string? __name = null;
+    try{
+        using var __doc = System.Text.Json.JsonDocument.Parse(__payload!);
+        if (__doc.RootElement.TryGetProperty("CompanyInfo", out var __ci) &&
+            __ci.TryGetProperty("CompanyName", out var __cn) &&
+            __cn.ValueKind == System.Text.Json.JsonValueKind.String)
+        { __name = __cn.GetString(); }
+    }catch{}
+    if (string.IsNullOrWhiteSpace(__name)){
+        try{
+            var __x = System.Xml.Linq.XDocument.Parse(__payload!);
+            var __n = __x.Descendants().FirstOrDefault(e => e.Name.LocalName == "CompanyName")?.Value;
+            if (!string.IsNullOrWhiteSpace(__n)) __name = __n;
+        }catch{}
+    }
+    if (!string.IsNullOrWhiteSpace(__name)) return __name!.Trim();
             using var s   = await res.Content.ReadAsStreamAsync(ct);
             using var doc = await System.Text.Json.JsonDocument.ParseAsync(s, cancellationToken: ct);
             var root = doc.RootElement;
@@ -219,6 +240,11 @@ namespace IvaFacilitador.Payroll.Services
         }
     }
 }
+
+
+
+
+
 
 
 
