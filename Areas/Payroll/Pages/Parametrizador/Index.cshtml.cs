@@ -10,6 +10,8 @@ using Microsoft.Extensions.Configuration;
 using IvaFacilitador.Payroll.Services;
 using IvaFacilitador.Areas.Payroll.BaseDatosPayroll;
 
+
+using Microsoft.AspNetCore.Mvc.Rendering;
 namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
 {
     public class IndexModel : PageModel
@@ -175,6 +177,9 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
                     // Traer cuentas contables
                     var accs = await _api.GetExpenseAccountsAsync(realm, access, ct);
                     Accounts = accs?.Select(a => new Opt { Id = a.Id ?? "", Name = a.Name ?? "" }).ToList() ?? new();
+_log.LogInformation("Parametrizador: QBO devolvió {Count} cuentas", Accounts?.Count ?? 0);
+foreach (var s in (Accounts ?? new()).Take(5))
+    _log.LogInformation("Cuenta ej: {Id} - {Name}", s.Id, s.Name);
 
                     // Si el nombre es placeholder, intenta obtener el nombre real desde QBO
                     if (string.IsNullOrWhiteSpace(CompanyName) ||
@@ -341,4 +346,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Parametrizador
         }
     }
 }
+
+
 
