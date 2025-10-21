@@ -55,11 +55,15 @@ public class PayrollQboApi : IPayrollQboApi
             var baseUrl = ((_cfg["IntuitPayrollAuth:Environment"] ?? _cfg["IntuitPayrollAuth__Environment"] ?? "production").Equals("sandbox", StringComparison.OrdinalIgnoreCase) ? "https://sandbox-quickbooks.api.intuit.com" : "https://quickbooks.api.intuit.com"); var url = $"{baseUrl}/v3/company/{realmId}/query?minorversion=65";
 
             // Traemos también AcctNum y FullyQualifiedName para formar la etiqueta visible en UI.
-            var query = "select Id, Name, FullyQualifiedName, AcctNum from Account where Active = true order by FullyQualifiedName";
-            var content = new StringContent(query, Encoding.UTF8, "text/plain");
+            var query = "select Id, Name, FullyQualifiedName, AcctNum from Account where Active = true order by Name";
+            var content = new StringContent(query, Encoding.UTF8, "application/text");
 
             using var resp = await client.PostAsync(url, content, ct);
-            resp.EnsureSuccessStatusCode();
+if (!resp.IsSuccessStatusCode) {
+    var __err = await resp.Content.ReadAsStringAsync(ct);
+    Console.WriteLine($"[QBO][query] status={(int)resp.StatusCode} {resp.ReasonPhrase} body: {__err}");
+    resp.EnsureSuccessStatusCode();
+}
 
             using var stream = await resp.Content.ReadAsStreamAsync(ct);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
@@ -102,10 +106,14 @@ public class PayrollQboApi : IPayrollQboApi
             using var client = CreateClient(accessToken);
             var baseUrl = ((_cfg["IntuitPayrollAuth:Environment"] ?? _cfg["IntuitPayrollAuth__Environment"] ?? "production").Equals("sandbox", StringComparison.OrdinalIgnoreCase) ? "https://sandbox-quickbooks.api.intuit.com" : "https://quickbooks.api.intuit.com"); var url = $"{baseUrl}/v3/company/{realmId}/query?minorversion=65";
             var query = "select Id, Name from Item where Active = true and Type in ('Service') order by Name";
-            var content = new StringContent(query, Encoding.UTF8, "text/plain");
+            var content = new StringContent(query, Encoding.UTF8, "application/text");
 
             using var resp = await client.PostAsync(url, content, ct);
-            resp.EnsureSuccessStatusCode();
+if (!resp.IsSuccessStatusCode) {
+    var __err = await resp.Content.ReadAsStringAsync(ct);
+    Console.WriteLine($"[QBO][query] status={(int)resp.StatusCode} {resp.ReasonPhrase} body: {__err}");
+    resp.EnsureSuccessStatusCode();
+}
 
             using var stream = await resp.Content.ReadAsStreamAsync(ct);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
@@ -146,6 +154,7 @@ public class PayrollQboApi : IPayrollQboApi
         }
     }
 }
+
 
 
 
