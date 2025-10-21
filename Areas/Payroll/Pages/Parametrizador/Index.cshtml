@@ -252,5 +252,69 @@
 })();
 </script>
 }
+<!-- persist-sector-account-selections -->
+<script>
+(function () {
+  // Claves que ya usa el servidor
+  var KEYS = ["SalarioBruto","Extras","CCSS","Deducciones","SalarioNeto"];
 
+  function companyId() {
+    var el = document.querySelector('input[name="CompanyId"]');
+    return el ? (el.value || "0") : "0";
+  }
+  var storageKey = "payroll-param-grid-" + companyId();
+
+  function snapshot() {
+    try {
+      var map = {};
+      document.querySelectorAll('input[name^="SectorRow_"]').forEach(function(inp){
+        var idx = inp.name.substring("SectorRow_".length);
+        var sec = inp.value || ("Sector " + idx);
+        map[sec] = {};
+        KEYS.forEach(function(k){
+          var sel = document.querySelector('select[name="Map_' + idx + '_' + k + '"]');
+          if (sel) map[sec][k] = sel.value || "";
+        });
+      });
+      localStorage.setItem(storageKey, JSON.stringify(map));
+    } catch(e) { /* no-op */ }
+  }
+
+  function restore() {
+    var raw = null, map = null;
+    try { raw = localStorage.getItem(storageKey); } catch(e) {}
+    if (!raw) return;
+    try { map = JSON.parse(raw); } catch(e) { return; }
+    if (!map) return;
+
+    document.querySelectorAll('input[name^="SectorRow_"]').forEach(function(inp){
+      var idx = inp.name.substring("SectorRow_".length);
+      var sec = inp.value || ("Sector " + idx);
+      var mm  = map[sec];
+      if (!mm) return;
+      KEYS.forEach(function(k){
+        var sel = document.querySelector('select[name="Map_' + idx + '_' + k + '"]');
+        if (sel && mm[k]) { sel.value = mm[k]; }
+      });
+    });
+  }
+
+  // Guarda cada vez que el usuario cambia una cuenta o renombra sector
+  document.addEventListener('change', function(ev){
+    var n = (ev.target && ev.target.name) || "";
+    if (n.startsWith("Map_") || n.startsWith("SectorRow_")) {
+      // snapshot inmediato y un restore por si el DOM se reconstruye
+      snapshot();
+      setTimeout(restore, 0);
+    }
+  });
+
+  // Observa agregados/eliminados en el DOM para reponer selecciones
+  var obs = new MutationObserver(function(){ restore(); });
+  obs.observe(document.body, { childList:true, subtree:true });
+
+  // Primer render
+  restore();
+})();
+</script>
 
