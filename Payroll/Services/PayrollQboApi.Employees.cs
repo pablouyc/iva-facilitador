@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-
 using System.Net.Http;
 
 namespace IvaFacilitador.Payroll.Services
@@ -16,23 +15,50 @@ namespace IvaFacilitador.Payroll.Services
         public async Task<List<(string Id,string Name)>> GetEmployeesAsync(string realmId, string accessToken, CancellationToken ct = default)
         {
             using var client = CreateClient(accessToken);
-            var url = $"https://quickbooks.api.intuit.com/v3/company/{realmId}/query?minorversion=65";
-            var query = "select Id, DisplayName, GivenName, FamilyName from Employee where Active = true order by DisplayName";
-            using var res = await client.PostAsync(url, new StringContent(query, Encoding.UTF8, "text/plain"), ct);
-            var body = await res.Content.ReadAsStringAsync(ct);
 
-            if (!res.IsSuccessStatusCode)
+            var env = _cfg["IntuitPayrollAuth:Environment"] ?? _cfg["IntuitPayrollAuth__Environment"] ?? "production";
+            var baseUrl = env.Equals("sandbox", StringComparison.OrdinalIgnoreCase)
+                ? "https://sandbox-quickbooks.api.intuit.com"
+                : "https://quickbooks.api.intuit.com";
+
+            var sql = "select Id, DisplayName, GivenName, FamilyName from Employee where Active = true order by DisplayName";
+            var postUrl = $"{baseUrl}/v3/company/{realmId}/query?minorversion=65";
+
+            // 1) Intento por POST text/plain
+            using var postRes = await client.PostAsync(postUrl, new StringContent(sql, Encoding.UTF8, "text/plain"), ct);
+            var body = await postRes.Content.ReadAsStringAsync(ct);
+
+            if (!postRes.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[QBO][employees-list] {(int)res.StatusCode} {res.ReasonPhrase} body: {body}");
-                res.EnsureSuccessStatusCode();
+                // Si QBO responde 400 (parser), probamos GET con query codificada
+                if ((int)postRes.StatusCode == 400)
+                {
+                    var getUrl = $"{baseUrl}/v3/company/{realmId}/query?query={Uri.EscapeDataString(sql)}&minorversion=65";
+                    using var getRes = await client.GetAsync(getUrl, ct);
+                    body = await getRes.Content.ReadAsStringAsync(ct);
+                    if (!getRes.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine($"[QBO][employees-list] {(int)getRes.StatusCode} {getRes.ReasonPhrase} body: {body}");
+                        getRes.EnsureSuccessStatusCode();
+                    }
+                    return ParseEmployees(body);
+                }
+
+                Console.WriteLine($"[QBO][employees-list] {(int)postRes.StatusCode} {postRes.ReasonPhrase} body: {body}");
+                postRes.EnsureSuccessStatusCode();
             }
 
+            return ParseEmployees(body);
+        }
+
+        private static List<(string Id,string Name)> ParseEmployees(string payload)
+        {
             var list = new List<(string Id,string Name)>();
 
             // JSON
             try
             {
-                using var doc = JsonDocument.Parse(body);
+                using var doc = JsonDocument.Parse(payload);
                 if (doc.RootElement.TryGetProperty("QueryResponse", out var qr) &&
                     qr.TryGetProperty("Employee", out var arr) &&
                     arr.ValueKind == JsonValueKind.Array)
@@ -59,7 +85,7 @@ namespace IvaFacilitador.Payroll.Services
             {
                 try
                 {
-                    var x = XDocument.Parse(body);
+                    var x = XDocument.Parse(payload);
                     var emps = x.Descendants().Where(e => e.Name.LocalName == "Employee");
                     foreach (var e in emps)
                     {
@@ -82,5 +108,3 @@ namespace IvaFacilitador.Payroll.Services
         }
     }
 }
-
-
