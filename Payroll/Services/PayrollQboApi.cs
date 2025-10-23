@@ -16,9 +16,7 @@ namespace IvaFacilitador.Payroll.Services
         Task<List<QboAccount>> GetExpenseAccountsAsync(string realmId, string accessToken, CancellationToken ct = default);
         Task<List<QboItem>>    GetServiceItemsAsync(string realmId, string accessToken, CancellationToken ct = default);
         Task<string?>          GetCompanyNameAsync(string realmId, string accessToken, CancellationToken ct = default);
-            Task<List<(string Id,string Name)>> GetEmployeesAsync(string realmId, string accessToken, CancellationToken ct = default);
-        Task<string> CreateOrLinkEmployeeAsync(string realmId, string accessToken, string displayName, string? givenName = null, string? familyName = null, CancellationToken ct = default);
-}
+    }
 
     public class QboAccount
     {
@@ -33,7 +31,7 @@ namespace IvaFacilitador.Payroll.Services
         public string? Id { get; set; }
         public string? Name { get; set; }
     }
-public partial class PayrollQboApi : IPayrollQboApi
+public class PayrollQboApi : IPayrollQboApi
 {
     private readonly IConfiguration _cfg;
         private readonly IHttpClientFactory _http;
@@ -156,9 +154,6 @@ if (!resp.IsSuccessStatusCode) {
         }
     }
 }
-
-
-
 
 
 

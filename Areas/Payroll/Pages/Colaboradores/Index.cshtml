@@ -1,238 +1,467 @@
 @page
 @model IvaFacilitador.Areas.Payroll.Pages.Colaboradores.IndexModel
-@using IvaFacilitador.Areas.Payroll.ModelosPayroll
 @{
     ViewData["Title"] = "Colaboradores";
-    // Si tu área tiene layout propio, déjalo así; si no, comenta la línea.
+    ViewData["PayrollSection"] = "Colaboradores";
+
+    var canAdd = Model.CompanyId.HasValue && Model.IsCompanyLinked;
+    var isActivos = string.Equals(Model.Status, "activos", StringComparison.OrdinalIgnoreCase);
+    var qActivos = Model.CompanyId.HasValue ? $"?companyId={Model.CompanyId}&status=activos" : "?status=activos";
+    var qInactivos = Model.CompanyId.HasValue ? $"?companyId={Model.CompanyId}&status=inactivos" : "?status=inactivos";
+}
+@await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
+
+<h1>Colaboradores</h1>
+
+<!-- Barra de navegación de estado -->
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item">
+    <a class="nav-link @(isActivos ? "active" : "")" href="@qActivos">Activos</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link @(!isActivos ? "active" : "")" href="@qInactivos">Inactivos</a>
+  </li>
+</ul>
+
+<!-- Acciones -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    @if (Model.CompanyId.HasValue) {
+      <span class="badge bg-secondary">EmpresaId: @Model.CompanyId</span>
+    } else {
+      <span class="text-muted">Seleccione una empresa en el header</span>
     }
+  </div>
 
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <h2 class="mb-0">Colaboradores (@Model.CompanyName)</h2>
-
-    <div class="d-flex gap-2">
-        <div class="btn-group me-2" role="group" aria-label="Filtro estado">
-            <a asp-page="./Index"
-               asp-route-ShowInactive="false"
-               class="btn btn-sm @(Model.ShowInactive ? "btn-outline-secondary" : "btn-primary")">
-                Activos
-            </a>
-            <a asp-page="./Index"
-               asp-route-ShowInactive="true"
-               class="btn btn-sm @(Model.ShowInactive ? "btn-primary" : "btn-outline-secondary")">
-                Inactivos
-            </a>
-        </div>
-
-        <div class="dropdown">
-            <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Agregar
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="#" data-open="#panel-manual">Manual</a></li>
-                <li><a class="dropdown-item" href="#" data-open="#panel-qbo">QBO</a></li>
-                <li><a class="dropdown-item" href="#" data-open="#panel-excel">Excel (CSV)</a></li>
-            </ul>
-        </div>
-    </div>
+  <div>
+    <button type="button" class="btn btn-primary" @(canAdd ? "" : "disabled") data-bs-toggle="modal" data-bs-target="#dlgAgregar">
+      Agregar
+    </button>
+  </div>
 </div>
 
-@if (!string.IsNullOrEmpty(Model.FlashOk))
-{
-    <div class="alert alert-success">@Model.FlashOk</div>
-}
-@if (!string.IsNullOrEmpty(Model.FlashErr))
-{
-    <div class="alert alert-danger">@Model.FlashErr</div>
-}
-
-<!-- ===== Tabla de colaboradores ===== -->
-@if (Model.Rows != null && Model.Rows.Any())
-{
-    <div class="table-responsive mb-4">
-        <table class="table table-sm align-middle">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Cédula</th>
-                    <th>Sector</th>
-                    <th>Cargo</th>
-                    <th class="text-end">Salario mensual</th>
-                    <th>Periodo</th>
-                    <th>Estado</th>
-                    <th style="width:1%; white-space:nowrap;"></th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var r in Model.Rows)
-            {
-                <tr>
-                    <td>@r.Name</td>
-                    <td>@r.TaxId</td>
-                    <td>@r.Sector</td>
-                    <td>@r.Position</td>
-                    <td class="text-end">@r.MonthlySalary?.ToString("N2")</td>
-                    <td>@r.PayPeriod</td>
-                    <td>
-                        @if (r.Status == 0) { <span class="badge bg-success">Activo</span> }
-                        else { <span class="badge bg-secondary">Inactivo</span> }
-                    </td>
-                    <td class="text-end">
-                        <form method="post" asp-page-handler="SetStatus" class="d-inline">
-                            <input type="hidden" name="id" value="@r.Id" />
-                            <input type="hidden" name="status" value="@(r.Status == 0 ? 1 : 0)" />
-                            <button type="submit" class="btn btn-sm @(r.Status==0 ? "btn-outline-danger" : "btn-outline-primary")">
-                                @(r.Status==0 ? "Terminar" : "Reactivar")
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            }
-            </tbody>
-        </table>
-    </div>
-}
-else
-{
-    <p class="text-muted">No hay colaboradores para mostrar.</p>
-}
-
-<!-- ===== Panel: Agregar Manual (colapsado por defecto) ===== -->
-<div id="panel-manual" class="card mb-4 d-none">
-    <div class="card-header">Agregar colaborador manualmente</div>
-    <div class="card-body">
-        <form method="post" asp-page-handler="AddManual" class="row g-3">
-            <input type="hidden" name="companyId" value="@Model.CompanyId" />
-            <div class="col-md-4">
-                <label asp-for="Manual.Name" class="form-label"></label>
-                <input asp-for="Manual.Name" class="form-control" />
-                <span asp-validation-for="Manual.Name" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="Manual.TaxId" class="form-label"></label>
-                <input asp-for="Manual.TaxId" class="form-control" />
-            </div>
-            <div class="col-md-4">
-                <label asp-for="Manual.MonthlySalary" class="form-label"></label>
-                <input asp-for="Manual.MonthlySalary" type="number" step="0.01" class="form-control" />
-            </div>
-
-            <div class="col-md-4">
-                <label asp-for="Manual.Sector" class="form-label"></label>
-                <input asp-for="Manual.Sector" class="form-control" />
-            </div>
-            <div class="col-md-4">
-                <label asp-for="Manual.Position" class="form-label"></label>
-                <input asp-for="Manual.Position" class="form-control" />
-            </div>
-            <div class="col-md-4">
-                <label asp-for="Manual.PayPeriod" class="form-label"></label>
-                <select asp-for="Manual.PayPeriod"
-                        class="form-select"
-                        asp-items="Html.GetEnumSelectList<PayPeriod>()"></select>
-            </div>
-
-            <div class="col-md-3">
-                <label asp-for="Manual.Split1" class="form-label">Split 1 (%)</label>
-                <input asp-for="Manual.Split1" type="number" class="form-control" />
-            </div>
-            <div class="col-md-3">
-                <label asp-for="Manual.Split2" class="form-label">Split 2 (%)</label>
-                <input asp-for="Manual.Split2" type="number" class="form-control" />
-            </div>
-            <div class="col-md-3">
-                <label asp-for="Manual.Split3" class="form-label">Split 3 (%)</label>
-                <input asp-for="Manual.Split3" type="number" class="form-control" />
-            </div>
-            <div class="col-md-3">
-                <label asp-for="Manual.Split4" class="form-label">Split 4 (%)</label>
-                <input asp-for="Manual.Split4" type="number" class="form-control" />
-            </div>
-
-            <div class="col-md-3 form-check ms-2">
-                <input asp-for="Manual.UseCCSS" class="form-check-input" />
-                <label asp-for="Manual.UseCCSS" class="form-check-label">Paga CCSS</label>
-            </div>
-            <div class="col-md-3 form-check">
-                <input asp-for="Manual.UseSeguro" class="form-check-input" />
-                <label asp-for="Manual.UseSeguro" class="form-check-label">Paga seguro</label>
-            </div>
-
-            <div class="col-12">
-                <button class="btn btn-primary">Agregar colaborador</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ===== Panel: QBO (colapsado por defecto) ===== -->
-<div id="panel-qbo" class="card mb-4 d-none">
-    <div class="card-header">Importar desde QBO</div>
-    <div class="card-body">
-        <p class="text-muted">Traerá empleados activos (Id, DisplayName) desde QBO y los insertará si no existen.</p>
-        <form method="post" asp-page-handler="ImportQbo" class="d-flex gap-2">
-            <input type="hidden" name="companyId" value="@Model.CompanyId" />
-            <button class="btn btn-secondary">Sincronizar ahora</button>
-        </form>
-
-        @if (Model.QboEmployees != null && Model.QboEmployees.Any())
+<!-- Tabla de colaboradores -->
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Cédula</th>
+        <th>Sector</th>
+        <th>Cargo</th>
+        <th>Salario mensual</th>
+        <th>CCSS</th>
+        <th>INS</th>
+        <th>% Pago</th>
+        <th>Estado</th>
+        @if (!isActivos) { <th>Fecha baja</th> }
+        <th style="width:1%"></th>
+      </tr>
+    </thead>
+    <tbody>
+    @if (Model.Rows.Count == 0)
+    {
+        <tr>
+          <td colspan="@(isActivos ? 10 : 11)" class="text-muted">No hay colaboradores @(isActivos ? "activos" : "inactivos").</td>
+        </tr>
+    }
+    else
+    {
+        @foreach (var row in Model.Rows)
         {
-            <hr />
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead><tr><th>Id</th><th>Nombre</th></tr></thead>
-                    <tbody>
-                    @foreach (var e in Model.QboEmployees)
-                    {
-                        <tr><td>@e.Id</td><td>@e.Name</td></tr>
-                    }
-                    </tbody>
-                </table>
-            </div>
+            <tr>
+              <td>@row.Nombre</td>
+              <td>@row.Cedula</td>
+              <td>@row.Sector</td>
+              <td>@row.Cargo</td>
+              <td>@(row.SalarioMensual?.ToString("N2", System.Globalization.CultureInfo.GetCultureInfo("es-CR")) ?? "-")</td>
+              <td>@(row.HasCcss ? "Sí" : "No")</td>
+              <td>@(row.HasIns ? "Sí" : "No")</td>
+              <td>@row.PorcentajePago</td>
+              <td>@row.Estado</td>
+              @if (!isActivos) { <td>@(row.EndDate?.ToString("yyyy-MM-dd") ?? "-")</td> }
+              <td>
+                <a class="btn btn-sm btn-outline-secondary" href="#" title="Editar">Editar</a>
+              </td>
+            </tr>
         }
-        else
-        {
-            <p class="text-muted mb-0">No se encontraron colaboradores en QBO o aún no se cargaron.</p>
-        }
-    </div>
+    }
+    </tbody>
+  </table>
 </div>
 
-<!-- ===== Panel: Excel/CSV (colapsado por defecto) ===== -->
-<div id="panel-excel" class="card mb-4 d-none">
-    <div class="card-header">Importar desde Excel (CSV)</div>
-    <div class="card-body">
-        <form method="post" asp-page-handler="UploadCsv" enctype="multipart/form-data" class="row g-3 align-items-end">
-            <input type="hidden" name="companyId" value="@Model.CompanyId" />
-            <div class="col-md-6">
-                <label asp-for="Csv" class="form-label">Archivo CSV</label>
-                <input asp-for="Csv" type="file" accept=".csv" class="form-control" />
-                <span class="form-text">
-                    <a asp-page-handler="DownloadCsvTemplate">Descargar plantilla</a>
-                </span>
-            </div>
-            <div class="col-md-3">
-                <button class="btn btn-primary">Importar</button>
-            </div>
-        </form>
-    </div>
+<!-- Modal Agregar (placeholder, se implementa en Iteración 7) -->
+<div class="modal fade" id="dlgAgregar" tabindex="-1" aria-labelledby="dlgAgregarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dlgAgregarLabel">Agregar colaboradores</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+<!-- Selector de vistas -->
+<div class="mb-3">
+  <div class="btn-group" role="group" aria-label="Método de alta">
+    <button type="button" class="btn btn-outline-primary active" data-view="qbo" id="btnViewQbo">QBO</button>
+    <button type="button" class="btn btn-outline-primary" data-view="manual" id="btnViewManual">Manual</button>
+    <button type="button" class="btn btn-outline-primary" data-view="excel" id="btnViewExcel">Excel</button>
+  </div>
 </div>
 
-@section Scripts{
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        // Abre paneles solo cuando se elige desde "Agregar"
-        document.querySelectorAll('[data-open]').forEach(a => {
-            a.addEventListener('click', function (e) {
-                e.preventDefault();
-                document.querySelectorAll('#panel-manual,#panel-qbo,#panel-excel').forEach(p => p.classList.add('d-none'));
-                const sel = document.querySelector(this.dataset.open);
-                if (sel) sel.classList.remove('d-none');
-            });
+<!-- Vista QBO -->
+<div id="view-qbo">
+  <div class="alert alert-info" id="qboNotice" style="display:none;"></div>
+  <div class="d-flex gap-2 mb-2">
+    <button type="button" class="btn btn-secondary" id="btnFetchQbo">Traer de QBO</button>
+    <div class="spinner-border spinner-border-sm text-secondary" role="status" id="qboSpinner" style="display:none;">
+      <span class="visually-hidden">Cargando…</span>
+    </div>
+  </div>
+  <div class="table-responsive" style="max-height: 350px; overflow:auto;">
+    <table class="table table-sm table-striped" id="tblQbo">
+      <thead>
+        <tr>
+          <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="4" class="text-muted">Sin datos. Presione “Traer de QBO”.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Vista Manual -->
+<div id="view-manual" class="d-none">
+  <form id="frmManual" class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label">Cédula</label>
+      <input type="text" class="form-control" id="mnNationalId" maxlength="50" required />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Nombre</label>
+      <input type="text" class="form-control" id="mnFirstName" required />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Apellido</label>
+      <input type="text" class="form-control" id="mnLastName" required />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Fecha ingreso</label>
+      <input type="date" class="form-control" id="mnJoinDate" />
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Email</label>
+      <input type="email" class="form-control" id="mnEmail" />
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Teléfono</label>
+      <input type="text" class="form-control" id="mnPhone" />
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Salario mensual</label>
+      <input type="number" class="form-control" id="mnSalary" step="0.01" min="0" />
+    </div>
+
+    <div class="col-md-4">
+      <label class="form-label">Sector</label>
+      <input type="text" class="form-control" id="mnSector" placeholder="(coincidir con sectores parametrizados)" />
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Cargo</label>
+      <input type="text" class="form-control" id="mnJob" />
+    </div>
+    <div class="col-md-4 d-flex align-items-end gap-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="mnCcss">
+        <label class="form-check-label" for="mnCcss">CCSS</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="mnIns">
+        <label class="form-check-label" for="mnIns">INS</label>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Porcentajes de pago (la suma debe ser 100)</label>
+      <div class="row g-2">
+        <div class="col-6 col-md-3">
+          <input type="number" class="form-control pct" id="mnPct1" min="0" max="100" step="0.01" placeholder="%1" />
+        </div>
+        <div class="col-6 col-md-3">
+          <input type="number" class="form-control pct" id="mnPct2" min="0" max="100" step="0.01" placeholder="%2" />
+        </div>
+        <div class="col-6 col-md-3">
+          <input type="number" class="form-control pct" id="mnPct3" min="0" max="100" step="0.01" placeholder="%3" />
+        </div>
+        <div class="col-6 col-md-3">
+          <input type="number" class="form-control pct" id="mnPct4" min="0" max="100" step="0.01" placeholder="%4" />
+        </div>
+      </div>
+      <small class="text-muted">Mensual: use solo %1=100. Quincenal: use %1/%2 (p.ej. 50/50). Semanal: distribuya %1–%4. </small>
+      <div class="mt-1">
+        <span>Suma actual: </span>
+        <span id="sumPct" class="badge bg-secondary">0</span>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <button type="button" class="btn btn-primary" id="btnManualSubmit">Guardar (stub)</button>
+      <span class="ms-2 text-muted">Crea/matchea en QBO y (aún) no persiste en BD.</span>
+    </div>
+  </form>
+
+  <div class="mt-3" id="manualMsg" style="display:none;"></div>
+</div>
+
+<!-- Vista Excel -->
+<div id="view-excel" class="d-none">
+  <p class="text-muted">Cargue colaboradores de forma masiva. Use la plantilla (o genere una mínima aquí) y pegue el CSV debajo.</p>
+  <div class="d-flex gap-2 mb-2">
+    <button type="button" class="btn btn-outline-secondary" id="btnGenCsv">Descargar plantilla mínima</button>
+    <button type="button" class="btn btn-primary" id="btnUploadCsv">Procesar CSV (stub)</button>
+  </div>
+  <textarea id="csvText" class="form-control" rows="8" placeholder="Encabezados esperados: NationalId,FirstName,LastName,Email,Phone"></textarea>
+  <div class="mt-3" id="uploadMsg" style="display:none;"></div>
+</div>
+
+<script>
+(() => {
+  const COMPANY_ID = @(Model.CompanyId ?? 0);
+  const LINKED = @(Model.IsCompanyLinked.ToString().ToLower());
+
+  // --- Helpers de UI ---
+  const qs = (sel) => document.querySelector(sel);
+  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
+  const show = (el) => el && (el.style.display = "");
+  const hide = (el) => el && (el.style.display = "none");
+  const addClass = (el, cls) => el && el.classList.add(cls);
+  const remClass = (el, cls) => el && el.classList.remove(cls);
+
+  // --- Switch entre vistas ---
+  const views = {
+    qbo: qs("#view-qbo"),
+    manual: qs("#view-manual"),
+    excel: qs("#view-excel"),
+  };
+  function switchView(name) {
+    Object.entries(views).forEach(([k, el]) => {
+      if (!el) return;
+      if (k === name) remClass(el, "d-none"); else addClass(el, "d-none");
+    });
+    qsa('[data-view]').forEach(b => {
+      if ((b.getAttribute('data-view') || '') === name) addClass(b, "active"); else remClass(b, "active");
+    });
+  }
+  qsa('[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.getAttribute('data-view'))));
+
+  // --- Validación de porcentajes ---
+  function sumPct() {
+    const vals = qsa('.pct').map(i => parseFloat(i.value.replace(",", "."))).filter(v => !isNaN(v));
+    const s = vals.reduce((a,b)=>a+b, 0);
+    const badge = qs("#sumPct");
+    if (badge) {
+      badge.textContent = (Math.round((s + Number.EPSILON) * 100) / 100).toString();
+      if (Math.abs(s - 100) < 0.001) {
+        remClass(badge, "bg-danger"); addClass(badge, "bg-success");
+      } else {
+        remClass(badge, "bg-success"); addClass(badge, "bg-danger");
+      }
+    }
+    return s;
+  }
+  qsa('.pct').forEach(i => i.addEventListener('input', sumPct));
+
+  // --- QBO: traer empleados ---
+  const btnFetchQbo = qs("#btnFetchQbo");
+  const qboSpinner = qs("#qboSpinner");
+  const qboNotice  = qs("#qboNotice");
+  const tblQboBody = () => qs("#tblQbo tbody");
+
+  function setQboReadyState() {
+    if (!COMPANY_ID || !LINKED) {
+      show(qboNotice);
+      qboNotice.className = "alert alert-warning";
+      qboNotice.textContent = !COMPANY_ID
+          ? "Seleccione una empresa en el header para habilitar QBO."
+          : "Esta empresa no está vinculada a QBO.";
+      if (btnFetchQbo) btnFetchQbo.disabled = true;
+    } else {
+      hide(qboNotice);
+      if (btnFetchQbo) btnFetchQbo.disabled = false;
+    }
+  }
+
+  async function fetchQboEmployees() {
+    if (!COMPANY_ID || !LINKED) return;
+    if (qboSpinner) show(qboSpinner);
+    try {
+      const url = `/payroll/api/qbo/employees?companyId=${COMPANY_ID}&includeInactive=false`;
+      const resp = await fetch(url, { method: "GET" });
+      const data = await resp.json();
+      const tb = tblQboBody();
+      if (!tb) return;
+      tb.innerHTML = "";
+      if (!Array.isArray(data) || data.length === 0) {
+        tb.innerHTML = '<tr><td colspan="4" class="text-muted">No se recibieron colaboradores desde QBO.</td></tr>';
+        return;
+      }
+      for (const e of data) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${e.displayName || ""}</td>
+                        <td>${e.email || ""}</td>
+                        <td>${e.phone || ""}</td>
+                        <td>${e.active ? "Activo" : "Inactivo"}</td>`;
+        tb.appendChild(tr);
+      }
+    } catch (err) {
+      const tb = tblQboBody();
+      if (tb) tb.innerHTML = `<tr><td colspan="4" class="text-danger">Error obteniendo QBO: ${err}</td></tr>`;
+    } finally {
+      if (qboSpinner) hide(qboSpinner);
+    }
+  }
+
+  if (btnFetchQbo) btnFetchQbo.addEventListener('click', fetchQboEmployees);
+  setQboReadyState();
+
+  // --- Manual: submit ---
+  const manualMsg = qs("#manualMsg");
+  async function submitManual() {
+    if (!COMPANY_ID) {
+      if (manualMsg) { manualMsg.className = "text-danger"; manualMsg.style.display = ""; manualMsg.textContent = "Seleccione una empresa."; }
+      return;
+    }
+    const s = sumPct();
+    if (Math.abs(s - 100) >= 0.001) {
+      if (manualMsg) { manualMsg.className = "text-danger"; manualMsg.style.display = ""; manualMsg.textContent = "La suma de porcentajes debe ser 100."; }
+      return;
+    }
+    const body = {
+      companyId: COMPANY_ID,
+      nationalId: qs("#mnNationalId").value.trim(),
+      firstName: qs("#mnFirstName").value.trim(),
+      lastName:  qs("#mnLastName").value.trim(),
+      joinDate:  qs("#mnJoinDate").value,
+      email:     qs("#mnEmail").value.trim(),
+      phone:     qs("#mnPhone").value.trim(),
+      baseSalary: parseFloat(qs("#mnSalary").value || "0"),
+      sector:    qs("#mnSector").value.trim(),
+      jobTitle:  qs("#mnJob").value.trim(),
+      hasCcss:   qs("#mnCcss").checked,
+      hasIns:    qs("#mnIns").checked,
+      payPct1:   parseFloat(qs("#mnPct1").value || "0"),
+      payPct2:   parseFloat(qs("#mnPct2").value || "0"),
+      payPct3:   parseFloat(qs("#mnPct3").value || "0"),
+      payPct4:   parseFloat(qs("#mnPct4").value || "0"),
+    };
+    try {
+      const resp = await fetch("/payroll/api/employees/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await resp.json();
+      if (manualMsg) {
+        manualMsg.style.display = "";
+        if (resp.ok) {
+          manualMsg.className = "alert alert-success";
+          manualMsg.innerHTML = `OK. Vinculado QBO: <strong>${data.qboId || "?"}</strong> — ${data.displayName || ""}`;
+try {
+  const modalEl = document.getElementById("dlgAgregar");
+  if (modalEl && window.bootstrap?.Modal) {
+    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    modal.hide();
+  }
+} catch {}
+setTimeout(() => location.reload(), 400);
+        } else {
+          manualMsg.className = "alert alert-danger";
+          manualMsg.textContent = data?.message || "Error al guardar (stub).";
+        }
+      }
+    } catch (err) {
+      if (manualMsg) { manualMsg.className = "alert alert-danger"; manualMsg.style.display = ""; manualMsg.textContent = "Error: " + err; }
+    }
+  }
+  const btnManualSubmit = qs("#btnManualSubmit");
+  if (btnManualSubmit) btnManualSubmit.addEventListener('click', submitManual);
+
+  // --- Excel: generar plantilla y subir CSV como stub ---
+  const sampleCsv = "NationalId,FirstName,LastName,Email,Phone\n1-1111-1111,Ana,Perez,ana@example.com,8888-8888\n2-2222-2222,Carlos,Rojas,carlos@example.com,7777-7777\n";
+
+  function download(name, content, mime = "text/csv") {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+  }
+  const btnGenCsv = qs("#btnGenCsv");
+  if (btnGenCsv) btnGenCsv.addEventListener('click', () => download("Colaboradores_Plantilla.csv", sampleCsv));
+
+  const uploadMsg = qs("#uploadMsg");
+  const btnUploadCsv = qs("#btnUploadCsv");
+  if (btnUploadCsv) btnUploadCsv.addEventListener('click', async () => {
+    if (!COMPANY_ID) {
+      if (uploadMsg) { uploadMsg.className = "text-danger"; uploadMsg.style.display = ""; uploadMsg.textContent = "Seleccione una empresa."; }
+      return;
+    }
+    const raw = (qs("#csvText").value || "").trim();
+    if (!raw) {
+      if (uploadMsg) { uploadMsg.className = "text-danger"; uploadMsg.style.display = ""; uploadMsg.textContent = "Pegue el CSV primero."; }
+      return;
+    }
+    try {
+      const lines = raw.split(/\r?\n/).filter(l => l.trim().length > 0);
+      if (lines.length < 2) throw new Error("CSV sin filas.");
+      const header = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const idx = (name) => header.indexOf(name);
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",");
+        rows.push({
+          nationalId: cols[idx("nationalid")]?.trim() || "",
+          firstName:  cols[idx("firstname")]?.trim() || "",
+          lastName:   cols[idx("lastname")]?.trim() || "",
+          email:      cols[idx("email")]?.trim() || "",
+          phone:      cols[idx("phone")]?.trim() || "",
         });
-    </script>
-}
+      }
+      const body = { companyId: COMPANY_ID, rows };
+      const resp = await fetch("/payroll/api/employees/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await resp.json();
+      if (uploadMsg) {
+        uploadMsg.style.display = "";
+        if (resp.ok) {
+          uploadMsg.className = "alert alert-success";
+          uploadMsg.textContent = `Procesados: ${data.processed || 0}`;
+setTimeout(() => location.reload(), 600);
+        } else {
+          uploadMsg.className = "alert alert-danger";
+          uploadMsg.textContent = data?.message || "Error al subir CSV (stub).";
+        }
+      }
+    } catch (err) {
+      if (uploadMsg) { uploadMsg.className = "alert alert-danger"; uploadMsg.style.display = ""; uploadMsg.textContent = "Error: " + err; }
+    }
+  });
 
-
-
-
+  // Inicial
+  switchView("qbo");
+})();
+</script>
+<div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" disabled>Continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 

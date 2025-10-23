@@ -23,6 +23,10 @@ namespace IvaFacilitador.Areas.Payroll.BaseDatosPayroll
                 .HasIndex(x => new { x.CompanyId, x.NationalId })
                 .IsUnique();
 
+            // Filtro rápido por estado (Activos/Inactivos)
+            modelBuilder.Entity<Employee>()
+                .HasIndex(x => new { x.CompanyId, x.Status });
+
             modelBuilder.Entity<PayItem>()
                 .HasIndex(x => x.Code)
                 .IsUnique();
@@ -105,6 +109,21 @@ namespace IvaFacilitador.Areas.Payroll.BaseDatosPayroll
         public string? Email { get; set; }
         public string Status { get; set; } = "Activo";
         public decimal? BaseSalary { get; set; }
+
+        // === Nuevos campos fijos para la sección Colaboradores ===
+        public string? Sector { get; set; }        // nombre del sector parametrizado en Empresa
+        public string? JobTitle { get; set; }      // Cargo
+        public bool HasCcss { get; set; }          // CCSS (Sí/No)
+        public bool HasIns { get; set; }           // Seguro INS (Sí/No)
+
+        // Porcentaje de pago por cuota según PayPolicy (la suma debe ser 100)
+        public decimal? PayPct1 { get; set; }
+        public decimal? PayPct2 { get; set; }
+        public decimal? PayPct3 { get; set; }
+        public decimal? PayPct4 { get; set; }
+
+        public DateTime? EndDate { get; set; }     // si pasa a Inactivo, fecha obligatoria
+        public string? QboEmployeeId { get; set; } // ligue con empleado en QBO
     }
 
     public class PayItem
@@ -155,5 +174,3 @@ namespace IvaFacilitador.Areas.Payroll.BaseDatosPayroll
         public decimal Amount { get; set; }
     }
 }
-
-
