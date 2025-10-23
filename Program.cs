@@ -21,6 +21,7 @@ builder.Services.AddHttpClient("intuit");
 // Payroll: DI (una sola vez, sin duplicados)
 builder.Services.AddScoped<IPayrollAuthService, PayrollAuthService>();
 builder.Services.AddScoped<IPayrollQboApi, PayrollQboApi>();
+builder.Services.AddScoped<IQboEmployeeService, QboEmployeeService>();
 
 // Stores/servicios ya existentes en tu app (NO tocados)
 builder.Services.AddSingleton<ICompanyStore, FileCompanyStore>();
@@ -237,7 +238,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+IvaFacilitador.Payroll.Endpoints.EmployeesApi.Register(app);
+
 app.Run();
+
+
+
 
 
 
