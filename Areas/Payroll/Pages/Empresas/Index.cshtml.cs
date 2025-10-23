@@ -70,7 +70,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 QboId = x.QboId,
                 Status = !x.HasTokens
                     ? "Sin conexión"
-                    : (IsParametrized(x.PayPolicy) ? "Listo" : "Pendiente")
+                    : (IsParametrized(x.PayPolicy) ? "Lista" : "Pendiente")
             }).ToList();
         }
 
@@ -160,6 +160,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
+
 
 
 
