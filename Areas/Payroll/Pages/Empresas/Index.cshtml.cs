@@ -1,4 +1,3 @@
-
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -31,6 +30,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         public class Row
         {
             public int Id { get; set; }
+            public string? DisplayId { get; set; }   // Cédula desde PayPolicy, si existe; si no, Id numérico
             public string? Nombre { get; set; }
             public string? QboId { get; set; }
             public string Status { get; set; } = "Sin conexión";
@@ -41,17 +41,16 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         {
             try
             {
-                // 1) Autocuración: si el nombre es "Empresa vinculada ..." y hay tokens, traer nombre real desde QBO.
+                // 1) Autocuración: si el nombre es placeholder y hay tokens, intentar nombre real desde QBO.
                 await FixCompanyNamesFromQboAsync(ct);
             }
             catch (Exception ex)
             {
-                // Si algo falla aquí, lo registramos y seguimos a la grilla.
                 _log.LogWarning(ex, "Empresas/OnGet: falló la autocuración de nombres, continúo dibujando la grilla.");
                 TempData["Empresas_Warn"] = "No se pudo validar los nombres con QBO en este momento. La lista se mostrará igualmente.";
             }
 
-            // 2) Cargar grilla (si esto falla, sí es un problema de base/EF y hay que mirar logs)
+            // 2) Cargar grilla
             var data = await _db.Companies
                 .Select(c => new
                 {
@@ -63,29 +62,61 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 })
                 .ToListAsync(ct);
 
-            Empresas = data.Select(x => new Row
+            Empresas = new List<Row>();
+            foreach (var x in data)
             {
-                Id = x.Id,
-                Nombre = x.Name,
-                QboId = x.QboId,
-                Status = !x.HasTokens
-                    ? "Sin conexión"
-                    : (IsParametrized(x.PayPolicy) ? "Lista" : "Pendiente")
-            }).ToList();
+                var info = TryReadPolicyStatus(x.PayPolicy);
+                var status = !x.HasTokens ? "Sin conexión" : (info.Parametrized ? "Listo" : "Pendiente");
+
+                Empresas.Add(new Row
+                {
+                    Id = x.Id,
+                    DisplayId = string.IsNullOrWhiteSpace(info.Cedula) ? x.Id.ToString() : info.Cedula,
+                    Nombre = x.Name,
+                    QboId = x.QboId,
+                    Status = status
+                });
+            }
         }
 
+        // Compatibilidad: ahora IsParametrized usa el lector nuevo
         private static bool IsParametrized(string? payPolicy)
         {
-            if (string.IsNullOrWhiteSpace(payPolicy)) return false;
+            return TryReadPolicyStatus(payPolicy).Parametrized;
+        }
+
+        // Lee PayPolicy para saber si está parametrizada y extraer cédula
+        private static (bool Parametrized, string? Cedula) TryReadPolicyStatus(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return (false, null);
             try
             {
-                using var doc = JsonDocument.Parse(payPolicy);
+                using var doc = JsonDocument.Parse(json);
                 var root = doc.RootElement;
-                var acc = root.TryGetProperty("defaultExpenseAccountId", out var a) ? a.GetString() : null;
-                var wi  = root.TryGetProperty("defaultWageItemId", out var w) ? w.GetString() : null;
-                return !string.IsNullOrWhiteSpace(acc) && !string.IsNullOrWhiteSpace(wi);
+
+                string? cedula = (root.TryGetProperty("cedula", out var c) && c.ValueKind == JsonValueKind.String)
+                    ? c.GetString()
+                    : null;
+
+                bool hasPeriodo = root.TryGetProperty("periodo", out var per)
+                                  && per.ValueKind == JsonValueKind.String
+                                  && !string.IsNullOrWhiteSpace(per.GetString());
+
+                bool hasAccounts = false;
+                if (root.TryGetProperty("accounts", out var acc) && acc.ValueKind == JsonValueKind.Object)
+                {
+                    hasAccounts =
+                        (acc.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object && gen.EnumerateObject().Any()) ||
+                        (acc.TryGetProperty("perSector", out var perSector) && perSector.ValueKind == JsonValueKind.Object && perSector.EnumerateObject().Any());
+                }
+
+                bool parametrized = hasPeriodo && hasAccounts; // criterio mínimo
+                return (parametrized, cedula);
             }
-            catch { return false; }
+            catch
+            {
+                return (false, null);
+            }
         }
 
         /// <summary>
@@ -93,7 +124,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         /// </summary>
         private async Task FixCompanyNamesFromQboAsync(CancellationToken ct)
         {
-            // Empresas a corregir (placeholder + con tokens)
             var candidates = await _db.Companies
                 .Where(c => _db.PayrollQboTokens.Any(t => t.CompanyId == c.Id))
                 .Where(c => c.Name == null || EF.Functions.Like(c.Name!, "Empresa vinculada%"))
@@ -108,14 +138,17 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 try
                 {
                     var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(comp.Id, ct);
-     Console.WriteLine($"[Payroll][FixNames] CompanyId={comp.Id} realm={realm}");if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(access)) continue;
+                    Console.WriteLine($"[Payroll][FixNames] CompanyId={comp.Id} realm={realm}");
+                    if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(access)) continue;
 
                     var realName = await _auth.TryGetCompanyNameAsync(realm, access, ct);
-     Console.WriteLine($"[Payroll][FixNames] TryGetCompanyNameAsync -> {realName}");
+                    Console.WriteLine($"[Payroll][FixNames] TryGetCompanyNameAsync -> {realName}");
                     if (!string.IsNullOrWhiteSpace(realName) &&
                         !string.Equals(comp.Name, realName, StringComparison.Ordinal))
                     {
-                        comp.Name = realName!; changed = true; Console.WriteLine($"[Payroll][FixNames][DB] Updated CompanyId={comp.Id} Name={comp.Name}");
+                        comp.Name = realName!;
+                        changed = true;
+                        Console.WriteLine($"[Payroll][FixNames][DB] Updated CompanyId={comp.Id} Name={comp.Name}");
                     }
                 }
                 catch (Exception ex)
@@ -160,10 +193,3 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         }
     }
 }
-
-
-
-
-
-
-

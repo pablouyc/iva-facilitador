@@ -13,7 +13,7 @@
         <table class="table table-sm table-striped align-middle">
             <thead>
                 <tr>
-                    <th style="width:90px;">ID</th>
+                    <th style="width:90px;">ID / Cédula</th>
                     <th>Nombre</th>
                     <th style="width:220px;">QBO Realm / Id</th>
                     <th style="width:140px;">Estado</th>
@@ -32,15 +32,17 @@
                 foreach (var e in Model.Empresas)
                 {
                     <tr>
-                        <td>@e.Id</td>
-                        <td>@e.Nombre</td>
-                        <td>@(string.IsNullOrWhiteSpace(e.QboId) ? "-" : e.QboId)</td>
-                        <td>@e.Status</td>
                         <td>
-                            <a class="btn btn-sm btn-primary" href="/Payroll/Parametrizador/@e.Id">Parametrizar</a>
-                            <a class="btn btn-sm btn-outline-secondary disabled" title="Próximamente">Editar</a>
-                            <a class="btn btn-sm btn-outline-danger disabled" title="Próximamente">Eliminar</a>
-                        </td>
+@if (e.Status == "Listo")
+{
+    <a class="btn btn-sm btn-outline-secondary" href="#" title="Editar">Editar</a>
+    <a class="btn btn-sm btn-outline-danger" href="#" title="Eliminar">Eliminar</a>
+}
+else
+{
+    <a class="btn btn-sm btn-primary" href="/Payroll/Parametrizador/@e.Id">Parametrizar</a>
+}
+</td>
                     </tr>
                 }
             }
@@ -56,3 +58,5 @@
         </div>
     }
 </div>
+
+
