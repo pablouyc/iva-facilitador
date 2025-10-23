@@ -1,7 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -41,6 +46,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         {
             try
             {
+                // Autocuración de nombres desde QBO si hay tokens y el nombre es placeholder.
                 await FixCompanyNamesFromQboAsync(ct);
             }
             catch (Exception ex)
@@ -86,7 +92,12 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
             catch { return null; }
         }
 
-        // "Parametrizada" si: tiene periodo válido + al menos 1 sector + al menos 1 mapeo de cuentas (general o por sector)
+        // "Parametrizada" si:
+        // - tiene periodo válido
+        // - tiene >= 1 sector
+        // - y TODAS las claves contables requeridas están asignadas:
+        //   * si splitBySector=false: en accounts.general TODAS las claves
+        //   * si splitBySector=true : para CADA sector, TODAS las claves en accounts.perSector[sector]
         private static bool IsParametrized(string? payPolicy)
         {
             if (string.IsNullOrWhiteSpace(payPolicy)) return false;
@@ -95,33 +106,77 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 using var doc = JsonDocument.Parse(payPolicy);
                 var root = doc.RootElement;
 
-                bool hasPeriodo = root.TryGetProperty("periodo", out var p) && p.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.GetString());
-                bool hasSectors = root.TryGetProperty("sectors", out var secs) && secs.ValueKind == JsonValueKind.Array && secs.GetArrayLength() > 0;
+                // Periodo
+                if (!(root.TryGetProperty("periodo", out var p) &&
+                      p.ValueKind == JsonValueKind.String &&
+                      !string.IsNullOrWhiteSpace(p.GetString())))
+                    return false;
 
-                bool hasAccounts = false;
-                if (root.TryGetProperty("accounts", out var accNode) && accNode.ValueKind == JsonValueKind.Object)
+                // Sectores
+                var sectors = new List<string>();
+                if (root.TryGetProperty("sectors", out var secs) && secs.ValueKind == JsonValueKind.Array)
                 {
-                    if (accNode.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object)
+                    foreach (var e in secs.EnumerateArray())
                     {
-                        // ¿al menos 1 par clave->cuenta no vacío?
-                        hasAccounts |= gen.EnumerateObject().Any(p => p.Value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.Value.GetString()));
+                        var s = e.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) sectors.Add(s!);
                     }
-                    if (accNode.TryGetProperty("perSector", out var perSector) && perSector.ValueKind == JsonValueKind.Object)
+                }
+                if (sectors.Count == 0) return false;
+
+                // splitBySector
+                bool split = false;
+                if (root.TryGetProperty("splitBySector", out var sb))
+                {
+                    split = sb.ValueKind == JsonValueKind.True
+                            || (sb.ValueKind == JsonValueKind.String && bool.TryParse(sb.GetString(), out var b) && b);
+                }
+
+                // accounts
+                if (!(root.TryGetProperty("accounts", out var accNode) && accNode.ValueKind == JsonValueKind.Object))
+                    return false;
+
+                var keys = new[] { "SalarioBruto", "Extras", "CCSS", "Deducciones", "SalarioNeto" };
+
+                if (split)
+                {
+                    if (!(accNode.TryGetProperty("perSector", out var perSector) && perSector.ValueKind == JsonValueKind.Object))
+                        return false;
+
+                    foreach (var secName in sectors)
                     {
-                        foreach (var sec in perSector.EnumerateObject())
+                        if (!(perSector.TryGetProperty(secName, out var map) && map.ValueKind == JsonValueKind.Object))
+                            return false;
+
+                        foreach (var k in keys)
                         {
-                            if (sec.Value.ValueKind == JsonValueKind.Object &&
-                                sec.Value.EnumerateObject().Any(p => p.Value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.Value.GetString())))
-                            {
-                                hasAccounts = true; break;
-                            }
+                            if (!(map.TryGetProperty(k, out var v) &&
+                                  v.ValueKind == JsonValueKind.String &&
+                                  !string.IsNullOrWhiteSpace(v.GetString())))
+                                return false;
                         }
                     }
                 }
+                else
+                {
+                    if (!(accNode.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object))
+                        return false;
 
-                return hasPeriodo && hasSectors && hasAccounts;
+                    foreach (var k in keys)
+                    {
+                        if (!(gen.TryGetProperty(k, out var v) &&
+                              v.ValueKind == JsonValueKind.String &&
+                              !string.IsNullOrWhiteSpace(v.GetString())))
+                            return false;
+                    }
+                }
+
+                return true;
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -149,7 +204,8 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                     if (!string.IsNullOrWhiteSpace(realName) &&
                         !string.Equals(comp.Name, realName, StringComparison.Ordinal))
                     {
-                        comp.Name = realName!; changed = true;
+                        comp.Name = realName!;
+                        changed = true;
                     }
                 }
                 catch (Exception ex)
@@ -162,6 +218,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 await _db.SaveChangesAsync(ct);
         }
 
+        // ====== Botón "Agregar" (redirección a Intuit) ======
         public IActionResult OnGetAgregar() => RedirectToIntuit();
         public IActionResult OnPostAgregar() => RedirectToIntuit();
 
