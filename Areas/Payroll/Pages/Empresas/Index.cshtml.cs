@@ -30,9 +30,9 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         public class Row
         {
             public int Id { get; set; }
-            public string? DisplayId { get; set; }   // Cédula desde PayPolicy, si existe; si no, Id numérico
             public string? Nombre { get; set; }
             public string? QboId { get; set; }
+            public string? Cedula { get; set; }
             public string Status { get; set; } = "Sin conexión";
         }
 
@@ -41,7 +41,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
         {
             try
             {
-                // 1) Autocuración: si el nombre es placeholder y hay tokens, intentar nombre real desde QBO.
                 await FixCompanyNamesFromQboAsync(ct);
             }
             catch (Exception ex)
@@ -50,7 +49,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 TempData["Empresas_Warn"] = "No se pudo validar los nombres con QBO en este momento. La lista se mostrará igualmente.";
             }
 
-            // 2) Cargar grilla
             var data = await _db.Companies
                 .Select(c => new
                 {
@@ -62,61 +60,68 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 })
                 .ToListAsync(ct);
 
-            Empresas = new List<Row>();
-            foreach (var x in data)
+            Empresas = data.Select(x => new Row
             {
-                var info = TryReadPolicyStatus(x.PayPolicy);
-                var status = !x.HasTokens ? "Sin conexión" : (info.Parametrized ? "Listo" : "Pendiente");
-
-                Empresas.Add(new Row
-                {
-                    Id = x.Id,
-                    DisplayId = string.IsNullOrWhiteSpace(info.Cedula) ? x.Id.ToString() : info.Cedula,
-                    Nombre = x.Name,
-                    QboId = x.QboId,
-                    Status = status
-                });
-            }
+                Id = x.Id,
+                Nombre = x.Name,
+                QboId = x.QboId,
+                Cedula = GetCedulaFromPolicy(x.PayPolicy),
+                Status = !x.HasTokens
+                    ? "Sin conexión"
+                    : (IsParametrized(x.PayPolicy) ? "Listo" : "Pendiente")
+            }).ToList();
         }
 
-        // Compatibilidad: ahora IsParametrized usa el lector nuevo
-        private static bool IsParametrized(string? payPolicy)
+        private static string? GetCedulaFromPolicy(string? payPolicy)
         {
-            return TryReadPolicyStatus(payPolicy).Parametrized;
-        }
-
-        // Lee PayPolicy para saber si está parametrizada y extraer cédula
-        private static (bool Parametrized, string? Cedula) TryReadPolicyStatus(string? json)
-        {
-            if (string.IsNullOrWhiteSpace(json)) return (false, null);
+            if (string.IsNullOrWhiteSpace(payPolicy)) return null;
             try
             {
-                using var doc = JsonDocument.Parse(json);
+                using var doc = JsonDocument.Parse(payPolicy);
                 var root = doc.RootElement;
-
-                string? cedula = (root.TryGetProperty("cedula", out var c) && c.ValueKind == JsonValueKind.String)
+                return root.TryGetProperty("cedula", out var c) && c.ValueKind == JsonValueKind.String
                     ? c.GetString()
                     : null;
+            }
+            catch { return null; }
+        }
 
-                bool hasPeriodo = root.TryGetProperty("periodo", out var per)
-                                  && per.ValueKind == JsonValueKind.String
-                                  && !string.IsNullOrWhiteSpace(per.GetString());
+        // "Parametrizada" si: tiene periodo válido + al menos 1 sector + al menos 1 mapeo de cuentas (general o por sector)
+        private static bool IsParametrized(string? payPolicy)
+        {
+            if (string.IsNullOrWhiteSpace(payPolicy)) return false;
+            try
+            {
+                using var doc = JsonDocument.Parse(payPolicy);
+                var root = doc.RootElement;
+
+                bool hasPeriodo = root.TryGetProperty("periodo", out var p) && p.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.GetString());
+                bool hasSectors = root.TryGetProperty("sectors", out var secs) && secs.ValueKind == JsonValueKind.Array && secs.GetArrayLength() > 0;
 
                 bool hasAccounts = false;
-                if (root.TryGetProperty("accounts", out var acc) && acc.ValueKind == JsonValueKind.Object)
+                if (root.TryGetProperty("accounts", out var accNode) && accNode.ValueKind == JsonValueKind.Object)
                 {
-                    hasAccounts =
-                        (acc.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object && gen.EnumerateObject().Any()) ||
-                        (acc.TryGetProperty("perSector", out var perSector) && perSector.ValueKind == JsonValueKind.Object && perSector.EnumerateObject().Any());
+                    if (accNode.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object)
+                    {
+                        // ¿al menos 1 par clave->cuenta no vacío?
+                        hasAccounts |= gen.EnumerateObject().Any(p => p.Value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.Value.GetString()));
+                    }
+                    if (accNode.TryGetProperty("perSector", out var perSector) && perSector.ValueKind == JsonValueKind.Object)
+                    {
+                        foreach (var sec in perSector.EnumerateObject())
+                        {
+                            if (sec.Value.ValueKind == JsonValueKind.Object &&
+                                sec.Value.EnumerateObject().Any(p => p.Value.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(p.Value.GetString())))
+                            {
+                                hasAccounts = true; break;
+                            }
+                        }
+                    }
                 }
 
-                bool parametrized = hasPeriodo && hasAccounts; // criterio mínimo
-                return (parametrized, cedula);
+                return hasPeriodo && hasSectors && hasAccounts;
             }
-            catch
-            {
-                return (false, null);
-            }
+            catch { return false; }
         }
 
         /// <summary>
@@ -138,17 +143,13 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 try
                 {
                     var (realm, access) = await _auth.GetRealmAndValidAccessTokenAsync(comp.Id, ct);
-                    Console.WriteLine($"[Payroll][FixNames] CompanyId={comp.Id} realm={realm}");
                     if (string.IsNullOrWhiteSpace(realm) || string.IsNullOrWhiteSpace(access)) continue;
 
                     var realName = await _auth.TryGetCompanyNameAsync(realm, access, ct);
-                    Console.WriteLine($"[Payroll][FixNames] TryGetCompanyNameAsync -> {realName}");
                     if (!string.IsNullOrWhiteSpace(realName) &&
                         !string.Equals(comp.Name, realName, StringComparison.Ordinal))
                     {
-                        comp.Name = realName!;
-                        changed = true;
-                        Console.WriteLine($"[Payroll][FixNames][DB] Updated CompanyId={comp.Id} Name={comp.Name}");
+                        comp.Name = realName!; changed = true;
                     }
                 }
                 catch (Exception ex)
@@ -161,7 +162,6 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Empresas
                 await _db.SaveChangesAsync(ct);
         }
 
-        // ====== Botón "Agregar" (redirección a Intuit) ======
         public IActionResult OnGetAgregar() => RedirectToIntuit();
         public IActionResult OnPostAgregar() => RedirectToIntuit();
 
