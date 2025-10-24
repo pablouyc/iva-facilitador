@@ -211,7 +211,11 @@ foreach (var s in (Accounts ?? new()).Take(5))
             // Nombre, cédula y periodo
             CompanyName = Request.Form["CompanyName"].ToString() ?? string.Empty;
             Cedula      = Request.Form["Cedula"].ToString()      ?? string.Empty;
-            Periodo     = Request.Form["Periodo"].ToString()     ?? "Mensual";
+            var _perFromPeriodo = Request.Form["Periodo"].ToString();
+            var _perFromPayroll = string.IsNullOrWhiteSpace(_perFromPeriodo) ? Request.Form["PeriodoPayroll"].ToString() : null;
+            Periodo = !string.IsNullOrWhiteSpace(_perFromPeriodo)
+                ? _perFromPeriodo
+                : (!string.IsNullOrWhiteSpace(_perFromPayroll) ? _perFromPayroll : "Mensual");
 
             if (!string.IsNullOrWhiteSpace(CompanyName) && !string.Equals(CompanyName, comp.Name, StringComparison.Ordinal))
                 comp.Name = CompanyName!;
@@ -227,6 +231,7 @@ foreach (var s in (Accounts ?? new()).Take(5))
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .ToList();
             if (Sectores.Count == 0) Sectores = new List<string> { "General" };
+            var normalizedSectors = SplitBySector ? Sectores : new List<string> { Sectores.FirstOrDefault() ?? "General" };
 
             // Recoger filas del grid (traemos el nombre del sector que usa el grid)
             var rows = new List<(int idx, string name)>();
@@ -271,7 +276,7 @@ foreach (var s in (Accounts ?? new()).Take(5))
             var policy = new
             {
                 splitBySector = SplitBySector,
-                sectors = Sectores,
+                sectors = normalizedSectors,
                 cedula = Cedula,
                 periodo = Periodo,
                 accounts = new
@@ -284,7 +289,7 @@ foreach (var s in (Accounts ?? new()).Take(5))
             await _db.SaveChangesAsync(ct);
 
             TempData["ok"] = "Parámetros de nómina guardados.";
-            return Redirect($"/Payroll/Parametrizador/{companyId}");
+            return Redirect("/Payroll/Empresas");
         }
 
         // --------- POST: sincronizar ----------
@@ -346,6 +351,9 @@ foreach (var s in (Accounts ?? new()).Take(5))
         }
     }
 }
+
+
+
 
 
 
