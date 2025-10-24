@@ -78,8 +78,10 @@
           </thead>
           <tbody id="mapBody">
             @{
-              var rows = Model.SectorNames;
-              var rowIdx = 0;
+              var rows = Model.SplitBySector
+    ? (Model.SectorNames ?? new List<string> { "General" })
+    : new List<string> { (Model.SectorNames?.FirstOrDefault() ?? "General") };
+  var rowIdx = 0;
             }
             @foreach (var sectorName in rows)
             {
@@ -317,4 +319,6 @@
   restore();
 })();
 </script>
+
+
 

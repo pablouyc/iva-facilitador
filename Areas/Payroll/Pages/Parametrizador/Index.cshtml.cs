@@ -306,8 +306,13 @@ foreach (var s in (Accounts ?? new()).Take(5))
                 TempData["ParamErr"] = string.Join(" ", errors);
                 return await OnGetAsync(ct); // permanece en Parametrizador, no guarda ni redirige
             }
-
-            var policy = new
+            // Si hay errores de validación, no persistir y volver a la página
+            if (errors.Count > 0)
+            {
+                TempData["Empresas_Warn"] = string.Join(" ", errors);
+                id = CompanyId;
+                return await OnGetAsync(ct);
+            }            var policy = new
             {
                 splitBySector = SplitBySector,
                 sectors = Sectores,
@@ -385,6 +390,7 @@ foreach (var s in (Accounts ?? new()).Take(5))
         }
     }
 }
+
 
 
 
