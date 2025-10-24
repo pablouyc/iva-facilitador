@@ -216,6 +216,9 @@ foreach (var s in (Accounts ?? new()).Take(5))
             Periodo = !string.IsNullOrWhiteSpace(_perFromPeriodo)
                 ? _perFromPeriodo
                 : (!string.IsNullOrWhiteSpace(_perFromPayroll) ? _perFromPayroll : "Mensual");
+            Periodo = !string.IsNullOrWhiteSpace(_perFromPeriodo)
+                ? _perFromPeriodo
+                : (!string.IsNullOrWhiteSpace(_perFromPayroll) ? _perFromPayroll : "Mensual");
 
             if (!string.IsNullOrWhiteSpace(CompanyName) && !string.Equals(CompanyName, comp.Name, StringComparison.Ordinal))
                 comp.Name = CompanyName!;
@@ -270,13 +273,44 @@ foreach (var s in (Accounts ?? new()).Take(5))
                     genMap = rowMap;
                     break; // solo 1 fila
                 }
+            }            // === Validaciones mínimas ===
+            var errors = new List<string>();
+            if (string.IsNullOrWhiteSpace(Cedula))
+                errors.Add("Debes ingresar la cédula.");
+            if (string.IsNullOrWhiteSpace(Periodo))
+                errors.Add("Debes seleccionar el período.");
+
+            bool IsCompleteMap(Dictionary<string,string> m)
+            {
+                foreach (var k in Keys)
+                    if (!m.TryGetValue(k, out var v) || string.IsNullOrWhiteSpace(v)) return false;
+                return true;
             }
 
-            // Persistir en PayPolicy
+            if (SplitBySector)
+            {
+                foreach (var sec in normalizedSectors)
+                {
+                    if (!perSector.TryGetValue(sec, out var m) || !IsCompleteMap(m))
+                        errors.Add($"Completa todas las cuentas para el sector '{sec}'.");
+                }
+            }
+            else
+            {
+                if (!IsCompleteMap(genMap))
+                    errors.Add("Completa todas las cuentas contables.");
+            }
+
+            if (errors.Count > 0)
+            {
+                TempData["ParamErr"] = string.Join(" ", errors);
+                return await OnGetAsync(ct); // permanece en Parametrizador, no guarda ni redirige
+            }
+
             var policy = new
             {
                 splitBySector = SplitBySector,
-                sectors = normalizedSectors,
+                sectors = Sectores,
                 cedula = Cedula,
                 periodo = Periodo,
                 accounts = new
@@ -351,6 +385,9 @@ foreach (var s in (Accounts ?? new()).Take(5))
         }
     }
 }
+
+
+
 
 
 
