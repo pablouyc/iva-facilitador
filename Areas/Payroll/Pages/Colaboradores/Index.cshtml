@@ -235,7 +235,9 @@
   const PCT_SLOTS  = (PERIOD === "Mensual" ? 1 : (PERIOD === "Quincenal" ? 2 : 4));
 
   
-  function applyPctVisibility(){
+  
+  console.log("[Colab] Consts:", { COMPANY_ID, LINKED, PERIOD, PCT_SLOTS });
+function applyPctVisibility(){
     const tbl=document.getElementById("tblManual");
     if(!tbl) return;
     const idxs=[];
@@ -264,6 +266,7 @@
     if (name === "manual") setPctVisibility();
   }
   qsa('[data-view]').forEach(b => b.addEventListener('click', ()=> switchView(b.getAttribute('data-view'))));
+  console.log("[Colab] Tabs wired:", qsa("[data-view]").length);
 
   // ---------- QBO ----------
   const btnFetchQbo = qs("#btnFetchQbo");
@@ -283,6 +286,7 @@
   }
 
   async function fetchQboEmployees() {
+  console.log("[Colab] fetchQboEmployees start", { COMPANY_ID, LINKED });
     if (!COMPANY_ID || !LINKED) return;
     if (qboSpinner) show(qboSpinner);
     try {
@@ -306,8 +310,7 @@
   }
   if (btnFetchQbo) btnFetchQbo.addEventListener('click', fetchQboEmployees);
   setQboReadyState();
-
-  // ---------- Manual ----------
+  console.log("[Colab] QBO wired; COMPANY_ID=", COMPANY_ID, "LINKED=", LINKED, "btn?", !!btnFetchQbo);// ---------- Manual ----------
   const lblPeriodo = qs("#lblPeriodo"); if (lblPeriodo) lblPeriodo.textContent = PERIOD;
   const tbManual   = qs("#tblManual tbody");
 
@@ -507,7 +510,7 @@
 
   // Inicial
   switchView("qbo");
-  setPctVisibility(); // aplicar ocultamiento TH al cargar
+  console.log("[Colab] switchView(qbo) called");setPctVisibility(); // aplicar ocultamiento TH al cargar
 })();
 </script>
 <div class="modal-footer">
@@ -517,6 +520,7 @@
     </div>
   </div>
 </div>
+
 
 
 
