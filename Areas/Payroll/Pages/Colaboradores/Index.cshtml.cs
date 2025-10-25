@@ -28,7 +28,9 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         // Query: companyId y status=activos|inactivos
         public int? CompanyId { get; private set; }
         public string Status { get; private set; } = "activos";
+        public List<string> SectorNames { get; private set; } = new() { "General" };
         public bool IsCompanyLinked { get; private set; }
+        public string Periodo { get; private set; } = "Mensual";
 
         // Tabla
         public List<RowVM> Rows { get; private set; } = new();
@@ -46,8 +48,9 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             public string PorcentajePago { get; set; } = "";
             public string Estado { get; set; } = "Activo";
             public DateTime? EndDate { get; set; }
-        }
 
+
+        }
         public async Task OnGetAsync(CancellationToken ct)
         {
             // Leer companyId de querystring
@@ -70,7 +73,38 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                 IsCompanyLinked = false;
             }
 
-            // Carga de empleados para la tabla
+                        // /// LOAD_PAYPOLICY: Periodo + Sectores desde Company.PayPolicy
+            try
+            {
+                if (CompanyId.HasValue)
+                {
+                    var comp = await _db.Companies.FindAsync(new object[] { CompanyId.Value }, ct);
+                    var json = comp?.PayPolicy;
+                    if (!string.IsNullOrWhiteSpace(json))
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        var root = doc.RootElement;
+
+                        if (root.TryGetProperty("periodo", out var per) && per.ValueKind == System.Text.Json.JsonValueKind.String)
+                            Periodo = per.GetString() ?? "Mensual";
+
+                        var secs = new System.Collections.Generic.List<string>();
+                        if (root.TryGetProperty("sectors", out var arr) && arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            foreach (var e in arr.EnumerateArray())
+                            {
+                                var s = e.GetString();
+                                if (!string.IsNullOrWhiteSpace(s)) secs.Add(s!);
+                            }
+                        }
+                        if (secs.Count > 0) SectorNames = secs;
+                        if (SectorNames.Count == 0) SectorNames = new() { "General" };
+                    }
+                }
+            }
+            catch { /* si falla policy: defaults */ }
+
+            
             try
             {
                 var isActivos = Status == "activos";
@@ -127,3 +161,8 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         }
     }
 }
+
+
+
+
+

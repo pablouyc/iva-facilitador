@@ -229,67 +229,56 @@
 <script>
 (() => {
   const COMPANY_ID = @(Model.CompanyId ?? 0);
-  const LINKED = @(Model.IsCompanyLinked.ToString().ToLower());
+  const LINKED     = @(Model.IsCompanyLinked.ToString().ToLower());
+  const SECTORS    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>{"General"}));
+  const PERIOD     = "@(Model.Periodo ?? "Mensual")";
+  const PCT_SLOTS  = (PERIOD === "Mensual" ? 1 : (PERIOD === "Quincenal" ? 2 : 4));
 
-  // --- Helpers de UI ---
-  const qs = (sel) => document.querySelector(sel);
+  
+  function applyPctVisibility(){
+    const tbl=document.getElementById("tblManual");
+    if(!tbl) return;
+    const idxs=[];
+    if(PCT_SLOTS<4) idxs.push(16);
+    if(PCT_SLOTS<3) idxs.push(15);
+    if(PCT_SLOTS<2) idxs.push(14);
+    idxs.forEach(i=>{
+      tbl.querySelectorAll("thead th:nth-child("+i+")").forEach(th=> th.style.display="none");
+      tbl.querySelectorAll("tbody tr td:nth-child("+i+")").forEach(td=> td.style.display="none");
+    });
+  }
+  applyPctVisibility();
+// --- Helpers ---
+  const qs  = (sel) => document.querySelector(sel);
   const qsa = (sel) => Array.from(document.querySelectorAll(sel));
   const show = (el) => el && (el.style.display = "");
   const hide = (el) => el && (el.style.display = "none");
   const addClass = (el, cls) => el && el.classList.add(cls);
   const remClass = (el, cls) => el && el.classList.remove(cls);
 
-  // --- Switch entre vistas ---
-  const views = {
-    qbo: qs("#view-qbo"),
-    manual: qs("#view-manual"),
-    excel: qs("#view-excel"),
-  };
+  // Vistas
+  const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
   function switchView(name) {
-    Object.entries(views).forEach(([k, el]) => {
-      if (!el) return;
-      if (k === name) remClass(el, "d-none"); else addClass(el, "d-none");
-    });
-    qsa('[data-view]').forEach(b => {
-      if ((b.getAttribute('data-view') || '') === name) addClass(b, "active"); else remClass(b, "active");
-    });
+    Object.entries(views).forEach(([k,el])=> { if (!el) return; (k===name)? remClass(el,"d-none"): addClass(el,"d-none"); });
+    qsa('[data-view]').forEach(b => { (b.getAttribute('data-view')||'')===name? addClass(b,"active"): remClass(b,"active"); });
+    if (name === "manual") setPctVisibility();
   }
-  qsa('[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.getAttribute('data-view'))));
+  qsa('[data-view]').forEach(b => b.addEventListener('click', ()=> switchView(b.getAttribute('data-view'))));
 
-  // --- Validación de porcentajes ---
-  function sumPct() {
-    const vals = qsa('.pct').map(i => parseFloat(i.value.replace(",", "."))).filter(v => !isNaN(v));
-    const s = vals.reduce((a,b)=>a+b, 0);
-    const badge = qs("#sumPct");
-    if (badge) {
-      badge.textContent = (Math.round((s + Number.EPSILON) * 100) / 100).toString();
-      if (Math.abs(s - 100) < 0.001) {
-        remClass(badge, "bg-danger"); addClass(badge, "bg-success");
-      } else {
-        remClass(badge, "bg-success"); addClass(badge, "bg-danger");
-      }
-    }
-    return s;
-  }
-  qsa('.pct').forEach(i => i.addEventListener('input', sumPct));
-
-  // --- QBO: traer empleados ---
+  // ---------- QBO ----------
   const btnFetchQbo = qs("#btnFetchQbo");
-  const qboSpinner = qs("#qboSpinner");
-  const qboNotice  = qs("#qboNotice");
-  const tblQboBody = () => qs("#tblQbo tbody");
+  const qboSpinner  = qs("#qboSpinner");
+  const qboNotice   = qs("#qboNotice");
+  const tblQboBody  = () => qs("#tblQbo tbody");
+  let QBO_LIST = null;
 
   function setQboReadyState() {
     if (!COMPANY_ID || !LINKED) {
-      show(qboNotice);
-      qboNotice.className = "alert alert-warning";
-      qboNotice.textContent = !COMPANY_ID
-          ? "Seleccione una empresa en el header para habilitar QBO."
-          : "Esta empresa no está vinculada a QBO.";
+      show(qboNotice); qboNotice.className = "alert alert-warning";
+      qboNotice.textContent = !COMPANY_ID ? "Seleccione una empresa en el header para habilitar QBO." : "Esta empresa no está vinculada a QBO.";
       if (btnFetchQbo) btnFetchQbo.disabled = true;
     } else {
-      hide(qboNotice);
-      if (btnFetchQbo) btnFetchQbo.disabled = false;
+      hide(qboNotice); if (btnFetchQbo) btnFetchQbo.disabled = false;
     }
   }
 
@@ -297,163 +286,228 @@
     if (!COMPANY_ID || !LINKED) return;
     if (qboSpinner) show(qboSpinner);
     try {
-      const url = `/payroll/api/qbo/employees?companyId=${COMPANY_ID}&includeInactive=false`;
+      const url = /payroll/api/qbo/employees?companyId=&includeInactive=false;
       const resp = await fetch(url, { method: "GET" });
       const data = await resp.json();
-      const tb = tblQboBody();
-      if (!tb) return;
+      const tb = tblQboBody(); if (!tb) return;
       tb.innerHTML = "";
       if (!Array.isArray(data) || data.length === 0) {
-        tb.innerHTML = '<tr><td colspan="4" class="text-muted">No se recibieron colaboradores desde QBO.</td></tr>';
-        return;
+        tb.innerHTML = '<tr><td colspan="4" class="text-muted">No se recibieron colaboradores desde QBO.</td></tr>'; return;
       }
+      QBO_LIST = data;
       for (const e of data) {
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${e.displayName || ""}</td>
-                        <td>${e.email || ""}</td>
-                        <td>${e.phone || ""}</td>
-                        <td>${e.active ? "Activo" : "Inactivo"}</td>`;
+        tr.innerHTML = <td></td><td></td><td></td><td></td>;
         tb.appendChild(tr);
       }
     } catch (err) {
-      const tb = tblQboBody();
-      if (tb) tb.innerHTML = `<tr><td colspan="4" class="text-danger">Error obteniendo QBO: ${err}</td></tr>`;
-    } finally {
-      if (qboSpinner) hide(qboSpinner);
-    }
+      const tb = tblQboBody(); if (tb) tb.innerHTML = <tr><td colspan="4" class="text-danger">Error obteniendo QBO: </td></tr>;
+    } finally { if (qboSpinner) hide(qboSpinner); }
   }
-
   if (btnFetchQbo) btnFetchQbo.addEventListener('click', fetchQboEmployees);
   setQboReadyState();
 
-  // --- Manual: submit ---
+  // ---------- Manual ----------
+  const lblPeriodo = qs("#lblPeriodo"); if (lblPeriodo) lblPeriodo.textContent = PERIOD;
+  const tbManual   = qs("#tblManual tbody");
+
+  // Oculta/muestra columnas % según PCT_SLOTS (12..15 son %1..%4)
+  function setPctVisibility() {
+    const table = qs("#tblManual"); if (!table) return;
+    const pctIdx = [12,13,14,15]; // TH/TD indexes para %1..%4
+    const ths = table.tHead?.rows?.[0]?.cells || [];
+    pctIdx.forEach((idx,i) => {
+      if (ths[idx]) ths[idx].style.display = (i < PCT_SLOTS) ? "" : "none";
+    }const rows = table.tBodies[0]?.rows || [];
+    Array.from(rows).forEach(row => {
+      pctIdx.forEach((idx,i) => {
+        const cell = row.cells[idx]; if (!cell) return;
+        cell.style.display = (i < PCT_SLOTS) ? "" : "none";
+        const inp = cell.querySelector("input");
+        if (inp) {
+          if (i < PCT_SLOTS) { inp.disabled = false; }
+          else { inp.value = "0"; inp.disabled = true; }
+        }
+      }// Recalcular suma al ajustar celdas
+      renderSumBadge(row);
+    }}
+
+  function pctSumForRow(tr){
+  const sels = [".pct1",".pct2",".pct3",".pct4"].slice(0, PCT_SLOTS);
+  const vs   = sels.map(sel => parseFloat(tr.querySelector(sel)?.value || "0")).filter(v => !isNaN(v));
+  return vs.reduce((a,b)=>a+b, 0);
+}return vs.reduce((a,b)=>a+b,0);
+  }
+  function renderSumBadge(tr) {
+    const sum = Math.round((pctSumForRow(tr) + Number.EPSILON)*100)/100;
+    const cell = tr.querySelector(".sumcell");
+    if (!cell) return sum;
+    cell.textContent = sum.toString();
+    cell.className = "sumcell badge " + (Math.abs(sum-100)<0.001 ? "bg-success" : "bg-danger");
+    return sum;
+  }
+
+  function qboSelectHtml(selectedId = "", selectedText = "") {
+    const opts = [];
+    opts.push(<option value="">No existe (crear en QBO)</option>);
+    if (Array.isArray(QBO_LIST)) {
+      for (const e of QBO_LIST) {
+        const sel = (e.id === selectedId) ? " selected" : "";
+        opts.push(<option value="\"\>\</option>);
+      }
+    } else if (selectedId) {
+      opts.push(<option value="\" selected>\</option>);
+    }
+    return <select class="form-select form-select-sm qboSel">\</select>;
+  }
+  function sectorSelectHtml(value="") {
+    const opts = (SECTORS||["General"]).map(s => <option value="\"\>\</option>);
+    return <select class="form-select form-select-sm sectorSel">\</select>;
+  }
+
+  function addRow(initial = {}) {
+    if (!tbManual) return;
+    if (tbManual.querySelector(".placeholder")) tbManual.innerHTML = "";
+    const tr = document.createElement("tr");
+    tr.innerHTML = 
+      <td>\</td>
+      <td><input class="form-control form-control-sm nid" value="\"></td>
+      <td><input class="form-control form-control-sm fn"  value="\"></td>
+      <td><input class="form-control form-control-sm ln"  value="\"></td>
+      <td><input type="date" class="form-control form-control-sm jd" value="\"></td>
+      <td><input class="form-control form-control-sm em"  value="\"></td>
+      <td><input class="form-control form-control-sm ph"  value="\"></td>
+      <td><input type="number" min="0" step="0.01" class="form-control form-control-sm sal" value="\"></td>
+      <td>\</td>
+      <td><input class="form-control form-control-sm job" value="\"></td>
+      <td class="text-center"><input type="checkbox" class="form-check-input ccss"\></td>
+      <td class="text-center"><input type="checkbox" class="form-check-input ins"\></td>
+      <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm pct1" value="\"></td>
+      <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm pct2" value="\"></td>
+      <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm pct3" value="\"></td>
+      <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm pct4" value="\"></td>
+      <td><span class="sumcell badge bg-secondary">0</span></td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger rm">✕</button></td>
+    ;
+    tr.querySelectorAll("input[type=number]").forEach(i => i.addEventListener("input", ()=>renderSumBadge(tr)));
+    tr.querySelector(".rm").addEventListener("click", ()=>{
+      tr.remove();
+      if (!tbManual.children.length) tbManual.innerHTML='<tr class="placeholder"><td colspan="17" class="text-muted">Sin filas. Pulse “Añadir fila”.</td></tr>';
+      setPctVisibility();
+    }tbManual.appendChild(tr);
+    setPctVisibility(); // oculta/inhabilita % que no aplican
+    renderSumBadge(tr);
+  }
+
+  const btnAddRow = qs("#btnAddRow");
+  if (btnAddRow) btnAddRow.addEventListener("click", ()=> addRow({}));
+
+  function collectRows() {
+    return qsa("#tblManual tbody tr").filter(tr => !tr.classList.contains("placeholder")).map(tr => {
+      const qboSel  = tr.querySelector(".qboSel");
+      const selText = qboSel?.selectedOptions?.[0]?.textContent || "";
+      const num = (sel) => {
+        const el = tr.querySelector(sel);
+        const v  = parseFloat(el?.value || "0");
+        return (isNaN(v) || el?.disabled) ? 0 : v;
+      };
+      return {
+        qboId:      qboSel?.value || null,
+        qboName:    qboSel?.value ? selText : null,
+        nationalId: tr.querySelector(".nid")?.value?.trim() || "",
+        firstName:  tr.querySelector(".fn")?.value?.trim()  || "",
+        lastName:   tr.querySelector(".ln")?.value?.trim()  || "",
+        joinDate:   tr.querySelector(".jd")?.value || null,
+        email:      tr.querySelector(".em")?.value?.trim()  || null,
+        phone:      tr.querySelector(".ph")?.value?.trim()  || null,
+        baseSalary: parseFloat(tr.querySelector(".sal")?.value || "0"),
+        sector:     tr.querySelector(".sectorSel")?.value || null,
+        jobTitle:   tr.querySelector(".job")?.value?.trim() || null,
+        hasCcss:    tr.querySelector(".ccss")?.checked || false,
+        hasIns:     tr.querySelector(".ins")?.checked  || false,
+        payPct1:    num(".pct1"),
+        payPct2:    num(".pct2"),
+        payPct3:    num(".pct3"),
+        payPct4:    num(".pct4")
+      };
+    }}
+
   const manualMsg = qs("#manualMsg");
-  async function submitManual() {
-    if (!COMPANY_ID) {
-      if (manualMsg) { manualMsg.className = "text-danger"; manualMsg.style.display = ""; manualMsg.textContent = "Seleccione una empresa."; }
-      return;
-    }
-    const s = sumPct();
-    if (Math.abs(s - 100) >= 0.001) {
-      if (manualMsg) { manualMsg.className = "text-danger"; manualMsg.style.display = ""; manualMsg.textContent = "La suma de porcentajes debe ser 100."; }
-      return;
-    }
-    const body = {
-      companyId: COMPANY_ID,
-      nationalId: qs("#mnNationalId").value.trim(),
-      firstName: qs("#mnFirstName").value.trim(),
-      lastName:  qs("#mnLastName").value.trim(),
-      joinDate:  qs("#mnJoinDate").value,
-      email:     qs("#mnEmail").value.trim(),
-      phone:     qs("#mnPhone").value.trim(),
-      baseSalary: parseFloat(qs("#mnSalary").value || "0"),
-      sector:    qs("#mnSector").value.trim(),
-      jobTitle:  qs("#mnJob").value.trim(),
-      hasCcss:   qs("#mnCcss").checked,
-      hasIns:    qs("#mnIns").checked,
-      payPct1:   parseFloat(qs("#mnPct1").value || "0"),
-      payPct2:   parseFloat(qs("#mnPct2").value || "0"),
-      payPct3:   parseFloat(qs("#mnPct3").value || "0"),
-      payPct4:   parseFloat(qs("#mnPct4").value || "0"),
-    };
-    try {
-      const resp = await fetch("/payroll/api/employees/manual", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-      const data = await resp.json();
-      if (manualMsg) {
-        manualMsg.style.display = "";
-        if (resp.ok) {
-          manualMsg.className = "alert alert-success";
-          manualMsg.innerHTML = `OK. Vinculado QBO: <strong>${data.qboId || "?"}</strong> — ${data.displayName || ""}`;
-try {
-  const modalEl = document.getElementById("dlgAgregar");
-  if (modalEl && window.bootstrap?.Modal) {
-    const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-    modal.hide();
-  }
-} catch {}
-setTimeout(() => location.reload(), 400);
-        } else {
-          manualMsg.className = "alert alert-danger";
-          manualMsg.textContent = data?.message || "Error al guardar (stub).";
-        }
-      }
-    } catch (err) {
-      if (manualMsg) { manualMsg.className = "alert alert-danger"; manualMsg.style.display = ""; manualMsg.textContent = "Error: " + err; }
-    }
-  }
-  const btnManualSubmit = qs("#btnManualSubmit");
-  if (btnManualSubmit) btnManualSubmit.addEventListener('click', submitManual);
-
-  // --- Excel: generar plantilla y subir CSV como stub ---
-  const sampleCsv = "NationalId,FirstName,LastName,Email,Phone\n1-1111-1111,Ana,Perez,ana@example.com,8888-8888\n2-2222-2222,Carlos,Rojas,carlos@example.com,7777-7777\n";
-
-  function download(name, content, mime = "text/csv") {
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = name; document.body.appendChild(a); a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
-  }
-  const btnGenCsv = qs("#btnGenCsv");
-  if (btnGenCsv) btnGenCsv.addEventListener('click', () => download("Colaboradores_Plantilla.csv", sampleCsv));
-
-  const uploadMsg = qs("#uploadMsg");
-  const btnUploadCsv = qs("#btnUploadCsv");
-  if (btnUploadCsv) btnUploadCsv.addEventListener('click', async () => {
-    if (!COMPANY_ID) {
-      if (uploadMsg) { uploadMsg.className = "text-danger"; uploadMsg.style.display = ""; uploadMsg.textContent = "Seleccione una empresa."; }
-      return;
-    }
-    const raw = (qs("#csvText").value || "").trim();
-    if (!raw) {
-      if (uploadMsg) { uploadMsg.className = "text-danger"; uploadMsg.style.display = ""; uploadMsg.textContent = "Pegue el CSV primero."; }
-      return;
+  async function saveRows() {
+    if (!COMPANY_ID) { manualMsg.className="text-danger"; manualMsg.style.display=""; manualMsg.textContent="Seleccione una empresa."; return; }
+    const rows = collectRows();
+    if (rows.length===0) { manualMsg.className="text-danger"; manualMsg.style.display=""; manualMsg.textContent="No hay filas para guardar."; return; }
+    for (const r of rows) {
+      if (!r.nationalId || !r.firstName || !r.lastName) { manualMsg.className="text-danger"; manualMsg.style.display=""; manualMsg.textContent="Cédula, Nombre y Apellido son obligatorios."; return; }
+      const arr=[r.payPct1||0,r.payPct2||0,r.payPct3||0,r.payPct4||0].slice(0,PCT_SLOTS); const s=arr.reduce((a,b)=>a+b,0);
+      if (Math.abs(s-100)>0.001) { manualMsg.className="text-danger"; manualMsg.style.display=""; manualMsg.textContent="La suma de porcentajes debe ser 100."; return; }
     }
     try {
-      const lines = raw.split(/\r?\n/).filter(l => l.trim().length > 0);
-      if (lines.length < 2) throw new Error("CSV sin filas.");
-      const header = lines[0].split(",").map(h => h.trim().toLowerCase());
-      const idx = (name) => header.indexOf(name);
-      const rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",");
-        rows.push({
-          nationalId: cols[idx("nationalid")]?.trim() || "",
-          firstName:  cols[idx("firstname")]?.trim() || "",
-          lastName:   cols[idx("lastname")]?.trim() || "",
-          email:      cols[idx("email")]?.trim() || "",
-          phone:      cols[idx("phone")]?.trim() || "",
-        });
-      }
       const body = { companyId: COMPANY_ID, rows };
-      const resp = await fetch("/payroll/api/employees/upload", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
+      const resp = await fetch("/payroll/api/employees/upload", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
       const data = await resp.json();
-      if (uploadMsg) {
-        uploadMsg.style.display = "";
-        if (resp.ok) {
-          uploadMsg.className = "alert alert-success";
-          uploadMsg.textContent = `Procesados: ${data.processed || 0}`;
-setTimeout(() => location.reload(), 600);
-        } else {
-          uploadMsg.className = "alert alert-danger";
-          uploadMsg.textContent = data?.message || "Error al subir CSV (stub).";
-        }
-      }
+      manualMsg.style.display=""; manualMsg.className = resp.ok? "alert alert-success":"alert alert-danger";
+      manualMsg.innerHTML = resp.ok ? \Procesados: <strong>\</strong>, Omitidos: \\ : (data?.message || "Error al guardar.");
+      if (resp.ok) setTimeout(()=>location.reload(), 500);
     } catch (err) {
-      if (uploadMsg) { uploadMsg.className = "alert alert-danger"; uploadMsg.style.display = ""; uploadMsg.textContent = "Error: " + err; }
+      manualMsg.className="alert alert-danger"; manualMsg.style.display=""; manualMsg.textContent="Error: "+err;
     }
-  });
+  }
+  const btnSaveRows = qs("#btnSaveRows"); if (btnSaveRows) btnSaveRows.addEventListener("click", saveRows);
+
+  // ---------- Excel (se mantiene igual) ----------
+  const uploadMsg = qs("#uploadMsg");
+  const prevHost  = qs("#xlsxPreview");
+  const actions   = qs("#xlsxActions");
+
+  const btnGen = qs("#btnDownloadXlsx");
+  if (btnGen) btnGen.addEventListener("click", async () => {
+    if (!COMPANY_ID) { uploadMsg.className="text-danger"; uploadMsg.style.display=""; uploadMsg.textContent="Seleccione una empresa."; return; }
+    const url = \/payroll/api/employees/template-xlsx?companyId=\\;
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "Colaboradores_Plantilla.xlsx";
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(a.href); },0);
+  }const fileX = qs("#fileXlsx");
+  const btnPrev = qs("#btnPreviewXlsx");
+  if (btnPrev) btnPrev.addEventListener("click", async () => {
+    if (!COMPANY_ID) { uploadMsg.className="text-danger"; uploadMsg.style.display=""; uploadMsg.textContent="Seleccione una empresa."; return; }
+    const f = fileX?.files?.[0];
+    if (!f) { uploadMsg.className="text-danger"; uploadMsg.style.display=""; uploadMsg.textContent="Seleccione un archivo .xlsx."; return; }
+    try {
+      const fd = new FormData(); fd.append("file", f);
+      const resp = await fetch(\/payroll/api/employees/preview-xlsx?companyId=\\, { method:"POST", body: fd });
+      const data = await resp.json();
+      if (!resp.ok) { uploadMsg.className="alert alert-danger"; uploadMsg.style.display=""; uploadMsg.textContent = data?.message || "No se pudo leer el Excel."; return; }
+      const rows = Array.isArray(data?.rows) ? data.rows : [];
+      if (rows.length===0) { uploadMsg.className="alert alert-warning"; uploadMsg.style.display=""; uploadMsg.textContent = "El Excel no tiene filas."; return; }
+      let html = <table class="table table-sm"><thead><tr><th>Cédula</th><th>Nombre</th><th>Apellido</th><th>Email</th><th>Teléfono</th></tr></thead><tbody>;
+      for (const r of rows) html += <tr><td>\</td><td>\</td><td>\</td><td>\</td><td>\</td></tr>;
+      html += </tbody></table><div class="small text-muted">Tip: pulse “Confirmar y guardar” o use “Descartar”.</div>;
+      prevHost.innerHTML = html; show(prevHost); show(actions); uploadMsg.style.display = "none";
+
+      const btnConfirm = qs("#btnConfirmXlsx");
+      btnConfirm.onclick = async () => {
+        for (const r of rows) addRow({
+  nationalId:r.nationalId, firstName:r.firstName, lastName:r.lastName, email:r.email, phone:r.phone,
+  payPct1:(PCT_SLOTS===1?100:(PCT_SLOTS===2?50:25)),
+  payPct2:(PCT_SLOTS>=2?(PCT_SLOTS===2?50:25):""),
+  payPct3:(PCT_SLOTS>=3?25:""),
+  payPct4:(PCT_SLOTS>=4?25:"")
+});
+        switchView("manual");
+        hide(prevHost); hide(actions);
+      };
+    } catch (err) {
+      uploadMsg.className="alert alert-danger"; uploadMsg.style.display=""; uploadMsg.textContent="Error: "+err;
+    }
+  }const btnClear = qs("#btnClearPreview");
+  if (btnClear) btnClear.addEventListener("click", ()=>{ prevHost.innerHTML=""; hide(prevHost); hide(actions); uploadMsg.style.display="none"; fileX.value=""; });
 
   // Inicial
   switchView("qbo");
+  setPctVisibility(); // aplicar ocultamiento TH al cargar
 })();
 </script>
 <div class="modal-footer">
@@ -463,5 +517,14 @@ setTimeout(() => location.reload(), 600);
     </div>
   </div>
 </div>
+
+
+
+
+
+
+
+
+
 
 
