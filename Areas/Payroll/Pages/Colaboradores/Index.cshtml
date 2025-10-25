@@ -286,7 +286,7 @@
     if (!COMPANY_ID || !LINKED) return;
     if (qboSpinner) show(qboSpinner);
     try {
-      const url = /payroll/api/qbo/employees?companyId=&includeInactive=false;
+      const url = `/payroll/api/qbo/employees?companyId=${COMPANY_ID}&includeInactive=false`;
       const resp = await fetch(url, { method: "GET" });
       const data = await resp.json();
       const tb = tblQboBody(); if (!tb) return;
@@ -463,7 +463,7 @@
   const btnGen = qs("#btnDownloadXlsx");
   if (btnGen) btnGen.addEventListener("click", async () => {
     if (!COMPANY_ID) { uploadMsg.className="text-danger"; uploadMsg.style.display=""; uploadMsg.textContent="Seleccione una empresa."; return; }
-    const url = \/payroll/api/employees/template-xlsx?companyId=\\;
+    const url = `/payroll/api/employees/template-xlsx?companyId=${COMPANY_ID}`;
     const resp = await fetch(url);
     const blob = await resp.blob();
     const a = document.createElement("a");
@@ -477,7 +477,7 @@
     if (!f) { uploadMsg.className="text-danger"; uploadMsg.style.display=""; uploadMsg.textContent="Seleccione un archivo .xlsx."; return; }
     try {
       const fd = new FormData(); fd.append("file", f);
-      const resp = await fetch(\/payroll/api/employees/preview-xlsx?companyId=\\, { method:"POST", body: fd });
+      const resp = await fetch(`/payroll/api/employees/preview-xlsx?companyId=${COMPANY_ID}`, { method:"POST", body: fd });
       const data = await resp.json();
       if (!resp.ok) { uploadMsg.className="alert alert-danger"; uploadMsg.style.display=""; uploadMsg.textContent = data?.message || "No se pudo leer el Excel."; return; }
       const rows = Array.isArray(data?.rows) ? data.rows : [];
@@ -517,6 +517,7 @@
     </div>
   </div>
 </div>
+
 
 
 
