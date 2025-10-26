@@ -134,7 +134,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                         Id = e.Id,
                         Nombre = $"{e.FirstName} {e.LastName}".Trim(),
                         Cedula = e.NationalId ?? "",
-                        Sector = e.Sector,
+                        Sector = null,
                         Cargo = e.JobTitle,
                         SalarioMensual = e.BaseSalary,
                         HasCcss = e.HasCcss,
@@ -165,6 +165,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         }
     }
 }
+
 
 
 
