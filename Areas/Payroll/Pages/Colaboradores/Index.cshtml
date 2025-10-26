@@ -227,6 +227,13 @@
 </div>
 
 <script>
+window.addEventListener('error', (e) => {
+  try {
+    console.error('[Colab] global error handler:', { message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno, error: e.error });
+  } catch(_) {}
+});
+console.log('[Colab] boot: script tag parsed');
+
 (() => {
   const COMPANY_ID = @(Model.CompanyId ?? 0);
   const LINKED     = @(Model.IsCompanyLinked.ToString().ToLower());
@@ -475,7 +482,14 @@ console.log("[Colab] Tabs wired:", qsa("[data-view]").length);
     const blob = await resp.blob();
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = "Colaboradores_Plantilla.xlsx";
-    document.body.appendChild(a); a.click(); setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(a.href); },0);
+    document.body.appendChild(a); a.click(); setTimeoutwindow.addEventListener('error', (e) => {
+  try {
+    console.error('[Colab] global error handler:', { message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno, error: e.error });
+  } catch(_) {}
+});
+console.log('[Colab] boot: script tag parsed');
+
+(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); },0);
   }const fileX = qs("#fileXlsx");
   const btnPrev = qs("#btnPreviewXlsx");
   if (btnPrev) btnPrev.addEventListener("click", async () => {
@@ -524,6 +538,7 @@ console.log("[Colab] Tabs wired:", qsa("[data-view]").length);
     </div>
   </div>
 </div>
+
 
 
 
