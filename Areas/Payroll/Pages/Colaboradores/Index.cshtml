@@ -260,11 +260,12 @@ function applyPctVisibility(){
 
   // Vistas
   const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
-  function switchView(name) {
+  function getViews(){ return { qbo: document.getElementById("view-qbo"), manual: document.getElementById("view-manual"), excel: document.getElementById("view-excel") }; }
+  function switchView(name) { const views = getViews();
     Object.entries(views).forEach(([k,el])=> { if (!el) return; (k===name)? remClass(el,"d-none"): addClass(el,"d-none"); });
     qsa('[data-view]').forEach(b => { (b.getAttribute('data-view')||'')===name? addClass(b,"active"): remClass(b,"active"); });
     if (name === "manual") setPctVisibility();
-  }
+   if (name==="qbo") setQboReadyState(); console.log("[Colab] delegation wired");}
   
   // Fallback explícito por ID (por si falla el [data-view])
   document.getElementById('btnViewQbo')?.addEventListener('click', ()=> switchView('qbo'));
@@ -313,8 +314,7 @@ console.log("[Colab] Tabs wired:", qsa("[data-view]").length);
     } finally { if (qboSpinner) hide(qboSpinner); }
   }
   if (btnFetchQbo) btnFetchQbo.addEventListener('click', fetchQboEmployees);
-  setQboReadyState();
-  console.log("[Colab] QBO wired; COMPANY_ID=", COMPANY_ID, "LINKED=", LINKED, "btn?", !!btnFetchQbo);// ---------- Manual ----------
+  setQboReadyState(); console.log("[Colab] delegation wired");console.log("[Colab] QBO wired; COMPANY_ID=", COMPANY_ID, "LINKED=", LINKED, "btn?", !!btnFetchQbo);// ---------- Manual ----------
   const lblPeriodo = qs("#lblPeriodo"); if (lblPeriodo) lblPeriodo.textContent = PERIOD;
   const tbManual   = qs("#tblManual tbody");
 
@@ -524,6 +524,8 @@ console.log("[Colab] Tabs wired:", qsa("[data-view]").length);
     </div>
   </div>
 </div>
+
+
 
 
 
