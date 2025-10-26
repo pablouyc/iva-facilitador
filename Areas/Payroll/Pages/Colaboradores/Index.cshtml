@@ -265,8 +265,12 @@ function applyPctVisibility(){
     qsa('[data-view]').forEach(b => { (b.getAttribute('data-view')||'')===name? addClass(b,"active"): remClass(b,"active"); });
     if (name === "manual") setPctVisibility();
   }
-  qsa('[data-view]').forEach(b => b.addEventListener('click', ()=> switchView(b.getAttribute('data-view'))));
-  console.log("[Colab] Tabs wired:", qsa("[data-view]").length);
+  
+  // Fallback explícito por ID (por si falla el [data-view])
+  document.getElementById('btnViewQbo')?.addEventListener('click', ()=> switchView('qbo'));
+  document.getElementById('btnViewManual')?.addEventListener('click', ()=> switchView('manual'));
+  document.getElementById('btnViewExcel')?.addEventListener('click', ()=> switchView('excel'));
+console.log("[Colab] Tabs wired:", qsa("[data-view]").length);
 
   // ---------- QBO ----------
   const btnFetchQbo = qs("#btnFetchQbo");
@@ -275,7 +279,7 @@ function applyPctVisibility(){
   const tblQboBody  = () => qs("#tblQbo tbody");
   let QBO_LIST = null;
 
-  function setQboReadyState() {
+  function setQboReadyState(){ console.log("[Colab] setQboReadyState ENTER", { COMPANY_ID, LINKED });
     if (!COMPANY_ID || !LINKED) {
       show(qboNotice); qboNotice.className = "alert alert-warning";
       qboNotice.textContent = !COMPANY_ID ? "Seleccione una empresa en el header para habilitar QBO." : "Esta empresa no está vinculada a QBO.";
@@ -520,6 +524,7 @@ function applyPctVisibility(){
     </div>
   </div>
 </div>
+
 
 
 

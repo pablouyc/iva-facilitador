@@ -120,6 +120,10 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                 var list = await q
                     .OrderBy(e => e.LastName)
                     .ThenBy(e => e.FirstName)
+                    .Select(e => new {
+                        e.Id, e.FirstName, e.LastName, e.NationalId, e.Sector, e.JobTitle,
+                        e.BaseSalary, e.HasCcss, e.HasIns, e.PayPct1, e.PayPct2, e.PayPct3, e.PayPct4, e.Status
+                    })
                     .ToListAsync(ct);
 
                 Rows = new List<RowVM>(list.Count);
@@ -137,7 +141,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                         HasIns = e.HasIns,
                         PorcentajePago = BuildPctString(e.PayPct1, e.PayPct2, e.PayPct3, e.PayPct4),
                         Estado = e.Status ?? "Activo",
-                        EndDate = e.EndDate
+                        EndDate = null
                     });
                 }
             }
@@ -161,6 +165,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         }
     }
 }
+
 
 
 
