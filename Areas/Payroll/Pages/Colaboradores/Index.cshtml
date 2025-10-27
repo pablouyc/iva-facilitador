@@ -132,7 +132,7 @@
     <th rowspan="2">Cargo <span class="text-danger">*</span></th>
     <th rowspan="2">CCSS <span class="text-danger">*</span></th>
     <th rowspan="2">INS <span class="text-danger">*</span></th>
-    <th id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
+    <th id="thPctGroup" id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
     <th rowspan="2">Estado</th>
   </tr>
   <tr>
@@ -304,19 +304,20 @@ console.log('[Colab] boot: script tag parsed');
   }
 
   function qboApplyPctVisibility(){
-  const tbl   = document.querySelector("#tblQbo"); if(!tbl) return;
-  const slots = PCT_SLOTS || 1;  // 1=mensual, 2=quincenal, 4=semanal
+  const tbl = document.querySelector("#tblQbo"); if (!tbl) return;
+  // Evita ReferenceError si PCT_SLOTS no existe todavía
+  const slots = (typeof window.PCT_SLOTS !== "undefined" && window.PCT_SLOTS) ? window.PCT_SLOTS : 1;
 
-  // 1) El <th> agrupador cubre solo las columnas visibles
+  // El th agrupador debe cubrir solo las columnas visibles
   const g = tbl.querySelector("#thPctGroup");
   if (g) g.colSpan = slots;
 
-  // 2) Mostrar/ocultar headers y celdas de % según slots
+  // Mostrar/ocultar columnas de % y mantener “Estado” alineado
   ["1","2","3","4"].forEach((k,i)=>{
     const disp = (i < slots) ? "" : "none";
-    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k)
-       .forEach(el => el.style.display = disp);
+    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => { el.style.display = disp; });
   });
+});
 
   // 3) Mensual: %1 = 100 bloqueado. Otros: editable y con defaults suaves si vacío
   tbl.querySelectorAll("tbody td.pct1 input.pct1").forEach(inp=>{
@@ -509,7 +510,13 @@ console.log('[Colab] boot: script tag parsed');
 
   // Eventos
   if (btnFetchQbo) btnFetchQbo.addEventListener("click", fetchQboEmployees);
-  qsa('[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.getAttribute('data-view'))));
+  
+  // Delegación de respaldo para tabs y Traer de QBO
+  document.addEventListener('click', (ev) => {
+    const t = ev.target.closest('[data-view]');
+    if (t) { ev.preventDefault(); switchView(t.getAttribute('data-view')); return; }
+    if (ev.target.closest('#btnFetchQbo')) { ev.preventDefault(); fetchQboEmployees(); }
+  });
   document.addEventListener("click", (ev) => {
     const t = ev.target.closest('[data-view]'); if (t) { ev.preventDefault(); switchView(t.getAttribute('data-view')); }
     const cont = ev.target.closest("#dlgAgregar .modal-footer .btn-primary"); if (cont && qboIsActive()) qboValidateAndContinue(ev);
@@ -639,19 +646,20 @@ try { if (typeof qboApplyPctVisibility === "function") qboApplyPctVisibility(); 
 
 
 function qboApplyPctVisibility(){
-  const tbl   = document.querySelector("#tblQbo"); if(!tbl) return;
-  const slots = PCT_SLOTS || 1;  // 1=mensual, 2=quincenal, 4=semanal
+  const tbl = document.querySelector("#tblQbo"); if (!tbl) return;
+  // Evita ReferenceError si PCT_SLOTS no existe todavía
+  const slots = (typeof window.PCT_SLOTS !== "undefined" && window.PCT_SLOTS) ? window.PCT_SLOTS : 1;
 
-  // 1) El <th> agrupador cubre solo las columnas visibles
+  // El th agrupador debe cubrir solo las columnas visibles
   const g = tbl.querySelector("#thPctGroup");
   if (g) g.colSpan = slots;
 
-  // 2) Mostrar/ocultar headers y celdas de % según slots
+  // Mostrar/ocultar columnas de % y mantener “Estado” alineado
   ["1","2","3","4"].forEach((k,i)=>{
     const disp = (i < slots) ? "" : "none";
-    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k)
-       .forEach(el => el.style.display = disp);
+    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => { el.style.display = disp; });
   });
+});
 
   // 3) Mensual: %1 = 100 bloqueado. Otros: editable y con defaults suaves si vacío
   tbl.querySelectorAll("tbody td.pct1 input.pct1").forEach(inp=>{
@@ -665,5 +673,6 @@ function qboApplyPctVisibility(){
   });
 });
 }
+
 
 
