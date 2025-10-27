@@ -92,7 +92,7 @@
 
 <!-- Modal Agregar (placeholder, se implementa en Iteración 7) -->
 <div class="modal fade" id="dlgAgregar" tabindex="-1" aria-labelledby="dlgAgregarLabel" aria-hidden="true">
-  <div class="modal-dialog modal-fullscreen modal-dialog-scrollable modal-lg">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="dlgAgregarLabel">Agregar colaboradores</h5>
@@ -132,7 +132,7 @@
     <th rowspan="2">Cargo <span class="text-danger">*</span></th>
     <th rowspan="2">CCSS <span class="text-danger">*</span></th>
     <th rowspan="2">INS <span class="text-danger">*</span></th>
-    <th id="thPctGroup" id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
+    <th id="thPctGroup" id="thPctGroup" id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
     <th rowspan="2">Estado</th>
   </tr>
   <tr>
@@ -461,4 +461,267 @@ console.log('[Colab] boot: script tag parsed');
     return rows;
   }
 
+
+
+<script>
+(() => {
+  // ---- helpers ----
+  const qs  = (s) => document.querySelector(s);
+  const qsa = (s) => Array.from(document.querySelectorAll(s));
+  const show = (el) => el && (el.style.display = "");
+  const hide = (el) => el && (el.style.display = "none");
+
+  // ---- consts (con saneos si el servidor no las inyectó) ----
+  const COMPANY_ID = (typeof window.COMPANY_ID !== "undefined") ? window.COMPANY_ID : null;
+  const LINKED     = (typeof window.LINKED     !== "undefined") ? window.LINKED     : false;
+  const SECTORS    = (typeof window.SECTORS    !== "undefined" && Array.isArray(window.SECTORS) && window.SECTORS.length) ? window.SECTORS : ["General"];
+  const PERIOD     = (typeof window.PERIOD     !== "undefined") ? window.PERIOD : "Mensual";
+  const PCT_SLOTS  = (PERIOD === "Mensual" ? 1 : (PERIOD === "Quincenal" ? 2 : 4));
+
+  // ---- vistas (tabs) ----
+  const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
+  function switchView(name) {
+    Object.entries(views).forEach(([k,el]) => { if (!el) return; (k===name) ? el.classList.remove("d-none") : el.classList.add("d-none"); });
+    qsa('[data-view]').forEach(b => (b.getAttribute('data-view')===name ? b.classList.add("active") : b.classList.remove("active")));
+    if (name === "qbo") setQboReadyState();
+  }
+
+  // ---- QBO wiring ----
+  const btnFetchQbo = qs("#btnFetchQbo");
+  const qboSpinner  = qs("#qboSpinner");
+  const qboNotice   = qs("#qboNotice");
+  const tblBody     = () => qs("#tblQbo tbody");
+  let QBO_LIST = [];
+
+  function defaultPctSlots(){
+    if (PCT_SLOTS===1) return [100,0,0,0];
+    if (PCT_SLOTS===2) return [50,50,0,0];
+    return [25,25,25,25];
+  }
+  function sectorOptions(selected){
+    return SECTORS.map(s => `<option value="${s}" ${s===selected?'selected':''}>${s}</option>`).join("");
+  }
+  function splitName(first,last,display){
+    if ((first||"").trim() || (last||"").trim()) return {first:first||"", last:last||""};
+    const d = (display||"").trim(); if (!d) return {first:"", last:""};
+    const parts = d.split(/\s+/); return { first: parts[0]||"", last: parts.slice(1).join(" ")||"" };
+  }
+
+  // ---- mostrar/ocultar % y ajustar colSpan del grupo ----
+  function qboApplyPctVisibility(){
+    const tbl = qs("#tblQbo"); if (!tbl) return;
+
+    const g = tbl.querySelector("#thPctGroup");
+    if (g) g.colSpan = PCT_SLOTS;
+
+    ["1","2","3","4"].forEach((k,i)=>{
+      const disp = (i < PCT_SLOTS) ? "" : "none";
+      tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => { el.style.display = disp; });
+    });
+
+    const disable = PCT_SLOTS === 1;
+    tbl.querySelectorAll("tbody td.pct1 input").forEach(inp=>{
+      if (disable){ inp.value = 100; inp.readOnly = true; inp.disabled = true; }
+      else { inp.readOnly = false; inp.disabled = false; }
+    });
+  }
+
+  // ---- plantilla de fila QBO ----
+  function qboRowTpl(e,i){
+    const name   = splitName(e.givenName, e.familyName, e.displayName);
+    const pct    = defaultPctSlots();
+    const sector = SECTORS[0] || "General";
+    const isAct  = (e.active !== false);
+    const ccssYes = false, insYes = false;
+
+    return `
+    <tr>
+      <td><input class="form-control form-control-sm nationalId" placeholder="Cédula" value=""></td>
+      <td><input class="form-control form-control-sm firstName"  placeholder="Nombre"  value="${name.first}"></td>
+      <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
+      <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
+      <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
+      <td><input class="form-control form-control-sm phone"      type="tel"   value="${e.phone||""}"></td>
+      <td><input class="form-control form-control-sm baseSalary" type="number" step="0.01" min="0" placeholder="0.00"></td>
+      <td><select class="form-select form-select-sm sector">${sectorOptions(sector)}</select></td>
+      <td><input class="form-control form-control-sm jobTitle"   placeholder="Cargo"></td>
+
+      <td class="text-center">
+        <div class="btn-group" role="group" aria-label="CCSS">
+          <input type="radio" class="btn-check ccss ccss-yes" name="ccss_${i}" id="ccssY_${i}" autocomplete="off" ${ccssYes?'checked':''} value="1">
+          <label class="btn btn-sm btn-outline-secondary" for="ccssY_${i}">Sí</label>
+          <input type="radio" class="btn-check ccss ccss-no"  name="ccss_${i}" id="ccssN_${i}" autocomplete="off" ${!ccssYes?'checked':''} value="0">
+          <label class="btn btn-sm btn-outline-secondary" for="ccssN_${i}">No</label>
+        </div>
+      </td>
+      <td class="text-center">
+        <div class="btn-group" role="group" aria-label="INS">
+          <input type="radio" class="btn-check ins ins-yes" name="ins_${i}" id="insY_${i}" autocomplete="off" ${insYes?'checked':''} value="1">
+          <label class="btn btn-sm btn-outline-secondary" for="insY_${i}">Sí</label>
+          <input type="radio" class="btn-check ins ins-no"  name="ins_${i}" id="insN_${i}" autocomplete="off" ${!insYes?'checked':''} value="0">
+          <label class="btn btn-sm btn-outline-secondary" for="insN_${i}">No</label>
+        </div>
+      </td>
+
+      <td class="pctcol pct1"><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
+      <td class="pctcol pct2"><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
+      <td class="pctcol pct3"><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
+      <td class="pctcol pct4"><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
+
+      <td>
+        <select class="form-select form-select-sm status">
+          <option value="Activo"   ${isAct?'selected':''}>Activo</option>
+          <option value="Inactivo" ${!isAct?'selected':''}>Inactivo</option>
+        </select>
+      </td>
+    </tr>`;
+  }
+
+  // ---- estado QBO ----
+  function setQboReadyState(){
+    if (!COMPANY_ID || !LINKED) {
+      if (qboNotice){
+        qboNotice.className = "alert alert-warning";
+        qboNotice.textContent = !COMPANY_ID
+          ? "Seleccione una empresa en el header para habilitar QBO."
+          : "Esta empresa no está vinculada a QBO.";
+        show(qboNotice);
+      }
+      if (btnFetchQbo) btnFetchQbo.disabled = true;
+    } else {
+      if (qboNotice) hide(qboNotice);
+      if (btnFetchQbo) btnFetchQbo.disabled = false;
+    }
+  }
+
+  // ---- fetch QBO ----
+  async function fetchQboEmployees(){
+    if (!COMPANY_ID || !LINKED) return;
+    if (qboSpinner) show(qboSpinner);
+    try {
+      const url  = `/payroll/api/qbo/employees?companyId=${COMPANY_ID}&includeInactive=false`;
+      const resp = await fetch(url, { method: "GET" });
+      const data = await resp.json();
+      const tb = tblBody(); if (!tb) return;
+      tb.innerHTML = (Array.isArray(data) ? data : []).map((e,i)=> qboRowTpl(e,i)).join("");
+      QBO_LIST = Array.isArray(data) ? data : [];
+      qboApplyPctVisibility();
+    } catch (err) {
+      const tb = tblBody(); if (tb) tb.innerHTML = `<tr><td colspan="16" class="text-danger">Error QBO: ${err}</td></tr>`;
+    } finally {
+      if (qboSpinner) hide(qboSpinner);
+    }
+  }
+
+  // ---- colecta filas ----
+  function qboCollectRows(){
+    const rows = []; const tb = tblBody(); if(!tb) return rows;
+    for (const tr of tb.querySelectorAll("tr")){
+      const get = s => tr.querySelector(s);
+      const num = s => { const v = parseFloat(get(s)?.value?.replace(",", ".")||""); return isNaN(v)?0:v; };
+      rows.push({
+        nationalId: (get(".nationalId")?.value||"").trim(),
+        firstName : (get(".firstName")?.value ||"").trim(),
+        lastName  : (get(".lastName")?.value  ||"").trim(),
+        joinDate  : (get(".joinDate")?.value  ||"").trim(),
+        email     : (get(".email")?.value     ||"").trim(),
+        phone     : (get(".phone")?.value     ||"").trim(),
+        baseSalary: parseFloat(get(".baseSalary")?.value||"0")||0,
+        sector    : get(".sector")?.value || "",
+        jobTitle  : (get(".jobTitle")?.value||"").trim(),
+        ccss      : !!tr.querySelector(".ccss-yes")?.checked,
+        ins       : !!tr.querySelector(".ins-yes")?.checked,
+        payPct1   : num(".pct1"),
+        payPct2   : num(".pct2"),
+        payPct3   : num(".pct3"),
+        payPct4   : num(".pct4"),
+        status    : get(".status")?.value || "Activo"
+      });
+    }
+    return rows;
+  }
+
+  // ---- validación ----
+  function qboIsActive(){ return !qs("#view-qbo")?.classList.contains("d-none"); }
+  function markInvalid(el, bad){ if(!el) return; el.classList.toggle("is-invalid", !!bad); }
+
+  function qboValidateAndContinue(ev){
+    if (!qboIsActive()) return;
+    ev?.preventDefault();
+
+    const rows   = qboCollectRows();
+    const notice = qboNotice;
+    const tb     = tblBody();
+
+    tb?.querySelectorAll(".is-invalid").forEach(x=> x.classList.remove("is-invalid"));
+    if (!rows || rows.length===0){ if (notice){ notice.className="alert alert-danger"; notice.textContent="No hay filas para continuar."; show(notice);} return; }
+
+    const EPS = 0.01; let idx = 0;
+    for (const tr of tb.querySelectorAll("tr")){
+      const get = s => tr.querySelector(s);
+      const num = s => { const v = parseFloat(get(s)?.value?.replace(",", ".")||""); return isNaN(v)?0:v; };
+
+      const nationalId = get(".nationalId");
+      const firstName  = get(".firstName");
+      const lastName   = get(".lastName");
+      const baseSalary = get(".baseSalary");
+      const sector     = get(".sector");
+      const jobTitle   = get(".jobTitle");
+      const ccssYes    = tr.querySelector(".ccss-yes");
+      const insYes     = tr.querySelector(".ins-yes");
+
+      const slots = PCT_SLOTS;
+      const pct   = [num(".pct1"),num(".pct2"),num(".pct3"),num(".pct4")].slice(0, slots);
+      const sum   = pct.reduce((a,b)=>a+b,0);
+
+      const bad =
+        !(nationalId?.value?.trim()) ||
+        !(firstName?.value?.trim())  ||
+        !(lastName?.value?.trim())   ||
+        !sector?.value               ||
+        !(jobTitle?.value?.trim())   ||
+        !(parseFloat(baseSalary?.value||"0")>0) ||
+        !(ccssYes?.checked) || !(insYes?.checked) ||
+        Math.abs(sum - 100) > EPS;
+
+      markInvalid(nationalId, !(nationalId?.value?.trim()));
+      markInvalid(firstName,  !(firstName?.value?.trim()));
+      markInvalid(lastName,   !(lastName?.value?.trim()));
+      markInvalid(baseSalary, !(parseFloat(baseSalary?.value||"0")>0));
+      markInvalid(sector,     !sector?.value);
+      markInvalid(jobTitle,   !(jobTitle?.value?.trim()));
+
+      ["1","2","3","4"].forEach((k,i)=>{
+        const inp = get(".pct"+k);
+        if (i >= slots) { if (inp) inp.classList.remove("is-invalid"); }
+        else if (inp) { const v = parseFloat(inp.value||"0"); markInvalid(inp, isNaN(v)); }
+      });
+
+      if (bad){
+        if (notice){ notice.className="alert alert-danger"; notice.innerHTML = `Fila ${idx+1}: complete obligatorios y verifique que la suma de % sea 100. (Actual: ${sum.toFixed(2)})`; show(notice); }
+        return;
+      }
+      idx++;
+    }
+    if (notice){ notice.className="alert alert-success"; notice.textContent="Validación OK. Listo para enviar."; show(notice); }
+  }
+
+  // ---- eventos ----
+  if (btnFetchQbo) btnFetchQbo.addEventListener("click", fetchQboEmployees);
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest("[data-view]");
+    if (t) { ev.preventDefault(); switchView(t.getAttribute("data-view")); return; }
+    if (ev.target.closest("#btnFetchQbo")) { ev.preventDefault(); fetchQboEmployees(); }
+    const cont = ev.target.closest("#dlgAgregar .modal-footer .btn-primary");
+    if (cont && qboIsActive()) qboValidateAndContinue(ev);
+  });
+
+  // ---- init ----
+  setQboReadyState();
+  qboApplyPctVisibility();
+  const btnContinue = document.querySelector("#dlgAgregar .modal-footer .btn-primary");
+  if (btnContinue) btnContinue.disabled = false;
+  switchView("qbo");
+})();
+</script>
 
