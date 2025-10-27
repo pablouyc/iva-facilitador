@@ -234,6 +234,12 @@ window.addEventListener('error', (e) => {
 });
 console.log('[Colab] boot: script tag parsed');
 
+  const COMPANY_ID = @(Model.CompanyId ?? 0);
+  const LINKED     = @(Model.IsCompanyLinked.ToString().ToLower());
+  const SECTORS    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>{"General"}));
+  const PERIOD     = "@(Model.Periodo ?? "Mensual")";
+  const PCT_SLOTS  = (PERIOD === "Mensual" ? 1 : (PERIOD === "Quincenal" ? 2 : 4));
+  console.log("[Colab] consts:", { COMPANY_ID, LINKED, PERIOD, PCT_SLOTS });
 (() => {
   // --- helpers ---
   const qs  = (sel) => document.querySelector(sel);
@@ -329,6 +335,7 @@ console.log('[Colab] boot: script tag parsed');
     </div>
   </div>
 </div>
+
 
 
 
