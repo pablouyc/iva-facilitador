@@ -120,10 +120,24 @@
   <div class="table-responsive" style="max-height: 350px; overflow:auto;">
     <table class="table table-sm table-striped" id="tblQbo">
       <thead>
-        <tr>
-          <th>Nombre</th><th>Email</th><th>Teléfono</th><th>Estado</th>
-        </tr>
-      </thead>
+  <tr>
+    <th>Cédula<span class="text-danger">*</span></th>
+    <th>Nombre<span class="text-danger">*</span></th>
+    <th>Apellido<span class="text-danger">*</span></th>
+    <th>Fecha ingreso</th>
+    <th>Email</th>
+    <th>Teléfono</th>
+    <th>Salario mensual<span class="text-danger">*</span></th>
+    <th>Sector<span class="text-danger">*</span></th>
+    <th>Cargo<span class="text-danger">*</span></th>
+    <th>CCSS<span class="text-danger">*</span></th>
+    <th>INS<span class="text-danger">*</span></th>
+    <th class="pct-col"># %1</th>
+    <th class="pct-col"># %2</th>
+    <th class="pct-col"># %3</th>
+    <th class="pct-col"># %4</th>
+  </tr>
+</thead>
       <tbody>
         <tr><td colspan="4" class="text-muted">Sin datos. Presione “Traer de QBO”.</td></tr>
       </tbody>
@@ -263,7 +277,85 @@ console.log('[Colab] boot: script tag parsed');
   const qboSpinner  = qs("#qboSpinner");
   const qboNotice   = qs("#qboNotice");
   const tblQboBody  = () => qs("#tblQbo tbody");
-  let QBO_LIST = [];
+let QBO_LIST = [];
+
+function sectorOptions(selected) {
+  if (!Array.isArray(SECTORS) || SECTORS.length === 0) return `<option value="">(Definir sectores)</option>`;
+  return SECTORS.map(s => `<option value="${s}" ${s===selected? "selected": ""}>${s}</option>`).join("");
+}
+
+function defaultPctSlots() {
+  // Usa PERIOD y PCT_SLOTS (constantes ya definidas arriba en tu página)
+  if (PERIOD?.toLowerCase() === "mensual")   return [100,0,0,0].slice(0,PCT_SLOTS);
+  if (PERIOD?.toLowerCase() === "quincenal") return [50,50,0,0].slice(0,PCT_SLOTS);
+  // Semanal / otro: repartir equitativo
+  const n = Math.max(1, PCT_SLOTS||1); const v = Math.round(10000/n)/100; // 2 dec.
+  return Array.from({length:n}, (_,i)=> i===n-1 ? 100 - v*(n-1) : v).concat([0,0,0]).slice(0,4);
+}
+
+function splitName(given, family, display) {
+  let first = (given||"").trim(), last = (family||"").trim();
+  if (!first || !last) {
+    const parts = (display||"").trim().split(/\s+/);
+    if (!first && parts.length) first = parts.shift();
+    if (!last && parts.length)  last  = parts.join(" ");
+  }
+  return { first: first||"", last: last||"" };
+}
+
+function qboRowTpl(e) {
+  const name = splitName(e.givenName, e.familyName, e.displayName);
+  const pct = defaultPctSlots(); // array con 1..PCT_SLOTS
+  const ccssChecked = ""; // por defecto vacío (usuario decide)
+  const insChecked  = "";
+  const sector = (SECTORS && SECTORS[0]) || "";
+
+  return `
+  <tr>
+    <td><input class="form-control form-control-sm nationalId" placeholder="Cédula" value=""></td>
+    <td><input class="form-control form-control-sm firstName"  placeholder="Nombre"  value="${name.first}"></td>
+    <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
+    <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
+    <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
+    <td><input class="form-control form-control-sm phone"      type="tel"   placeholder="" value="${e.phone||""}"></td>
+    <td><input class="form-control form-control-sm baseSalary" type="number" step="0.01" min="0" placeholder="0.00"></td>
+    <td><select class="form-select form-select-sm sector">${sectorOptions(sector)}</select></td>
+    <td><input class="form-control form-control-sm jobTitle"   placeholder="Cargo"></td>
+    <td class="text-center"><input class="form-check-input ccss" type="checkbox" ${ccssChecked}></td>
+    <td class="text-center"><input class="form-check-input ins"  type="checkbox" ${insChecked}></td>
+    <td><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
+    <td><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
+    <td><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
+    <td><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
+  </tr>`;
+}
+
+// Colector (por si lo necesitas ya)
+function qboCollectRows() {
+  const rows = [];
+  tblQboBody()?.querySelectorAll("tr")?.forEach(tr => {
+    const get = sel => tr.querySelector(sel);
+    const num = sel => { const v = parseFloat(get(sel)?.value?.replace(",", ".")||""); return isNaN(v)? null : v; };
+    rows.push({
+      nationalId:  get(".nationalId")?.value?.trim()||"",
+      firstName:   get(".firstName")?.value?.trim()||"",
+      lastName:    get(".lastName")?.value?.trim()||"",
+      joinDate:    get(".joinDate")?.value||null,
+      email:       get(".email")?.value?.trim()||null,
+      phone:       get(".phone")?.value?.trim()||null,
+      baseSalary:  num(".baseSalary"),
+      sector:      get(".sector")?.value||"",
+      jobTitle:    get(".jobTitle")?.value?.trim()||"",
+      hasCcss:     !!get(".ccss")?.checked,
+      hasIns:      !!get(".ins")?.checked,
+      payPct1:     num(".pct1")||0,
+      payPct2:     num(".pct2")||0,
+      payPct3:     num(".pct3")||0,
+      payPct4:     num(".pct4")||0
+    });
+  });
+  return rows;
+}
 
   function setQboReadyState() {
     if (!COMPANY_ID || !LINKED) {
@@ -291,14 +383,7 @@ console.log('[Colab] boot: script tag parsed');
         return;
       }
       QBO_LIST = data;
-      for (const e of data) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${(e.displayName || "").trim()}</td>
-                        <td>${e.email || ""}</td>
-                        <td>${e.phone || ""}</td>
-                        <td>${e.active === false ? "Inactivo" : "Activo"}</td>`;
-        tb.appendChild(tr);
-      }
+      tb.innerHTML = data.map(e => qboRowTpl(e)).join("");
     } catch (err) {
       const tb = tblQboBody(); if (tb) tb.innerHTML = `<tr><td colspan="4" class="text-danger">Error obteniendo QBO: ${err}</td></tr>`;
     } finally {
@@ -354,3 +439,92 @@ console.log('[Colab] boot: script tag parsed');
 
 
 
+
+  
+function qboIsActive(){ return !document.querySelector("#view-qbo")?.classList.contains("d-none"); }
+function markInvalid(el, bad){ if(!el) return; el.classList.toggle("is-invalid", !!bad); }
+
+function qboValidateAndContinue(ev){
+  if (!qboIsActive()) return; // otra pestaña: no interferir
+  ev?.preventDefault();
+
+  const rows = qboCollectRows();
+  const notice = document.querySelector("#qboNotice");
+  const tb = document.querySelector("#tblQbo tbody");
+
+  // reset visual
+  tb?.querySelectorAll(".is-invalid").forEach(x=> x.classList.remove("is-invalid"));
+
+  if (!rows || rows.length===0) {
+    if (notice){ notice.className="alert alert-danger"; notice.textContent="No hay filas para continuar."; notice.style.display=""; }
+    return;
+  }
+
+  const EPS = 0.01;
+  let idx = 0;
+  for (const tr of tb.querySelectorAll("tr")) {
+    const get = sel => tr.querySelector(sel);
+    const num = sel => { const v = parseFloat(get(sel)?.value?.replace(",", ".")||""); return isNaN(v)? 0 : v; };
+
+    const nationalId = get(".nationalId");
+    const firstName  = get(".firstName");
+    const lastName   = get(".lastName");
+    const baseSalary = get(".baseSalary");
+    const sector     = get(".sector");
+    const jobTitle   = get(".jobTitle");
+    const ccss       = get(".ccss");
+    const ins        = get(".ins");
+
+    const slots = (typeof PCT_SLOTS!=="undefined" && PCT_SLOTS) ? PCT_SLOTS : 1;
+    const pct = [num(".pct1"),num(".pct2"),num(".pct3"),num(".pct4")].slice(0, slots);
+    const sum = pct.reduce((a,b)=>a+b,0);
+
+    const bad =
+      !(nationalId?.value?.trim()) ||
+      !(firstName?.value?.trim())  ||
+      !(lastName?.value?.trim())   ||
+      !sector?.value               ||
+      !(jobTitle?.value?.trim())   ||
+      !(parseFloat(baseSalary?.value||"0")>0) ||
+      !ccss?.checked || !ins?.checked ||
+      Math.abs(sum - 100) > EPS;
+
+    markInvalid(nationalId, !(nationalId?.value?.trim()));
+    markInvalid(firstName,  !(firstName?.value?.trim()));
+    markInvalid(lastName,   !(lastName?.value?.trim()));
+    markInvalid(baseSalary, !(parseFloat(baseSalary?.value||"0")>0));
+    markInvalid(sector,     !sector?.value);
+    markInvalid(jobTitle,   !(jobTitle?.value?.trim()));
+    if (!ccss?.checked) ccss?.classList.add("is-invalid");
+    if (!ins?.checked)  ins?.classList.add("is-invalid");
+
+    // marcar % visibles
+    ["1","2","3","4"].forEach((k,i)=>{
+      const inp = get(".pct"+k);
+      if (i >= slots) { if (inp) inp.classList.remove("is-invalid"); }
+      else if (inp) { const v = parseFloat(inp.value||""); markInvalid(inp, isNaN(v)); }
+    });
+
+    if (bad) {
+      if (notice){
+        notice.className = "alert alert-danger";
+        notice.innerHTML = `Fila ${idx+1}: complete los obligatorios y verifique que la suma de % sea 100. (Actual: ${sum.toFixed(2)})`;
+        notice.style.display="";
+      }
+      return;
+    }
+    idx++;
+  }
+
+  if (notice){ notice.className="alert alert-success"; notice.textContent="Validación OK. Listo para enviar."; notice.style.display=""; }
+  // Aquí podrías hacer el POST con qboCollectRows() cuando quieras.
+}
+
+// Delegación para “Continuar” (botón primario del modal)
+document.addEventListener("click", (ev) => {
+  const cont = ev.target.closest("#dlgAgregar .modal-footer .btn-primary");
+  if (cont && qboIsActive()) qboValidateAndContinue(ev);
+});
+
+// Asegurar visibilidad de % al cargar (si está definida)
+try { if (typeof qboApplyPctVisibility === "function") qboApplyPctVisibility(); } catch(_) {}
