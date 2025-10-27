@@ -303,17 +303,58 @@ function splitName(given, family, display) {
   return { first: first||"", last: last||"" };
 }
 
-function qboRowTpl(e) {
-  const name = splitName(e.givenName, e.familyName, e.displayName);
-  const pct = defaultPctSlots(); // array con 1..PCT_SLOTS
-  const ccssChecked = ""; // por defecto vacío (usuario decide)
-  const insChecked  = "";
+function qboRowTpl(e, i) {
+  const name   = splitName(e.givenName, e.familyName, e.displayName);
+  const pct    = defaultPctSlots();
   const sector = (SECTORS && SECTORS[0]) || "";
+  const isAct  = (e.active !== false); // estado del empleado QBO
+
+  // QBO no trae CCSS/INS -> por defecto "No"
+  const ccssYes = false;
+  const insYes  = false;
 
   return `
   <tr>
     <td><input class="form-control form-control-sm nationalId" placeholder="Cédula" value=""></td>
     <td><input class="form-control form-control-sm firstName"  placeholder="Nombre"  value="${name.first}"></td>
+    <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
+    <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
+    <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
+    <td><input class="form-control form-control-sm phone"      type="tel"   value="${e.phone||""}"></td>
+    <td><input class="form-control form-control-sm baseSalary" type="number" step="0.01" min="0" placeholder="0.00"></td>
+    <td><select class="form-select form-select-sm sector">${sectorOptions(sector)}</select></td>
+    <td><input class="form-control form-control-sm jobTitle"   placeholder="Cargo"></td>
+
+    <td class="text-center">
+      <div class="btn-group" role="group" aria-label="CCSS">
+        <input type="radio" class="btn-check ccss ccss-yes" name="ccss_${i}" id="ccssY_${i}" autocomplete="off" ${ccssYes?'checked':''} value="1">
+        <label class="btn btn-sm btn-outline-secondary" for="ccssY_${i}">Sí</label>
+        <input type="radio" class="btn-check ccss ccss-no"  name="ccss_${i}" id="ccssN_${i}" autocomplete="off" ${!ccssYes?'checked':''} value="0">
+        <label class="btn btn-sm btn-outline-secondary ${!ccssYes?'active':'}" for="ccssN_${i}">No</label>
+      </div>
+    </td>
+    <td class="text-center">
+      <div class="btn-group" role="group" aria-label="INS">
+        <input type="radio" class="btn-check ins ins-yes" name="ins_${i}" id="insY_${i}" autocomplete="off" ${insYes?'checked':''} value="1">
+        <label class="btn btn-sm btn-outline-secondary" for="insY_${i}">Sí</label>
+        <input type="radio" class="btn-check ins ins-no"  name="ins_${i}" id="insN_${i}" autocomplete="off" ${!insYes?'checked':''} value="0">
+        <label class="btn btn-sm btn-outline-secondary ${!insYes?'active':'}" for="insN_${i}">No</label>
+      </div>
+    </td>
+
+    <td class="pctcol pct1"><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
+    <td class="pctcol pct2"><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
+    <td class="pctcol pct3"><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
+    <td class="pctcol pct4"><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
+
+    <td>
+      <select class="form-select form-select-sm status">
+        <option value="Activo"   ${isAct?'selected':''}>Activo</option>
+        <option value="Inactivo" ${!isAct?'selected':''}>Inactivo</option>
+      </select>
+    </td>
+  </tr>`;
+}"></td>
     <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
     <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
     <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
@@ -528,3 +569,13 @@ document.addEventListener("click", (ev) => {
 
 // Asegurar visibilidad de % al cargar (si está definida)
 try { if (typeof qboApplyPctVisibility === "function") qboApplyPctVisibility(); } catch(_) {}
+
+
+function qboApplyPctVisibility(){
+  const tbl = document.querySelector("#tblQbo"); if(!tbl) return;
+  const n = PCT_SLOTS || 1;
+  ["1","2","3","4"].forEach((k,i)=>{
+    const disp = (i < n) ? "" : "none";
+    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => el.style.display = disp);
+  });
+}
