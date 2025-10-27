@@ -92,7 +92,7 @@
 
 <!-- Modal Agregar (placeholder, se implementa en Iteración 7) -->
 <div class="modal fade" id="dlgAgregar" tabindex="-1" aria-labelledby="dlgAgregarLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-fullscreen modal-dialog-scrollable modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="dlgAgregarLabel">Agregar colaboradores</h5>
@@ -121,21 +121,25 @@
     <table class="table table-sm table-striped" id="tblQbo">
       <thead>
   <tr>
-    <th>Cédula<span class="text-danger">*</span></th>
-    <th>Nombre<span class="text-danger">*</span></th>
-    <th>Apellido<span class="text-danger">*</span></th>
-    <th>Fecha ingreso</th>
-    <th>Email</th>
-    <th>Teléfono</th>
-    <th>Salario mensual<span class="text-danger">*</span></th>
-    <th>Sector<span class="text-danger">*</span></th>
-    <th>Cargo<span class="text-danger">*</span></th>
-    <th>CCSS<span class="text-danger">*</span></th>
-    <th>INS<span class="text-danger">*</span></th>
-    <th class="pct-col"># %1</th>
-    <th class="pct-col"># %2</th>
-    <th class="pct-col"># %3</th>
-    <th class="pct-col"># %4</th>
+    <th rowspan="2">Cédula <span class="text-danger">*</span></th>
+    <th rowspan="2">Nombre <span class="text-danger">*</span></th>
+    <th rowspan="2">Apellido <span class="text-danger">*</span></th>
+    <th rowspan="2">Fecha ingreso</th>
+    <th rowspan="2">Email</th>
+    <th rowspan="2">Teléfono</th>
+    <th rowspan="2">Salario mensual <span class="text-danger">*</span></th>
+    <th rowspan="2">Sector <span class="text-danger">*</span></th>
+    <th rowspan="2">Cargo <span class="text-danger">*</span></th>
+    <th rowspan="2">CCSS <span class="text-danger">*</span></th>
+    <th rowspan="2">INS <span class="text-danger">*</span></th>
+    <th colspan="4" class="text-center">Porcentaje de pago por periodo</th>
+    <th rowspan="2">Estado</th>
+  </tr>
+  <tr>
+    <th class="pct-col pct1">Periodo 1</th>
+    <th class="pct-col pct2">Periodo 2</th>
+    <th class="pct-col pct3">Periodo 3</th>
+    <th class="pct-col pct4">Periodo 4</th>
   </tr>
 </thead>
       <tbody>
@@ -256,201 +260,245 @@ console.log('[Colab] boot: script tag parsed');
   console.log("[Colab] consts:", { COMPANY_ID, LINKED, PERIOD, PCT_SLOTS });
 (() => {
   // --- helpers ---
-  const qs  = (sel) => document.querySelector(sel);
-  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
-  const show = (el) => el && (el.style.display = "");
-  const hide = (el) => el && (el.style.display = "none");
-  const addClass = (el, cls) => el && el.classList.add(cls);
-  const remClass = (el, cls) => el && el.classList.remove(cls);
+  const qs  = (s) => document.querySelector(s);
+  const qsa = (s) => Array.from(document.querySelectorAll(s));
+  const show = (el) => el && (el.style.display="");
+  const hide = (el) => el && (el.style.display="none");
 
-  // Vistas (pestañas)
+  // Constantes ya declaradas en la vista:
+  // COMPANY_ID, LINKED, SECTORS, PERIOD, PCT_SLOTS
+
+  // -------- Vistas (tabs) --------
   const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
-  function switchView(name) {
-    Object.entries(views).forEach(([k,el]) => { if (!el) return; (k===name)? remClass(el,"d-none") : addClass(el,"d-none"); });
-    qsa('[data-view]').forEach(b => (b.getAttribute('data-view')===name? addClass(b,"active") : remClass(b,"active")));
-    if (name === "manual") setPctVisibility();
-    if (name === "qbo") setQboReadyState();
+  function switchView(name){
+    Object.entries(views).forEach(([k,el]) => { if (!el) return; (k===name)? el.classList.remove("d-none") : el.classList.add("d-none"); });
+    qsa('[data-view]').forEach(b => (b.getAttribute('data-view')===name? b.classList.add("active") : b.classList.remove("active")));
+    if (name==="qbo") setQboReadyState();
   }
 
-  // ---------- QBO ----------
+  // -------- QBO wiring --------
   const btnFetchQbo = qs("#btnFetchQbo");
   const qboSpinner  = qs("#qboSpinner");
   const qboNotice   = qs("#qboNotice");
-  const tblQboBody  = () => qs("#tblQbo tbody");
-let QBO_LIST = [];
+  const tblBody     = () => qs("#tblQbo tbody");
+  let QBO_LIST = [];
 
-function sectorOptions(selected) {
-  if (!Array.isArray(SECTORS) || SECTORS.length === 0) return `<option value="">(Definir sectores)</option>`;
-  return SECTORS.map(s => `<option value="${s}" ${s===selected? "selected": ""}>${s}</option>`).join("");
-}
-
-function defaultPctSlots() {
-  // Usa PERIOD y PCT_SLOTS (constantes ya definidas arriba en tu página)
-  if (PERIOD?.toLowerCase() === "mensual")   return [100,0,0,0].slice(0,PCT_SLOTS);
-  if (PERIOD?.toLowerCase() === "quincenal") return [50,50,0,0].slice(0,PCT_SLOTS);
-  // Semanal / otro: repartir equitativo
-  const n = Math.max(1, PCT_SLOTS||1); const v = Math.round(10000/n)/100; // 2 dec.
-  return Array.from({length:n}, (_,i)=> i===n-1 ? 100 - v*(n-1) : v).concat([0,0,0]).slice(0,4);
-}
-
-function splitName(given, family, display) {
-  let first = (given||"").trim(), last = (family||"").trim();
-  if (!first || !last) {
-    const parts = (display||"").trim().split(/\s+/);
-    if (!first && parts.length) first = parts.shift();
-    if (!last && parts.length)  last  = parts.join(" ");
+  function defaultPctSlots(){
+    const slots = PCT_SLOTS || 1;
+    if (slots===1) return [100,0,0,0];
+    if (slots===2) return [50,50,0,0];
+    return [25,25,25,25];
   }
-  return { first: first||"", last: last||"" };
-}
 
-function qboRowTpl(e, i) {
-  const name   = splitName(e.givenName, e.familyName, e.displayName);
-  const pct    = defaultPctSlots();
-  const sector = (SECTORS && SECTORS[0]) || "";
-  const isAct  = (e.active !== false); // estado del empleado QBO
+  function sectorOptions(selected){
+    const list = (SECTORS && SECTORS.length ? SECTORS : ["General"]);
+    return list.map(s => `<option value="${s}" ${s===selected?'selected':''}>${s}</option>`).join("");
+  }
 
-  // QBO no trae CCSS/INS -> por defecto "No"
-  const ccssYes = false;
-  const insYes  = false;
+  function splitName(first,last,display){
+    if ((first||"").trim() || (last||"").trim()) return {first:first||"", last:last||""};
+    const d = (display||"").trim();
+    if (!d) return {first:"", last:""};
+    const parts = d.split(/\s+/);
+    return { first: parts[0]||"", last: parts.slice(1).join(" ")||"" };
+  }
 
-  return `
-  <tr>
-    <td><input class="form-control form-control-sm nationalId" placeholder="Cédula" value=""></td>
-    <td><input class="form-control form-control-sm firstName"  placeholder="Nombre"  value="${name.first}"></td>
-    <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
-    <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
-    <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
-    <td><input class="form-control form-control-sm phone"      type="tel"   value="${e.phone||""}"></td>
-    <td><input class="form-control form-control-sm baseSalary" type="number" step="0.01" min="0" placeholder="0.00"></td>
-    <td><select class="form-select form-select-sm sector">${sectorOptions(sector)}</select></td>
-    <td><input class="form-control form-control-sm jobTitle"   placeholder="Cargo"></td>
-
-    <td class="text-center">
-      <div class="btn-group" role="group" aria-label="CCSS">
-        <input type="radio" class="btn-check ccss ccss-yes" name="ccss_${i}" id="ccssY_${i}" autocomplete="off" ${ccssYes?'checked':''} value="1">
-        <label class="btn btn-sm btn-outline-secondary" for="ccssY_${i}">Sí</label>
-        <input type="radio" class="btn-check ccss ccss-no"  name="ccss_${i}" id="ccssN_${i}" autocomplete="off" ${!ccssYes?'checked':''} value="0">
-        <label class="btn btn-sm btn-outline-secondary ${!ccssYes?'active':'}" for="ccssN_${i}">No</label>
-      </div>
-    </td>
-    <td class="text-center">
-      <div class="btn-group" role="group" aria-label="INS">
-        <input type="radio" class="btn-check ins ins-yes" name="ins_${i}" id="insY_${i}" autocomplete="off" ${insYes?'checked':''} value="1">
-        <label class="btn btn-sm btn-outline-secondary" for="insY_${i}">Sí</label>
-        <input type="radio" class="btn-check ins ins-no"  name="ins_${i}" id="insN_${i}" autocomplete="off" ${!insYes?'checked':''} value="0">
-        <label class="btn btn-sm btn-outline-secondary ${!insYes?'active':'}" for="insN_${i}">No</label>
-      </div>
-    </td>
-
-    <td class="pctcol pct1"><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
-    <td class="pctcol pct2"><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
-    <td class="pctcol pct3"><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
-    <td class="pctcol pct4"><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
-
-    <td>
-      <select class="form-select form-select-sm status">
-        <option value="Activo"   ${isAct?'selected':''}>Activo</option>
-        <option value="Inactivo" ${!isAct?'selected':''}>Inactivo</option>
-      </select>
-    </td>
-  </tr>`;
-}"></td>
-    <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
-    <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
-    <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
-    <td><input class="form-control form-control-sm phone"      type="tel"   placeholder="" value="${e.phone||""}"></td>
-    <td><input class="form-control form-control-sm baseSalary" type="number" step="0.01" min="0" placeholder="0.00"></td>
-    <td><select class="form-select form-select-sm sector">${sectorOptions(sector)}</select></td>
-    <td><input class="form-control form-control-sm jobTitle"   placeholder="Cargo"></td>
-    <td class="text-center"><input class="form-check-input ccss" type="checkbox" ${ccssChecked}></td>
-    <td class="text-center"><input class="form-check-input ins"  type="checkbox" ${insChecked}></td>
-    <td><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
-    <td><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
-    <td><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
-    <td><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
-  </tr>`;
-}
-
-// Colector (por si lo necesitas ya)
-function qboCollectRows() {
-  const rows = [];
-  tblQboBody()?.querySelectorAll("tr")?.forEach(tr => {
-    const get = sel => tr.querySelector(sel);
-    const num = sel => { const v = parseFloat(get(sel)?.value?.replace(",", ".")||""); return isNaN(v)? null : v; };
-    rows.push({
-      nationalId:  get(".nationalId")?.value?.trim()||"",
-      firstName:   get(".firstName")?.value?.trim()||"",
-      lastName:    get(".lastName")?.value?.trim()||"",
-      joinDate:    get(".joinDate")?.value||null,
-      email:       get(".email")?.value?.trim()||null,
-      phone:       get(".phone")?.value?.trim()||null,
-      baseSalary:  num(".baseSalary"),
-      sector:      get(".sector")?.value||"",
-      jobTitle:    get(".jobTitle")?.value?.trim()||"",
-      hasCcss:     !!get(".ccss")?.checked,
-      hasIns:      !!get(".ins")?.checked,
-      payPct1:     num(".pct1")||0,
-      payPct2:     num(".pct2")||0,
-      payPct3:     num(".pct3")||0,
-      payPct4:     num(".pct4")||0
+  function qboApplyPctVisibility(){
+    const tbl = qs("#tblQbo"); if(!tbl) return;
+    const n = PCT_SLOTS || 1;
+    ["1","2","3","4"].forEach((k,i)=>{
+      const disp = (i < n) ? "" : "none";
+      tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => el.style.display = disp);
     });
-  });
-  return rows;
-}
+    // Mensual: forzar 100 y deshabilitar la celda
+    const disable = (PCT_SLOTS||1)===1;
+    tbl.querySelectorAll("tbody td.pct1 input").forEach(inp => { if (disable){ inp.value = 100; inp.disabled = true; } else { inp.disabled = false; }});
+  }
 
-  function setQboReadyState() {
+  function qboRowTpl(e,i){
+    const name   = splitName(e.givenName, e.familyName, e.displayName);
+    const pct    = defaultPctSlots();
+    const sector = (SECTORS && SECTORS[0]) || "";
+    const isAct  = (e.active !== false);           // Estado desde QBO (true/undefined = Activo)
+    const ccssYes = false;                         // QBO no trae CCSS/INS -> por defecto No
+    const insYes  = false;
+
+    return `
+    <tr>
+      <td><input class="form-control form-control-sm nationalId" placeholder="Cédula" value=""></td>
+      <td><input class="form-control form-control-sm firstName"  placeholder="Nombre"  value="${name.first}"></td>
+      <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
+      <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
+      <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
+      <td><input class="form-control form-control-sm phone"      type="tel"   value="${e.phone||""}"></td>
+      <td><input class="form-control form-control-sm baseSalary" type="number" step="0.01" min="0" placeholder="0.00"></td>
+      <td><select class="form-select form-select-sm sector">${sectorOptions(sector)}</select></td>
+      <td><input class="form-control form-control-sm jobTitle"   placeholder="Cargo"></td>
+
+      <td class="text-center">
+        <div class="btn-group" role="group" aria-label="CCSS">
+          <input type="radio" class="btn-check ccss ccss-yes" name="ccss_${i}" id="ccssY_${i}" autocomplete="off" ${ccssYes?'checked':''} value="1">
+          <label class="btn btn-sm btn-outline-secondary" for="ccssY_${i}">Sí</label>
+          <input type="radio" class="btn-check ccss ccss-no"  name="ccss_${i}" id="ccssN_${i}" autocomplete="off" ${!ccssYes?'checked':''} value="0">
+          <label class="btn btn-sm btn-outline-secondary" for="ccssN_${i}">No</label>
+        </div>
+      </td>
+      <td class="text-center">
+        <div class="btn-group" role="group" aria-label="INS">
+          <input type="radio" class="btn-check ins ins-yes" name="ins_${i}" id="insY_${i}" autocomplete="off" ${insYes?'checked':''} value="1">
+          <label class="btn btn-sm btn-outline-secondary" for="insY_${i}">Sí</label>
+          <input type="radio" class="btn-check ins ins-no"  name="ins_${i}" id="insN_${i}" autocomplete="off" ${!insYes?'checked':''} value="0">
+          <label class="btn btn-sm btn-outline-secondary" for="insN_${i}">No</label>
+        </div>
+      </td>
+
+      <td class="pctcol pct1"><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
+      <td class="pctcol pct2"><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
+      <td class="pctcol pct3"><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
+      <td class="pctcol pct4"><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
+
+      <td>
+        <select class="form-select form-select-sm status">
+          <option value="Activo"   ${isAct?'selected':''}>Activo</option>
+          <option value="Inactivo" ${!isAct?'selected':''}>Inactivo</option>
+        </select>
+      </td>
+    </tr>`;
+  }
+
+  function setQboReadyState(){
     if (!COMPANY_ID || !LINKED) {
-      show(qboNotice); qboNotice.className = "alert alert-warning";
-      qboNotice.textContent = !COMPANY_ID ? "Seleccione una empresa en el header para habilitar QBO."
-                                          : "Esta empresa no está vinculada a QBO.";
+      if (qboNotice){ qboNotice.className="alert alert-warning"; qboNotice.textContent = !COMPANY_ID
+        ? "Seleccione una empresa en el header para habilitar QBO."
+        : "Esta empresa no está vinculada a QBO."; show(qboNotice); }
       if (btnFetchQbo) btnFetchQbo.disabled = true;
     } else {
-      hide(qboNotice); if (btnFetchQbo) btnFetchQbo.disabled = false;
+      if (qboNotice) hide(qboNotice);
+      if (btnFetchQbo) btnFetchQbo.disabled = false;
     }
   }
 
-  async function fetchQboEmployees() {
-    console.log("[Colab] fetchQboEmployees", { COMPANY_ID, LINKED });
+  async function fetchQboEmployees(){
     if (!COMPANY_ID || !LINKED) return;
     if (qboSpinner) show(qboSpinner);
-    try {
+    try{
       const url  = `/payroll/api/qbo/employees?companyId=${COMPANY_ID}&includeInactive=false`;
-      const resp = await fetch(url, { method: "GET" });
+      const resp = await fetch(url, { method:"GET" });
       const data = await resp.json();
-      const tb   = tblQboBody(); if (!tb) return;
-      tb.innerHTML = "";
-      if (!Array.isArray(data) || data.length === 0) {
-        tb.innerHTML = `<tr><td colspan="4" class="text-muted">No se recibieron colaboradores desde QBO.</td></tr>`;
-        return;
-      }
-      QBO_LIST = data;
-      tb.innerHTML = data.map(e => qboRowTpl(e)).join("");
-    } catch (err) {
-      const tb = tblQboBody(); if (tb) tb.innerHTML = `<tr><td colspan="4" class="text-danger">Error obteniendo QBO: ${err}</td></tr>`;
-    } finally {
+      const tb = tblBody(); if (!tb) return;
+      tb.innerHTML = data.map((e,i)=> qboRowTpl(e,i)).join("");
+      qboApplyPctVisibility();
+      QBO_LIST = Array.isArray(data) ? data : [];
+    }catch(err){
+      const tb = tblBody(); if (tb) tb.innerHTML = `<tr><td colspan="16" class="text-danger">Error QBO: ${err}</td></tr>`;
+    }finally{
       if (qboSpinner) hide(qboSpinner);
     }
   }
+
+  function qboCollectRows(){
+    const rows = []; const tb = tblBody(); if(!tb) return rows;
+    for (const tr of tb.querySelectorAll("tr")){
+      const get = s => tr.querySelector(s);
+      const num = s => { const v = parseFloat(get(s)?.value?.replace(",", ".")||""); return isNaN(v)?0:v; };
+      rows.push({
+        nationalId: (get(".nationalId")?.value||"").trim(),
+        firstName : (get(".firstName")?.value ||"").trim(),
+        lastName  : (get(".lastName")?.value  ||"").trim(),
+        joinDate  : (get(".joinDate")?.value  ||"").trim(),
+        email     : (get(".email")?.value     ||"").trim(),
+        phone     : (get(".phone")?.value     ||"").trim(),
+        baseSalary: parseFloat(get(".baseSalary")?.value||"0")||0,
+        sector    : get(".sector")?.value || "",
+        jobTitle  : (get(".jobTitle")?.value||"").trim(),
+        ccss      : !!tr.querySelector(".ccss-yes")?.checked,
+        ins       : !!tr.querySelector(".ins-yes")?.checked,
+        payPct1   : num(".pct1"),
+        payPct2   : num(".pct2"),
+        payPct3   : num(".pct3"),
+        payPct4   : num(".pct4"),
+        status    : get(".status")?.value || "Activo"
+      });
+    }
+    return rows;
+  }
+
+  function qboIsActive(){ return !qs("#view-qbo")?.classList.contains("d-none"); }
+  function markInvalid(el, bad){ if(!el) return; el.classList.toggle("is-invalid", !!bad); }
+
+  function qboValidateAndContinue(ev){
+    if (!qboIsActive()) return;
+    ev?.preventDefault();
+
+    const rows   = qboCollectRows();
+    const notice = qboNotice;
+    const tb     = tblBody();
+
+    tb?.querySelectorAll(".is-invalid").forEach(x=> x.classList.remove("is-invalid"));
+    if (!rows || rows.length===0){ if (notice){ notice.className="alert alert-danger"; notice.textContent="No hay filas para continuar."; show(notice);} return; }
+
+    const EPS = 0.01; let idx = 0;
+    for (const tr of tb.querySelectorAll("tr")){
+      const get = s => tr.querySelector(s);
+      const num = s => { const v = parseFloat(get(s)?.value?.replace(",", ".")||""); return isNaN(v)?0:v; };
+
+      const nationalId = get(".nationalId");
+      const firstName  = get(".firstName");
+      const lastName   = get(".lastName");
+      const baseSalary = get(".baseSalary");
+      const sector     = get(".sector");
+      const jobTitle   = get(".jobTitle");
+      const ccssYes    = tr.querySelector(".ccss-yes");
+      const insYes     = tr.querySelector(".ins-yes");
+
+      const slots = PCT_SLOTS || 1;
+      const pct   = [num(".pct1"),num(".pct2"),num(".pct3"),num(".pct4")].slice(0, slots);
+      const sum   = pct.reduce((a,b)=>a+b,0);
+
+      const bad =
+        !(nationalId?.value?.trim()) ||
+        !(firstName?.value?.trim())  ||
+        !(lastName?.value?.trim())   ||
+        !sector?.value               ||
+        !(jobTitle?.value?.trim())   ||
+        !(parseFloat(baseSalary?.value||"0")>0) ||
+        !(ccssYes?.checked) || !(insYes?.checked) ||
+        Math.abs(sum - 100) > EPS;
+
+      markInvalid(nationalId, !(nationalId?.value?.trim()));
+      markInvalid(firstName,  !(firstName?.value?.trim()));
+      markInvalid(lastName,   !(lastName?.value?.trim()));
+      markInvalid(baseSalary, !(parseFloat(baseSalary?.value||"0")>0));
+      markInvalid(sector,     !sector?.value);
+      markInvalid(jobTitle,   !(jobTitle?.value?.trim()));
+
+      ["1","2","3","4"].forEach((k,i)=>{
+        const inp = get(".pct"+k);
+        if (i >= slots) { if (inp) inp.classList.remove("is-invalid"); }
+        else if (inp) { const v = parseFloat(inp.value||"0"); markInvalid(inp, isNaN(v)); }
+      });
+
+      if (bad){
+        if (notice){ notice.className="alert alert-danger"; notice.innerHTML = `Fila ${idx+1}: complete obligatorios y verifique que la suma de % sea 100. (Actual: ${sum.toFixed(2)})`; show(notice);}
+        return;
+      }
+      idx++;
+    }
+    if (notice){ notice.className="alert alert-success"; notice.textContent="Validación OK. Listo para enviar."; show(notice); }
+    // Aquí podrías POSTear rows si ya quieres persistir
+  }
+
+  // Eventos
   if (btnFetchQbo) btnFetchQbo.addEventListener("click", fetchQboEmployees);
-  setQboReadyState();
-
-  // ---------- Manual (stubs seguros para no romper) ----------
-  function setPctVisibility(){ /* no-op base; tu versión avanzada puede vivir aquí si la necesitas */ }
-  function addRow(){ /* no-op */ }
-  function collectRows(){ return []; }
-  async function saveRows(){ /* no-op */ }
-
-  // ---------- Excel (deja tus handlers existentes si están fuera, esto no choca) ----------
-
-  // Wiring de tabs + delegación de respaldo
   qsa('[data-view]').forEach(b => b.addEventListener('click', () => switchView(b.getAttribute('data-view'))));
-  document.addEventListener('click', (ev) => {
-    const t = ev.target.closest('[data-view]');
-    if (t) { ev.preventDefault(); switchView(t.getAttribute('data-view')); }
-    if (ev.target.closest('#btnFetchQbo')) { ev.preventDefault(); fetchQboEmployees(); }
+  document.addEventListener("click", (ev) => {
+    const t = ev.target.closest('[data-view]'); if (t) { ev.preventDefault(); switchView(t.getAttribute('data-view')); }
+    const cont = ev.target.closest("#dlgAgregar .modal-footer .btn-primary"); if (cont && qboIsActive()) qboValidateAndContinue(ev);
   });
 
-  // Vista por defecto
+  // Init
+  setQboReadyState();
+  qboApplyPctVisibility();
   switchView("qbo");
 })();
 </script>
@@ -579,3 +627,4 @@ function qboApplyPctVisibility(){
     tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => el.style.display = disp);
   });
 }
+
