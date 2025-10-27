@@ -132,7 +132,7 @@
     <th rowspan="2">Cargo <span class="text-danger">*</span></th>
     <th rowspan="2">CCSS <span class="text-danger">*</span></th>
     <th rowspan="2">INS <span class="text-danger">*</span></th>
-    <th colspan="4" class="text-center">Porcentaje de pago por periodo</th>
+    <th id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
     <th rowspan="2">Estado</th>
   </tr>
   <tr>
@@ -304,12 +304,31 @@ console.log('[Colab] boot: script tag parsed');
   }
 
   function qboApplyPctVisibility(){
-    const tbl = qs("#tblQbo"); if(!tbl) return;
-    const n = PCT_SLOTS || 1;
-    ["1","2","3","4"].forEach((k,i)=>{
-      const disp = (i < n) ? "" : "none";
-      tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => el.style.display = disp);
-    });
+  const tbl   = document.querySelector("#tblQbo"); if(!tbl) return;
+  const slots = PCT_SLOTS || 1;  // 1=mensual, 2=quincenal, 4=semanal
+
+  // 1) El <th> agrupador cubre solo las columnas visibles
+  const g = tbl.querySelector("#thPctGroup");
+  if (g) g.colSpan = slots;
+
+  // 2) Mostrar/ocultar headers y celdas de % según slots
+  ["1","2","3","4"].forEach((k,i)=>{
+    const disp = (i < slots) ? "" : "none";
+    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k)
+       .forEach(el => el.style.display = disp);
+  });
+
+  // 3) Mensual: %1 = 100 bloqueado. Otros: editable y con defaults suaves si vacío
+  tbl.querySelectorAll("tbody td.pct1 input.pct1").forEach(inp=>{
+    if (slots === 1){
+      inp.value = "100";
+      inp.readOnly = true;
+    } else {
+      if (inp.readOnly) inp.readOnly = false;
+      if (!inp.value) inp.value = (slots===2) ? "50" : (slots===4 ? "25" : "100");
+    }
+  });
+});
     // Mensual: forzar 100 y deshabilitar la celda
     const disable = (PCT_SLOTS||1)===1;
     tbl.querySelectorAll("tbody td.pct1 input").forEach(inp => { if (disable){ inp.value = 100; inp.disabled = true; } else { inp.disabled = false; }});
@@ -620,11 +639,31 @@ try { if (typeof qboApplyPctVisibility === "function") qboApplyPctVisibility(); 
 
 
 function qboApplyPctVisibility(){
-  const tbl = document.querySelector("#tblQbo"); if(!tbl) return;
-  const n = PCT_SLOTS || 1;
+  const tbl   = document.querySelector("#tblQbo"); if(!tbl) return;
+  const slots = PCT_SLOTS || 1;  // 1=mensual, 2=quincenal, 4=semanal
+
+  // 1) El <th> agrupador cubre solo las columnas visibles
+  const g = tbl.querySelector("#thPctGroup");
+  if (g) g.colSpan = slots;
+
+  // 2) Mostrar/ocultar headers y celdas de % según slots
   ["1","2","3","4"].forEach((k,i)=>{
-    const disp = (i < n) ? "" : "none";
-    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => el.style.display = disp);
+    const disp = (i < slots) ? "" : "none";
+    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k)
+       .forEach(el => el.style.display = disp);
   });
+
+  // 3) Mensual: %1 = 100 bloqueado. Otros: editable y con defaults suaves si vacío
+  tbl.querySelectorAll("tbody td.pct1 input.pct1").forEach(inp=>{
+    if (slots === 1){
+      inp.value = "100";
+      inp.readOnly = true;
+    } else {
+      if (inp.readOnly) inp.readOnly = false;
+      if (!inp.value) inp.value = (slots===2) ? "50" : (slots===4 ? "25" : "100");
+    }
+  });
+});
 }
+
 
