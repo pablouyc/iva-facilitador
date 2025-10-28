@@ -260,7 +260,7 @@
 
   // ---- vistas (tabs) ----
   const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
-  function switchView(name) {
+  function switchView(name){ Object.entries(views).forEach(([k,el])=>{ if(!el)return; (k===name)? el.classList.remove("d-none") : el.classList.add("d-none"); }); qsa('[data-view]').forEach(b => (b.getAttribute('data-view')===name? b.classList.add("active") : b.classList.remove("active"))); setQboReadyState();
     Object.entries(views).forEach(([k,el]) => { if (!el) return; (k===name) ? el.classList.remove("d-none") : el.classList.add("d-none"); });
     qsa('[data-view]').forEach(b => (b.getAttribute('data-view')===name ? b.classList.add("active") : b.classList.remove("active")));
     if (name === "qbo") setQboReadyState();
@@ -359,14 +359,36 @@
 
   // ---- estado QBO ----
   function setQboReadyState(){
-    if (!COMPANY_ID || !LINKED) {
+  try{
+    const qboView = document.querySelector("#view-qbo");
+    const activeIsQbo = qboView && !qboView.classList.contains("d-none");
+    const canQbo = !!window.COMPANY_ID && !!window.LINKED;
+
+    // Si no estoy en la vista QBO, oculto el aviso y salgo
+    if (!activeIsQbo){
+      if (typeof hide === "function") hide(qboNotice);
+      if (btnFetchQbo) btnFetchQbo.disabled = true;
+      return;
+    }
+
+    // En QBO: controlo el aviso y el botón
+    if (!canQbo){
       if (qboNotice){
         qboNotice.className = "alert alert-warning";
-        qboNotice.textContent = !COMPANY_ID
+        qboNotice.textContent = !window.COMPANY_ID
           ? "Seleccione una empresa en el header para habilitar QBO."
           : "Esta empresa no está vinculada a QBO.";
-        show(qboNotice);
+        if (typeof show === "function") show(qboNotice);
       }
+      if (btnFetchQbo) btnFetchQbo.disabled = true;
+    } else {
+      if (qboNotice && typeof hide === "function") hide(qboNotice);
+      if (btnFetchQbo) btnFetchQbo.disabled = false;
+    }
+  } catch (e) {
+    console && console.warn && console.warn("[Colab] setQboReadyState error:", e);
+  }
+}
       if (btnFetchQbo) btnFetchQbo.disabled = true;
     } else {
       if (qboNotice) hide(qboNotice);
@@ -504,4 +526,5 @@
   switchView("qbo");
 })();
 </script>
+
 
