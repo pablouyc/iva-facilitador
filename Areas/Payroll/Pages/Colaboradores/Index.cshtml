@@ -3,16 +3,15 @@
 @{
     ViewData["Title"] = "Colaboradores";
     ViewData["PayrollSection"] = "Colaboradores";
-    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null)!;
+    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null) ?? "#";
 }
-
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Colaboradores</h2>
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
+    @if (Model.CompanyId.HasValue && Model.CompanyReady)
     {
-        <button id="btnAgregar" type="button" class="btn btn-success text-white">Agregar</button>
+        <button id="btnAgregar" type="button" class="btn btn-success text-white" data-bs-toggle="modal" data-bs-target="#dlgAgregar">Agregar</button>
     }
     else
     {
@@ -68,107 +67,335 @@
   </div>
 </div>
 
-<!-- Panel AGREGAR dentro de la misma página -->
-<section id="addPanel" class="card d-none">
-  <div class="card-header">Agregar colaboradores</div>
-  <div class="card-body">
-    <div class="btn-group mb-3" role="group" aria-label="método">
-      <button type="button" class="btn btn-outline-primary" id="tab-qbo">QBO</button>
-      <button type="button" class="btn btn-outline-secondary" id="tab-manual">Manual</button>
-      <button type="button" class="btn btn-outline-secondary" id="tab-excel">Excel</button>
-    </div>
+<!-- MODAL Agregar -->
+<div class="modal fade" id="dlgAgregar" tabindex="-1" aria-labelledby="dlgAgregarLabel" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen-lg-down modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="dlgAgregarLabel">Agregar colaboradores</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="btn-group mb-3" role="group" aria-label="método">
+          <button type="button" class="btn btn-outline-primary" id="tab-qbo">QBO</button>
+          <button type="button" class="btn btn-outline-secondary" id="tab-manual">Manual</button>
+          <button type="button" class="btn btn-outline-secondary" id="tab-excel">Excel</button>
+        </div>
 
-    <div id="pane" class="mb-3"></div>
+        <div id="pane"></div>
 
-    <div>
-      <label class="form-label">Porcentaje de pago por periodo</label>
-      <div id="pct-editor"></div>
+        <hr/>
+        <h6>Porcentaje de pago por periodo</h6>
+        <div id="pct-editor"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="btnContinuar" disabled>Continuar</button>
+      </div>
     </div>
   </div>
-  <div class="card-footer d-flex gap-2">
-    <button type="button" class="btn btn-secondary" id="btnCerrar">Cerrar</button>
-    <button type="button" class="btn btn-primary" id="btnContinuar" disabled>Continuar</button>
-  </div>
-</section>
+</div>
 
 @section Scripts{
+<style>
+  .is-invalid { border-color:#dc3545 !important; }
+  .table-fixed thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
+</style>
+
 <script>
 (function(){
-  if (window.__colab_wired) return; window.__colab_wired = true;
+  if (window.__payroll_colab__) return; window.__payroll_colab__ = true;
 
   function qs(s){ return document.querySelector(s); }
   function qsa(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
+  function ce(tag, cls){ var el=document.createElement(tag); if(cls) el.className=cls; return el; }
 
   var companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
-  var canOpen   = @((Model.CompanyId.HasValue && Model.CanAdd) ? "true" : "false");
+  var canOpen   = @((Model.CompanyId.HasValue && Model.CompanyReady) ? "true" : "false");
   var periodo   = ('@Model.Periodo' || 'Mensual').toLowerCase();
+  var sectorList = @((Model.SectorNames!=null && Model.SectorNames.Count>0)? "['" + string.Join("','", Model.SectorNames) + "']" : "[]");
+  var qboList = @((Model.QboEmployees!=null && Model.QboEmployees.Count>0)? "['" + string.Join("','", Model.QboEmployees) + "']" : "[]");
 
-  var addPanel = qs('#addPanel');
-  var btnAdd   = qs('#btnAgregar');
-  var btnClose = qs('#btnCerrar');
-  var btnCont  = qs('#btnContinuar');
+  // === Config de periodos
+  var periodCfg = (function(p){
+    if (p==='mensual') return {count:1, defaults:[100], editable:[false]};
+    if (p==='quincenal') return {count:2, defaults:[50,50], editable:[true,true]};
+    return {count:4, defaults:[25,25,25,25], editable:[true,true,true,true]}; // semanal
+  })(periodo);
 
-  function showPanel(){ if (addPanel) { addPanel.classList.remove('d-none'); addPanel.scrollIntoView({behavior:'smooth',block:'start'}); } }
-  function hidePanel(){ if (addPanel) { addPanel.classList.add('d-none'); } }
-
-  if (btnAdd && (String(canOpen)==='true')) { btnAdd.addEventListener('click', function(){ showPanel(); }); }
-  if (btnClose) btnClose.addEventListener('click', hidePanel);
-
-  // Pestañas de método
-  function openPane(kind){
-    var host = qs('#pane'); if (!host) return; host.innerHTML='';
-    if (kind==='qbo'){
-      var d=document.createElement('div');
-      d.innerHTML = '<div class="mb-2 text-muted">Importar desde QuickBooks Online</div>'+
-                    '<button id="go-qbo" class="btn btn-primary">Traer de QBO</button>';
-      host.appendChild(d);
-      var g=qs('#go-qbo');
-      if (g) g.addEventListener('click', function(e){ e.preventDefault(); if (companyId>0) window.location.href = "?handler=ImportQbo&companyId="+companyId; });
-    } else if (kind==='manual'){
-      var w=document.createElement('div');
-      w.innerHTML = '<div class="mb-2 text-muted">Ingreso manual rápido</div>'+
-                    '<div class="row g-2">'+
-                    '<div class="col"><label class="form-label">Cédula</label><input class="form-control"></div>'+
-                    '<div class="col"><label class="form-label">Nombre</label><input class="form-control"></div>'+
-                    '<div class="col"><label class="form-label">Apellido</label><input class="form-control"></div>'+
-                    '</div>';
-      host.appendChild(w);
-    } else if (kind==='excel'){
-      var x=document.createElement('div');
-      x.innerHTML = '<div class="mb-2 text-muted">Importar desde Excel</div>'+
-                    '<input type="file" class="form-control" accept=".xlsx,.xls,.csv">';
-      host.appendChild(x);
+  // ====== QBO
+  function renderQbo(){
+  var host = qs('#pane'); host.innerHTML='';
+  if ((qboList || []).length > 0){
+    // Construir grilla y poblar con empleados de QBO (nombre lleno en Nombre; Apellidos vacío para completar)
+    buildGridShell(host);
+    for (var i=0;i<qboList.length;i++){
+      var full = qboList[i] || '';
+      var nm = full.trim();
+      var nombres = nm; var apellidos = '';
+      var parts = nm.split(' ');
+      if (parts.length>1){ apellidos = parts.slice(-1)[0]; nombres = parts.slice(0, parts.length-1).join(' '); }
+      addRow({
+        Nombre:nombres, Apellidos:apellidos, Cedula:'', Correo:'', Telefono:'',
+        Sector:'', Cargo:'', Salario:'', CCSS:'', INS:'', Estado:'Activo', VincQbo:nm
+      });
     }
+    // Bloquear columna de Vinculación QBO (ya viene vinculada)
+    qsa('#pane tbody tr').forEach(function(tr){
+      var selects = qsa('select', tr);
+      if (selects.length>0){ var vinc = selects[selects.length-1]; vinc.setAttribute('disabled','disabled'); }
+    });
+    validateAll();
+  } else {
+    var info = ce('div','mb-2 text-muted');
+    info.textContent = 'No hay empleados QBO en caché. Presione "Traer de QBO".';
+    var btn = ce('button','btn btn-primary mb-3'); btn.id='go-qbo'; btn.textContent='Traer de QBO';
+    host.appendChild(info); host.appendChild(btn);
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      if (companyId>0) window.location.href='?handler=ImportQbo&companyId='+companyId;
+    });
   }
+});
+  }
+
+  // ====== MANUAL / EXCEL
+  var grid; // tbody
+  function buildGridShell(host){
+    host.innerHTML = '';
+    var wrap = ce('div','table-responsive');
+    var tbl = ce('table','table table-sm table-fixed');
+    var thead = ce('thead'); var tr = ce('tr');
+    function th(t){ var h=ce('th'); h.textContent=t; tr.appendChild(h); }
+    th(''); // borrar
+    th('Nombre *'); th('Apellidos *'); th('Cédula *'); th('Correo'); th('Teléfono');
+    th('Sector *'); th('Cargo *'); th('Salario mensual *'); th('CCSS *'); th('INS *');
+    for (var i=0;i<periodCfg.count;i++) th('Periodo ' + (i+1) + (periodCfg.editable[i] ? ' *' : ''));
+    th('Estado *'); th('Vinculación QBO *');
+    thead.appendChild(tr);
+    grid = ce('tbody');
+    tbl.appendChild(thead); tbl.appendChild(grid); wrap.appendChild(tbl); host.appendChild(wrap);
+
+    var tools = ce('div','mt-2 d-flex gap-2');
+    var add = ce('button','btn btn-outline-primary'); add.textContent='Añadir fila';
+    tools.appendChild(add); host.appendChild(tools);
+
+    add.addEventListener('click', function(){ addRow(); validateAll(); });
+  }
+
+  function addRow(rowData){
+    var tr = ce('tr');
+
+    // borrar
+    var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.innerHTML='&times;';
+    tdDel.appendChild(del); tr.appendChild(tdDel);
+
+    function tdInput(ph, required, type){
+      var td=ce('td'); var inp=ce('input','form-control form-control-sm');
+      inp.placeholder=ph || ''; if(type) inp.type=type;
+      if(required) inp.setAttribute('data-required','1');
+      td.appendChild(inp); return {td:td, input:inp};
+    }
+
+    function tdSelect(options, required){
+      var td=ce('td'); var sel=ce('select','form-select form-select-sm');
+      if (!options || !options.length) options=[];
+      sel.appendChild(new Option('Seleccione...', ''));
+      for (var i=0;i<options.length;i++) sel.appendChild(new Option(options[i], options[i]));
+      if(required) sel.setAttribute('data-required','1');
+      td.appendChild(sel); return {td:td, select:sel};
+    }
+
+    function tdRadio(required, namePrefix){
+      var td=ce('td'); var g=ce('div','btn-group btn-group-sm');
+      var nm=(namePrefix||('r'+Date.now()+Math.random()));
+      var s=ce('input'); s.type='radio'; s.name=nm; s.value='Si';
+      var n=ce('input'); n.type='radio'; n.name=nm; n.value='No';
+      var lb1=ce('label','btn btn-outline-secondary'); lb1.textContent='Sí';
+      var lb2=ce('label','btn btn-outline-secondary'); lb2.textContent='No';
+      s.className='btn-check'; n.className='btn-check'; s.id=nm+'_1'; n.id=nm+'_0';
+      lb1.setAttribute('for',s.id); lb2.setAttribute('for',n.id);
+      g.appendChild(s); g.appendChild(lb1); g.appendChild(n); g.appendChild(lb2);
+      if(required) g.setAttribute('data-required','1');
+      td.appendChild(g);
+      return {td:td, yes:s, no:n, group:g};
+    }
+
+    // columnas
+    var cNombre   = tdInput('Nombre', true);
+    var cApellidos= tdInput('Apellidos', true);
+    var cCedula   = tdInput('Cédula', true, 'text');
+    var cCorreo   = tdInput('Correo', false, 'email');
+    var cTelefono = tdInput('Teléfono', false, 'tel');
+    var cSector   = tdSelect(sectorList, true);
+    var cCargo    = tdInput('Cargo', true);
+    var cSalario  = tdInput('0.00', true, 'number'); cSalario.input.min='0'; cSalario.input.step='0.01';
+    var cCcss     = tdRadio(true, 'ccss_'+Date.now()+Math.random());
+    var cIns      = tdRadio(true, 'ins_'+Date.now()+Math.random());
+
+    tr.appendChild(cNombre.td); tr.appendChild(cApellidos.td); tr.appendChild(cCedula.td);
+    tr.appendChild(cCorreo.td); tr.appendChild(cTelefono.td); tr.appendChild(cSector.td);
+    tr.appendChild(cCargo.td);  tr.appendChild(cSalario.td);  tr.appendChild(cCcss.td); tr.appendChild(cIns.td);
+
+    var pagos = [];
+    for (var i=0;i<periodCfg.count;i++){
+      var t = tdInput('0', periodCfg.editable[i], 'number');
+      t.input.min='0'; t.input.max='100'; t.input.step='1';
+      t.input.value = periodCfg.defaults[i];
+      if (!periodCfg.editable[i]) { t.input.setAttribute('readonly','readonly'); t.input.classList.add('bg-light'); }
+      pagos.push(t); tr.appendChild(t.td);
+    }
+
+    var cEstado = tdSelect(['Activo','Inactivo'], true);
+    var qboOpts = ['No aplica'].concat(qboList || []);
+    var cVinc   = tdSelect(qboOpts, true);
+
+    tr.appendChild(cEstado.td); tr.appendChild(cVinc.td);
+
+    if (rowData){
+      cNombre.input.value    = rowData.Nombre||'';   cApellidos.input.value = rowData.Apellidos||'';
+      cCedula.input.value    = rowData.Cedula||'';   cCorreo.input.value    = rowData.Correo||'';
+      cTelefono.input.value  = rowData.Telefono||''; cSector.select.value   = rowData.Sector||'';
+      cCargo.input.value     = rowData.Cargo||'';    cSalario.input.value   = rowData.Salario||'';
+      if (rowData.CCSS==='Si') cCcss.yes.checked = true; else if (rowData.CCSS==='No') cCcss.no.checked = true;
+      if (rowData.INS==='Si')  cIns.yes.checked  = true; else if (rowData.INS==='No')  cIns.no.checked  = true;
+      for (var j=0;j<periodCfg.count;j++) if (rowData['P'+(j+1)]!=null) pagos[j].input.value = rowData['P'+(j+1)];
+      cEstado.select.value = rowData.Estado || '';
+      cVinc.select.value   = rowData.VincQbo || '';
+    }
+
+    del.addEventListener('click', function(){
+      if (grid.children.length <= 1) return;
+      tr.remove(); validateAll();
+    });
+
+    grid.appendChild(tr);
+    qsa('input,select', tr).forEach(function(el){ el.addEventListener('input', validateAll); el.addEventListener('change', validateAll); });
+  }
+
+  function validateAll(){
+    var ok = true;
+    qsa('#pane tbody tr').forEach(function(tr){
+      qsa('.is-invalid', tr).forEach(function(el){ el.classList.remove('is-invalid'); });
+
+      function req(el){ if (!el) return true; var val=(el.value||'').trim(); var good=(val!==''); if(!good) el.classList.add('is-invalid'); return good; }
+      function reqGroup(g){ if (!g) return true; var r=qsa('input[type=radio]', g).some(function(x){ return x.checked; }); if(!r) g.classList.add('is-invalid'); return r; }
+
+      var cells = qsa('td', tr);
+      var idx = 1; // 0 delete
+      var nombre    = qsa('input', cells[idx++])[0];
+      var apellidos = qsa('input', cells[idx++])[0];
+      var cedula    = qsa('input', cells[idx++])[0];
+      var correo    = qsa('input', cells[idx++])[0];
+      var telefono  = qsa('input', cells[idx++])[0];
+      var sectorSel = qsa('select', cells[idx++])[0];
+      var cargo     = qsa('input', cells[idx++])[0];
+      var salario   = qsa('input', cells[idx++])[0];
+      var ccssGroup = qsa('div.btn-group', cells[idx++])[0];
+      var insGroup  = qsa('div.btn-group', cells[idx++])[0];
+      var pagos = [];
+      for (var i=0;i<periodCfg.count;i++){ pagos.push(qsa('input', cells[idx++])[0]); }
+      var estadoSel = qsa('select', cells[idx++])[0];
+      var vincSel   = qsa('select', cells[idx++])[0];
+
+      ok = req(nombre) && ok;
+      ok = req(apellidos) && ok;
+      ok = req(cedula) && ok;
+      ok = req(sectorSel) && ok;
+      ok = req(cargo) && ok;
+      ok = req(salario) && ok;
+      ok = reqGroup(ccssGroup) && ok;
+      ok = reqGroup(insGroup) && ok;
+      for (var j=0;j<periodCfg.count;j++){
+        if (periodCfg.editable[j]) ok = req(pagos[j]) && ok;
+      }
+      ok = req(estadoSel) && ok;
+      ok = req(vincSel) && ok;
+
+      if (cedula && !/^\d+$/.test(cedula.value.trim())) { cedula.classList.add('is-invalid'); ok=false; }
+      if (telefono && telefono.value.trim()!=='' && !/^\d+$/.test(telefono.value.trim())) { telefono.classList.add('is-invalid'); ok=false; }
+      if (salario && (isNaN(parseFloat(salario.value)) || parseFloat(salario.value)<0)) { salario.classList.add('is-invalid'); ok=false; }
+
+      var sum = 0;
+      for (var j=0;j<periodCfg.count;j++){
+        var v = parseInt(pagos[j].value||'0',10); sum += (isNaN(v)?0:v);
+      }
+      if (sum !== 100){ pagos.forEach(function(p){ p.classList.add('is-invalid'); }); ok=false; }
+    });
+
+    var btn = qs('#btnContinuar');
+    if (btn){ if (!ok){ btn.setAttribute('disabled','disabled'); btn.classList.add('disabled'); } else { btn.removeAttribute('disabled'); btn.classList.remove('disabled'); } }
+  }
+
+  function renderManual(){ var host = qs('#pane'); buildGridShell(host); addRow(); validateAll(); }
+
+  function renderExcel(){
+    var host = qs('#pane'); host.innerHTML='';
+    var tools = ce('div','d-flex gap-2 mb-3');
+    var dl = ce('button','btn btn-outline-primary'); dl.textContent='Descargar plantilla (CSV)';
+    var up = ce('input','form-control'); up.type='file'; up.accept='.csv,text/csv';
+    tools.appendChild(dl); tools.appendChild(up); host.appendChild(tools);
+
+    var gridHost = ce('div'); host.appendChild(gridHost); buildGridShell(gridHost);
+
+    dl.addEventListener('click', function(){
+      var cols = ['Nombre','Apellidos','Cedula','Correo','Telefono','Sector','Cargo','SalarioMensual','CCSS','INS'];
+      for (var i=0;i<periodCfg.count;i++) cols.push('Periodo'+(i+1));
+      cols.push('Estado','VinculacionQBO');
+      var csv = cols.join(',') + '\r\n';
+      var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      var a = ce('a'); a.href = URL.createObjectURL(blob); a.download = 'PlantillaColaboradores.csv'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
+    });
+
+    up.addEventListener('change', function(){
+      var f = up.files && up.files[0]; if(!f) return;
+      var r = new FileReader();
+      r.onload = function(){
+        var lines = (r.result||'').split(/\r?\n/).filter(function(l){ return l.trim()!==''; });
+        if (lines.length<=1) return;
+        var hdr = lines[0].split(',');
+        function idx(name){ var i = hdr.indexOf(name); return i<0 ? null : i; }
+        grid.innerHTML='';
+        for (var i=1;i<lines.length;i++){
+          var parts = lines[i].split(',');
+          var row = {
+            Nombre: parts[idx('Nombre')]||'',
+            Apellidos: parts[idx('Apellidos')]||'',
+            Cedula: parts[idx('Cedula')]||'',
+            Correo: parts[idx('Correo')]||'',
+            Telefono: parts[idx('Telefono')]||'',
+            Sector: parts[idx('Sector')]||'',
+            Cargo: parts[idx('Cargo')]||'',
+            Salario: parts[idx('SalarioMensual')]||'',
+            CCSS: parts[idx('CCSS')]||'',
+            INS:  parts[idx('INS')]||'',
+            Estado: parts[idx('Estado')]||'',
+            VincQbo: parts[idx('VinculacionQBO')]||''
+          };
+          for (var j=0;j<periodCfg.count;j++){
+            var key = 'Periodo'+(j+1);
+            var col = idx(key);
+            row['P'+(j+1)] = col==null? periodCfg.defaults[j] : parts[col]||'0';
+          }
+          addRow(row);
+        }
+        validateAll();
+      };
+      r.readAsText(f, 'utf-8');
+    });
+  }
+
   var tQ=qs('#tab-qbo'), tM=qs('#tab-manual'), tE=qs('#tab-excel');
-  if (tQ) tQ.addEventListener('click', function(){ openPane('qbo'); });
-  if (tM) tM.addEventListener('click', function(){ openPane('manual'); });
-  if (tE) tE.addEventListener('click', function(){ openPane('excel'); });
+  if (tQ) tQ.addEventListener('click', function(){ tQ.classList.replace('btn-outline-primary','btn-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderQbo(); });
+  if (tM) tM.addEventListener('click', function(){ tM.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderManual(); });
+  if (tE) tE.addEventListener('click', function(){ tE.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); renderExcel(); });
 
-  // Editor de periodo (1/2/4) y validación=100%
-  function renderPct(p){
-    var host = qs('#pct-editor'); if (!host) return;
-    host.innerHTML='';
-    var cfg = (p==='mensual')?[100]:(p==='quincenal'?[50,50]:[25,25,25,25]);
-    var row=document.createElement('div'); row.className='d-flex gap-2 align-items-end flex-wrap';
-    for (var i=0;i<cfg.length;i++){
-      var w=document.createElement('div'); w.className='d-flex flex-column me-2';
-      var lb=document.createElement('label'); lb.className='form-label'; lb.innerText='Periodo '+(i+1);
-      var inp=document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1'; inp.value=cfg[i]; inp.className='form-control'; inp.name='PayPct'+(i+1);
-      w.appendChild(lb); w.appendChild(inp); row.appendChild(w);
-    }
-    var info=document.createElement('div'); info.id='pct-total'; info.className='ms-3 fw-bold pt-2';
-    host.appendChild(row); host.appendChild(info);
-    function validate(){
-      var inputs=qsa('#pct-editor input[type=number]'); var sum=0;
-      for (var k=0;k<inputs.length;k++){ var v=parseInt(inputs[k].value||'0',10); if(!isNaN(v)) sum+=v; }
-      info.textContent='Total: '+sum+'%';
-      if (btnCont){ if(sum!==100){ btnCont.setAttribute('disabled','disabled'); btnCont.classList.add('disabled'); } else { btnCont.removeAttribute('disabled'); btnCont.classList.remove('disabled'); } }
-    }
-    qsa('#pct-editor input[type=number]').forEach(function(x){ x.addEventListener('input', validate); });
-    validate();
+  var dlg = document.getElementById('dlgAgregar');
+  if (dlg){
+    dlg.addEventListener('shown.bs.modal', function(){ if (tQ) tQ.click(); });
   }
-  renderPct(periodo);
 })();
 </script>
 }
+
+

@@ -25,13 +25,21 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             _qbo = qbo;
         }
 
-        // Query: companyId y status=activos|inactivos
+        // Query
         public int? CompanyId { get; private set; }
         public string Status { get; private set; } = "activos";
+
+        // Empresa / política de pago
         public List<string> SectorNames { get; private set; } = new() { "General" };
-        public bool IsCompanyLinked { get; private set; }
         public string Periodo { get; private set; } = "Mensual";
-        public bool CanAdd { get; private set; }
+
+        // Estado real de la empresa
+        public string CompanyState { get; private set; } = "";
+        public bool CompanyReady { get; private set; } = false;   // Solo TRUE si CompanyState == "Listo"
+
+        // QBO
+        public bool IsCompanyLinked { get; private set; } = false;
+        public List<string> QboEmployees { get; private set; } = new();
 
         // Tabla
         public List<RowVM> Rows { get; private set; } = new();
@@ -49,32 +57,26 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             public string PorcentajePago { get; set; } = "";
             public string Estado { get; set; } = "Activo";
             public DateTime? EndDate { get; set; }
-
-
         }
+
         public async Task OnGetAsync(CancellationToken ct)
         {
-            // Leer companyId de querystring
+            // 1) Params
             int tmp;
             var qsCompany = HttpContext.Request.Query["companyId"].ToString();
             CompanyId = int.TryParse(qsCompany, out tmp) ? tmp : null;
 
-            // Leer status (activos|inactivos), default 'activos'
             var qsStatus = (HttpContext.Request.Query["status"].ToString() ?? "").Trim().ToLowerInvariant();
             Status = (qsStatus == "inactivos") ? "inactivos" : "activos";
 
-            // Habilitación del botón Agregar: empresa vinculada a QBO
+            // 2) ¿Vinculada a QBO?
             if (CompanyId.HasValue)
             {
                 try { IsCompanyLinked = await _qbo.IsCompanyLinkedAsync(CompanyId.Value, ct); }
                 catch { IsCompanyLinked = false; }
             }
-            else
-            {
-                IsCompanyLinked = false;
-            }
 
-                        // /// LOAD_PAYPOLICY: Periodo + Sectores desde Company.PayPolicy
+            // 3) Cargar PayPolicy (Periodo + Sectores)
             try
             {
                 if (CompanyId.HasValue)
@@ -89,7 +91,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                         if (root.TryGetProperty("periodo", out var per) && per.ValueKind == System.Text.Json.JsonValueKind.String)
                             Periodo = per.GetString() ?? "Mensual";
 
-                        var secs = new System.Collections.Generic.List<string>();
+                        var secs = new List<string>();
                         if (root.TryGetProperty("sectors", out var arr) && arr.ValueKind == System.Text.Json.JsonValueKind.Array)
                         {
                             foreach (var e in arr.EnumerateArray())
@@ -103,16 +105,49 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                     }
                 }
             }
-            catch { /* si falla policy: defaults */ }
-            // Habilitar "Agregar" sólo si: empresa seleccionada + vinculada a QBO + periodo definido + al menos 1 sector.
-            CanAdd = CompanyId.HasValue
-                     && IsCompanyLinked
-                     && !string.IsNullOrWhiteSpace(Periodo)
-                     && SectorNames != null
-                     && SectorNames.Count > 0;
+            catch { /* defaults ya establecidos */ }
 
+            // 4) Estado de la empresa y gating exacto: seleccionado + estado "Listo"
+            try
+            {
+                CompanyReady = false;
+                if (CompanyId.HasValue)
+                {
+                    var comp = await _db.Companies.FindAsync(new object[] { CompanyId.Value }, ct);
+                    string? state = null;
+                    var t = comp?.GetType();
+                    if (t != null)
+                    {
+                        foreach (var name in new[] { "PayrollStatus", "PayrollState", "Estado", "State", "Status" })
+                        {
+                            var p = t.GetProperty(name);
+                            if (p != null)
+                            {
+                                var val = p.GetValue(comp);
+                                if (val != null) { state = val.ToString(); break; }
+                            }
+                        }
+                    }
+                    CompanyState = state ?? "";
+                    CompanyReady = !string.IsNullOrWhiteSpace(CompanyState)
+                                   && CompanyState.Equals("Listo", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            catch { CompanyReady = false; }
 
-            
+            // 5) (Opcional) Poblado de lista QBO (si existe tabla/servicio); dejamos vacío por ahora
+            try
+            {
+                if (CompanyId.HasValue)
+                {
+                    // Ejemplo:
+                    // QboEmployees = _db.QboEmployees.Where(e => e.CompanyId == CompanyId.Value)
+                    //                   .Select(e => e.FullName).ToList();
+                }
+            }
+            catch { /* noop */ }
+
+            // 6) Cargar empleados
             try
             {
                 var isActivos = Status == "activos";
@@ -121,19 +156,18 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                 if (CompanyId.HasValue)
                     q = q.Where(e => e.CompanyId == CompanyId.Value);
 
-                q = isActivos
-                    ? q.Where(e => e.Status == "Activo")
-                    : q.Where(e => e.Status != "Activo");
+                q = isActivos ? q.Where(e => e.Status == "Activo")
+                              : q.Where(e => e.Status != "Activo");
 
-                var list = await q
-    .OrderBy(e => e.LastName)
-    .ThenBy(e => e.FirstName)
-        .Select(e => new {
-        e.Id, e.FirstName, e.LastName, e.NationalId,
-        e.BaseSalary, e.HasCcss, e.HasIns,
-        e.PayPct1, e.PayPct2, e.PayPct3, e.PayPct4, e.Status
-    })
-    .ToListAsync(ct);
+                var list = await q.OrderBy(e => e.LastName)
+                                  .ThenBy(e => e.FirstName)
+                                  .Select(e => new
+                                  {
+                                      e.Id, e.FirstName, e.LastName, e.NationalId,
+                                      e.BaseSalary, e.HasCcss, e.HasIns,
+                                      e.PayPct1, e.PayPct2, e.PayPct3, e.PayPct4, e.Status
+                                  })
+                                  .ToListAsync(ct);
 
                 Rows = new List<RowVM>(list.Count);
                 foreach (var e in list)
@@ -159,14 +193,15 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                 _log.LogError(ex, "[Colaboradores] Error cargando empleados");
                 Rows = new List<RowVM>();
             }
-        }// GET: Traer de QBO (placeholder; conecta aquí tu flujo real)
-public Microsoft.AspNetCore.Mvc.IActionResult OnGetImportQbo(int companyId)
-{
-    if (companyId <= 0) return BadRequest();
-    TempData["Colab_Import"] = "qbo";
-    return RedirectToPage(new { companyId = companyId, status = this.Status });
-}
+        }
 
+        // GET: Traer de QBO (placeholder; conecta aquí tu flujo real de importación)
+        public Microsoft.AspNetCore.Mvc.IActionResult OnGetImportQbo(int companyId)
+        {
+            if (companyId <= 0) return BadRequest();
+            TempData["Colab_Import"] = "qbo";
+            return RedirectToPage(new { companyId = companyId, status = this.Status });
+        }
 
         private static string BuildPctString(decimal? p1, decimal? p2, decimal? p3, decimal? p4)
         {
@@ -181,15 +216,4 @@ public Microsoft.AspNetCore.Mvc.IActionResult OnGetImportQbo(int companyId)
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 
