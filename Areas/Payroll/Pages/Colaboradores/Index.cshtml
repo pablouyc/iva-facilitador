@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Colaboradores";
     ViewData["PayrollSection"] = "Colaboradores";
-    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null) ?? "#";
+    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null) ?? "";
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
@@ -96,48 +96,48 @@
   </div>
 </div>
 
+@section Scripts{
 <style>
   .is-invalid { border-color:#dc3545 !important; }
   .table-fixed thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
+window.addEventListener('DOMContentLoaded', function(){
   if (window.__payroll_colab__) return; window.__payroll_colab__ = true;
+
+  // ==== Datos del servidor (100% serializados a JSON) ====
+  var companyId = @(Model.CompanyId ?? 0);
+  var periodo   = (@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Periodo ?? "Mensual"))).toLowerCase();
+  var sectorList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>()));
+  var qboList    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QboEmployees ?? new List<string>()));
+  var canOpen    = @((Model.CompanyId.HasValue && Model.CompanyReady) ? "true" : "false");
 
   function qs(s){ return document.querySelector(s); }
   function qsa(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
   function ce(tag, cls){ var el=document.createElement(tag); if(cls) el.className=cls; return el; }
 
-  var companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
-  var periodo   = ('@Model.Periodo' || 'Mensual').toLowerCase();
-  var sectorList = @((Model.SectorNames!=null && Model.SectorNames.Count>0)? "['" + string.Join("','", Model.SectorNames) + "']" : "[]");
-  var qboList = @((Model.QboEmployees!=null && Model.QboEmployees.Count>0)? "['" + string.Join("','", Model.QboEmployees) + "']" : "[]");
-
+  // === Config de periodos
   var periodCfg = (function(p){
-    if (p==='mensual') return {count:1, defaults:[100], editable:[false]};
-    if (p==='quincenal') return {count:2, defaults:[50,50], editable:[true,true]};
-    return {count:4, defaults:[25,25,25,25], editable:[true,true,true,true]};
+    if (p==='mensual')   return {count:1, defaults:[100],           editable:[false]};
+    if (p==='quincenal') return {count:2, defaults:[50,50],         editable:[true,true]};
+    return                  {count:4, defaults:[25,25,25,25],      editable:[true,true,true,true]}; // semanal
   })(periodo);
 
-  function markActive(btn, others){
-    btn.classList.remove('btn-outline-primary','btn-outline-secondary');
-    btn.classList.add('btn-primary');
-    others.forEach(function(o){
-      o.classList.remove('btn-primary');
-      if (o.id==='tab-qbo') o.classList.add('btn-outline-primary'); else o.classList.add('btn-outline-secondary');
+  // ====== QBO
+  function renderQbo(){
+    var host = qs('#pane'); host.innerHTML = '';
+    var info = ce('div','mb-2 text-muted');
+    info.textContent = 'Sin datos. Presione "Traer de QBO".';
+    var btn = ce('button','btn btn-primary mb-3'); btn.id='go-qbo'; btn.textContent='Traer de QBO';
+    host.appendChild(info); host.appendChild(btn);
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      if (companyId>0) window.location.href='?handler=ImportQbo&companyId='+companyId;
     });
   }
 
-  function renderQbo(){
-    var host = qs('#pane'); if (!host) return;
-    host.innerHTML = '';
-    var info = ce('div','mb-2 text-muted'); info.textContent = 'Sin datos. Presione "Traer de QBO".';
-    var btn = ce('button','btn btn-primary mb-3'); btn.id='go-qbo'; btn.textContent='Traer de QBO';
-    host.appendChild(info); host.appendChild(btn);
-    btn.addEventListener('click', function(e){ e.preventDefault(); if (companyId>0) window.location.href='?handler=ImportQbo&companyId='+companyId; });
-  }
-
+  // ====== MANUAL / EXCEL
   var grid; // tbody
   function buildGridShell(host){
     host.innerHTML = '';
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function(){
     var tbl = ce('table','table table-sm table-fixed');
     var thead = ce('thead'); var tr = ce('tr');
     function th(t){ var h=ce('th'); h.textContent=t; tr.appendChild(h); }
-    th('');
+    th(''); // borrar
     th('Nombre *'); th('Apellidos *'); th('Cédula *'); th('Correo'); th('Teléfono');
     th('Sector *'); th('Cargo *'); th('Salario mensual *'); th('CCSS *'); th('INS *');
     for (var i=0;i<periodCfg.count;i++) th('Periodo ' + (i+1) + (periodCfg.editable[i] ? ' *' : ''));
@@ -157,18 +157,49 @@ document.addEventListener('DOMContentLoaded', function(){
     var tools = ce('div','mt-2 d-flex gap-2');
     var add = ce('button','btn btn-outline-primary'); add.textContent='Añadir fila';
     tools.appendChild(add); host.appendChild(tools);
+
     add.addEventListener('click', function(){ addRow(); validateAll(); });
   }
 
   function addRow(rowData){
     var tr = ce('tr');
-    var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.innerHTML='&times;';
+
+    // borrar
+    var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.textContent = '\u00D7';
     tdDel.appendChild(del); tr.appendChild(tdDel);
 
-    function tdInput(ph, required, type){ var td=ce('td'); var inp=ce('input','form-control form-control-sm'); if(ph) inp.placeholder=ph; if(type) inp.type=type; if(required) inp.setAttribute('data-required','1'); td.appendChild(inp); return {td:td, input:inp}; }
-    function tdSelect(options, required){ var td=ce('td'); var sel=ce('select','form-select form-select-sm'); sel.appendChild(new Option('Seleccione...', '')); (options||[]).forEach(function(o){ sel.appendChild(new Option(o,o)); }); if(required) sel.setAttribute('data-required','1'); td.appendChild(sel); return {td:td, select:sel}; }
-    function tdRadio(required, namePrefix){ var td=ce('td'); var g=ce('div','btn-group btn-group-sm'); var nm=(namePrefix||('r'+Date.now()+Math.random())); var s=ce('input'); s.type='radio'; s.name=nm; s.value='Si'; var n=ce('input'); n.type='radio'; n.name=nm; n.value='No'; var lb1=ce('label','btn btn-outline-secondary'); lb1.textContent='Sí'; var lb2=ce('label','btn btn-outline-secondary'); lb2.textContent='No'; s.className='btn-check'; n.className='btn-check'; s.id=nm+'_1'; n.id=nm+'_0'; lb1.setAttribute('for',s.id); lb2.setAttribute('for',n.id); g.appendChild(s); g.appendChild(lb1); g.appendChild(n); g.appendChild(lb2); if(required) g.setAttribute('data-required','1'); td.appendChild(g); return {td:td, yes:s, no:n, group:g}; }
+    function tdInput(ph, required, type){
+      var td=ce('td'); var inp=ce('input','form-control form-control-sm');
+      inp.placeholder=ph || ''; if(type) inp.type=type;
+      if(required) inp.setAttribute('data-required','1');
+      td.appendChild(inp); return {td:td, input:inp};
+    }
 
+    function tdSelect(options, required){
+      var td=ce('td'); var sel=ce('select','form-select form-select-sm');
+      if (!options || !options.length) options=[];
+      sel.appendChild(new Option('Seleccione...', ''));
+      for (var i=0;i<options.length;i++) sel.appendChild(new Option(options[i], options[i]));
+      if(required) sel.setAttribute('data-required','1');
+      td.appendChild(sel); return {td:td, select:sel};
+    }
+
+    function tdRadio(required, namePrefix){
+      var td=ce('td'); var g=ce('div','btn-group btn-group-sm');
+      var nm=(namePrefix||('r'+Date.now()+Math.random()));
+      var s=ce('input'); s.type='radio'; s.name=nm; s.value='Si';
+      var n=ce('input'); n.type='radio'; n.name=nm; n.value='No';
+      var lb1=ce('label','btn btn-outline-secondary'); lb1.textContent='Sí';
+      var lb2=ce('label','btn btn-outline-secondary'); lb2.textContent='No';
+      s.className='btn-check'; n.className='btn-check'; s.id=nm+'_1'; n.id=nm+'_0';
+      lb1.setAttribute('for',s.id); lb2.setAttribute('for',n.id);
+      g.appendChild(s); g.appendChild(lb1); g.appendChild(n); g.appendChild(lb2);
+      if(required) g.setAttribute('data-required','1');
+      td.appendChild(g);
+      return {td:td, yes:s, no:n, group:g};
+    }
+
+    // columnas
     var cNombre   = tdInput('Nombre', true);
     var cApellidos= tdInput('Apellidos', true);
     var cCedula   = tdInput('Cédula', true, 'text');
@@ -187,7 +218,8 @@ document.addEventListener('DOMContentLoaded', function(){
     var pagos = [];
     for (var i=0;i<periodCfg.count;i++){
       var t = tdInput('0', periodCfg.editable[i], 'number');
-      t.input.min='0'; t.input.max='100'; t.input.step='1'; t.input.value = periodCfg.defaults[i];
+      t.input.min='0'; t.input.max='100'; t.input.step='1';
+      t.input.value = periodCfg.defaults[i];
       if (!periodCfg.editable[i]) { t.input.setAttribute('readonly','readonly'); t.input.classList.add('bg-light'); }
       pagos.push(t); tr.appendChild(t.td);
     }
@@ -195,6 +227,7 @@ document.addEventListener('DOMContentLoaded', function(){
     var cEstado = tdSelect(['Activo','Inactivo'], true);
     var qboOpts = ['No aplica'].concat(qboList || []);
     var cVinc   = tdSelect(qboOpts, true);
+
     tr.appendChild(cEstado.td); tr.appendChild(cVinc.td);
 
     if (rowData){
@@ -202,14 +235,18 @@ document.addEventListener('DOMContentLoaded', function(){
       cCedula.input.value    = rowData.Cedula||'';   cCorreo.input.value    = rowData.Correo||'';
       cTelefono.input.value  = rowData.Telefono||''; cSector.select.value   = rowData.Sector||'';
       cCargo.input.value     = rowData.Cargo||'';    cSalario.input.value   = rowData.Salario||'';
-      if (rowData.CCSS==='Si') cCcss.yes.checked=true; else if (rowData.CCSS==='No') cCcss.no.checked=true;
-      if (rowData.INS==='Si')  cIns.yes.checked=true; else if (rowData.INS==='No')  cIns.no.checked=true;
+      if (rowData.CCSS==='Si') cCcss.yes.checked = true; else if (rowData.CCSS==='No') cCcss.no.checked = true;
+      if (rowData.INS==='Si')  cIns.yes.checked  = true; else if (rowData.INS==='No')  cIns.no.checked  = true;
       for (var j=0;j<periodCfg.count;j++) if (rowData['P'+(j+1)]!=null) pagos[j].input.value = rowData['P'+(j+1)];
       cEstado.select.value = rowData.Estado || '';
       cVinc.select.value   = rowData.VincQbo || '';
     }
 
-    del.addEventListener('click', function(){ if (grid.children.length <= 1) return; tr.remove(); validateAll(); });
+    del.addEventListener('click', function(){
+      if (grid.children.length <= 1) return;
+      tr.remove(); validateAll();
+    });
+
     grid.appendChild(tr);
     qsa('input,select', tr).forEach(function(el){ el.addEventListener('input', validateAll); el.addEventListener('change', validateAll); });
   }
@@ -223,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function(){
       function reqGroup(g){ if (!g) return true; var r=qsa('input[type=radio]', g).some(function(x){ return x.checked; }); if(!r) g.classList.add('is-invalid'); return r; }
 
       var cells = qsa('td', tr);
-      var idx = 1;
+      var idx = 1; // 0 delete
       var nombre    = qsa('input', cells[idx++])[0];
       var apellidos = qsa('input', cells[idx++])[0];
       var cedula    = qsa('input', cells[idx++])[0];
@@ -239,17 +276,28 @@ document.addEventListener('DOMContentLoaded', function(){
       var estadoSel = qsa('select', cells[idx++])[0];
       var vincSel   = qsa('select', cells[idx++])[0];
 
-      ok = req(nombre) && ok; ok = req(apellidos) && ok; ok = req(cedula) && ok;
-      ok = req(sectorSel) && ok; ok = req(cargo) && ok; ok = req(salario) && ok;
-      ok = reqGroup(ccssGroup) && ok; ok = reqGroup(insGroup) && ok;
-      for (var j=0;j<periodCfg.count;j++){ if (periodCfg.editable[j]) ok = req(pagos[j]) && ok; }
-      ok = req(estadoSel) && ok; ok = req(vincSel) && ok;
+      ok = req(nombre) && ok;
+      ok = req(apellidos) && ok;
+      ok = req(cedula) && ok;
+      ok = req(sectorSel) && ok;
+      ok = req(cargo) && ok;
+      ok = req(salario) && ok;
+      ok = reqGroup(ccssGroup) && ok;
+      ok = reqGroup(insGroup) && ok;
+      for (var j=0;j<periodCfg.count;j++){
+        if (periodCfg.editable[j]) ok = req(pagos[j]) && ok;
+      }
+      ok = req(estadoSel) && ok;
+      ok = req(vincSel) && ok;
 
       if (cedula && !/^\d+$/.test(cedula.value.trim())) { cedula.classList.add('is-invalid'); ok=false; }
       if (telefono && telefono.value.trim()!=='' && !/^\d+$/.test(telefono.value.trim())) { telefono.classList.add('is-invalid'); ok=false; }
       if (salario && (isNaN(parseFloat(salario.value)) || parseFloat(salario.value)<0)) { salario.classList.add('is-invalid'); ok=false; }
 
-      var sum = 0; for (var j=0;j<periodCfg.count;j++){ var v = parseInt(pagos[j].value||'0',10); sum += (isNaN(v)?0:v); }
+      var sum = 0;
+      for (var j=0;j<periodCfg.count;j++){
+        var v = parseInt(pagos[j].value||'0',10); sum += (isNaN(v)?0:v);
+      }
       if (sum !== 100){ pagos.forEach(function(p){ p.classList.add('is-invalid'); }); ok=false; }
     });
 
@@ -272,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function(){
       var cols = ['Nombre','Apellidos','Cedula','Correo','Telefono','Sector','Cargo','SalarioMensual','CCSS','INS'];
       for (var i=0;i<periodCfg.count;i++) cols.push('Periodo'+(i+1));
       cols.push('Estado','VinculacionQBO');
-      var csv = cols.join(',') + '\\r\\n';
+      var csv = cols.join(',') + '\r\n';
       var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
       var a = ce('a'); a.href = URL.createObjectURL(blob); a.download = 'PlantillaColaboradores.csv'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
     });
@@ -281,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function(){
       var f = up.files && up.files[0]; if(!f) return;
       var r = new FileReader();
       r.onload = function(){
-        var lines = (r.result||'').split(/\\r?\\n/).filter(function(l){ return l.trim()!==''; });
+        var lines = (r.result||'').split(/\r?\n/).filter(function(l){ return l.trim()!==''; });
         if (lines.length<=1) return;
         var hdr = lines[0].split(',');
         function idx(name){ var i = hdr.indexOf(name); return i<0 ? null : i; }
@@ -303,7 +351,8 @@ document.addEventListener('DOMContentLoaded', function(){
             VincQbo: parts[idx('VinculacionQBO')]||''
           };
           for (var j=0;j<periodCfg.count;j++){
-            var key = 'Periodo'+(j+1); var col = idx(key);
+            var key = 'Periodo'+(j+1);
+            var col = idx(key);
             row['P'+(j+1)] = col==null? periodCfg.defaults[j] : parts[col]||'0';
           }
           addRow(row);
@@ -314,15 +363,23 @@ document.addEventListener('DOMContentLoaded', function(){
     });
   }
 
+  // Pestañas
   var tQ=qs('#tab-qbo'), tM=qs('#tab-manual'), tE=qs('#tab-excel');
-  if (tQ) tQ.addEventListener('click', function(){ markActive(tQ, [tM,tE]); renderQbo(); });
-  if (tM) tM.addEventListener('click', function(){ markActive(tM, [tQ,tE]); renderManual(); });
-  if (tE) tE.addEventListener('click', function(){ markActive(tE, [tQ,tM]); renderExcel(); });
+  if (tQ) tQ.addEventListener('click', function(){ tQ.classList.replace('btn-outline-primary','btn-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderQbo(); });
+  if (tM) tM.addEventListener('click', function(){ tM.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderManual(); });
+  if (tE) tE.addEventListener('click', function(){ tE.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); renderExcel(); });
 
+  // Abrir modal => pintar QBO por defecto, y mover foco al modal (evita warning aria-hidden)
   var dlg = document.getElementById('dlgAgregar');
   if (dlg){
-    dlg.addEventListener('shown.bs.modal', function(){ if (tQ) tQ.click(); });
+    dlg.addEventListener('shown.bs.modal', function(){ if (tQ) tQ.click(); dlg.focus && dlg.focus(); });
+  }
+
+  // Fallback por si el listener anterior no quedó enganchado (layout particular)
+  var addBtn = document.getElementById('btnAgregar');
+  if (addBtn && canOpen){
+    addBtn.addEventListener('click', function(){ setTimeout(function(){ if (tQ) tQ.click(); }, 0); });
   }
 });
 </script>
-
+}
