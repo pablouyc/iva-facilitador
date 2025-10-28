@@ -15,7 +15,7 @@
     }
     else
     {
-        <button type="button" class="btn btn-outline-secondary" disabled aria-disabled="true">Agregar</button>
+        <button type="button" class="btn btn-outline-secondary" disabled aria-disabled="true" title="Seleccione una empresa en estado Listo">Agregar</button>
     }
 </div>
 
@@ -73,7 +73,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="dlgAgregarLabel">Agregar colaboradores</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar" id="dlgCloseBtn"></button>
       </div>
       <div class="modal-body">
         <div class="btn-group mb-3" role="group" aria-label="método">
@@ -89,7 +89,7 @@
         <div id="pct-editor"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="dlgCloseBtn2">Cerrar</button>
         <button type="button" class="btn btn-primary" id="btnContinuar" disabled>Continuar</button>
       </div>
     </div>
@@ -98,12 +98,8 @@
 
 @section Scripts{
 <style>
-  /* Mantener estética y accesibilidad */
   .is-invalid { border-color:#dc3545 !important; }
   .table-fixed thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
-  /* Verde para selector de empresa si existe (#sel-company del Topbar) */
-  #sel-company.form-select { background-color:#198754 !important; color:#fff !important; border-color:#198754 !important; }
-  #sel-company.form-select option { color:#000; }
 </style>
 
 <script>
@@ -117,35 +113,54 @@
   var companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
   var canOpen   = @((Model.CompanyId.HasValue && Model.CompanyReady) ? "true" : "false");
   var periodo   = ('@Model.Periodo' ?? 'Mensual').toLowerCase();
+  var sectorList = @((Model.SectorNames!=null && Model.SectorNames.Count>0)? "['" + string.Join("','", Model.SectorNames) + "']" : "[]");
+  var qboList = @((Model.QboEmployees!=null && Model.QboEmployees.Count>0)? "['" + string.Join("','", Model.QboEmployees) + "']" : "[]");
 
-  // Listas seguras (JSON crudo, evita entidades &*)
-  var sectorList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>()));
-  var qboList    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QboEmployees ?? new List<string>()));
-
-  // Config de periodos
-  function periodCfgFrom(p){
-    if (p==='mensual') return {count:1, defaults:[100], editable:[false]};
-    if (p==='quincenal') return {count:2, defaults:[50,50], editable:[true,true]};
-    return {count:4, defaults:[25,25,25,25], editable:[true,true,true,true]};
+  // Fallback modal si no hay bootstrap.js cargado
+  function showModal(){
+    var m = qs('#dlgAgregar'); if (!m) return;
+    try {
+      if (window.bootstrap && window.bootstrap.Modal){
+        window.bootstrap.Modal.getOrCreateInstance(m).show(); return;
+      }
+    } catch(e){}
+    m.classList.add('show'); m.style.display='block'; m.removeAttribute('aria-hidden'); m.setAttribute('aria-modal','true');
+    var bd = ce('div','modal-backdrop fade show'); bd.id='__bd'; document.body.appendChild(bd);
   }
-  var periodCfg = periodCfgFrom(periodo);
+  function hideModal(){
+    var m = qs('#dlgAgregar'); if (!m) return;
+    try {
+      if (window.bootstrap && window.bootstrap.Modal){
+        window.bootstrap.Modal.getOrCreateInstance(m).hide(); return;
+      }
+    } catch(e){}
+    m.classList.remove('show'); m.style.display='none'; m.setAttribute('aria-hidden','true'); m.removeAttribute('aria-modal');
+    var bd = qs('#__bd'); if (bd) bd.remove();
+  }
 
-  // Fallback de apertura modal si data-bs no dispara (por si falta init de Bootstrap)
   var addBtn = qs('#btnAgregar');
-  if (addBtn && canOpen) {
-    addBtn.addEventListener('click', function(){
-      var m = document.getElementById('dlgAgregar');
-      try {
-        var bs = window.bootstrap;
-        if (m && bs && bs.Modal) bs.Modal.getOrCreateInstance(m).show();
-      } catch(_){}
-    });
+  if (addBtn && canOpen === true || addBtn && canOpen === "true") {
+    addBtn.addEventListener('click', function(e){ e.preventDefault(); showModal(); });
   }
 
-  // ===== QBO =====
+  var c1 = qs('#dlgCloseBtn'), c2 = qs('#dlgCloseBtn2');
+  if (c1) c1.addEventListener('click', function(){ hideModal(); });
+  if (c2) c2.addEventListener('click', function(){ hideModal(); });
+
+  // === Config de periodos
+  function periodCfgOf(p){
+    var pp = (p||'').toLowerCase();
+    if (pp==='mensual') return {count:1, defaults:[100], editable:[false]};
+    if (pp==='quincenal') return {count:2, defaults:[50,50], editable:[true,true]};
+    return {count:4, defaults:[25,25,25,25], editable:[true,true,true,true]}; // semanal
+  }
+  var periodCfg = periodCfgOf(periodo);
+
+  // ====== QBO
   function renderQbo(){
     var host = qs('#pane'); host.innerHTML = '';
-    var info = ce('div','mb-2 text-muted'); info.textContent = 'Sin datos. Presione "Traer de QBO".';
+    var info = ce('div','mb-2 text-muted');
+    info.textContent = 'Sin datos. Presione "Traer de QBO".';
     var btn = ce('button','btn btn-primary mb-3'); btn.id='go-qbo'; btn.textContent='Traer de QBO';
     host.appendChild(info); host.appendChild(btn);
     btn.addEventListener('click', function(e){
@@ -154,7 +169,7 @@
     });
   }
 
-  // ===== Manual / Excel (grilla común) =====
+  // ====== MANUAL / EXCEL
   var grid; // tbody
   function buildGridShell(host){
     host.innerHTML = '';
@@ -174,14 +189,14 @@
     var tools = ce('div','mt-2 d-flex gap-2');
     var add = ce('button','btn btn-outline-primary'); add.textContent='Añadir fila';
     tools.appendChild(add); host.appendChild(tools);
+
     add.addEventListener('click', function(){ addRow(); validateAll(); });
   }
 
   function addRow(rowData){
     var tr = ce('tr');
 
-    // borrar
-    var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.textContent = '×';
+    var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.innerHTML='&times;';
     tdDel.appendChild(del); tr.appendChild(tdDel);
 
     function tdInput(ph, required, type){
@@ -190,7 +205,6 @@
       if(required) inp.setAttribute('data-required','1');
       td.appendChild(inp); return {td:td, input:inp};
     }
-
     function tdSelect(options, required){
       var td=ce('td'); var sel=ce('select','form-select form-select-sm');
       if (!options || !options.length) options=[];
@@ -199,7 +213,6 @@
       if(required) sel.setAttribute('data-required','1');
       td.appendChild(sel); return {td:td, select:sel};
     }
-
     function tdRadio(required, namePrefix){
       var td=ce('td'); var g=ce('div','btn-group btn-group-sm');
       var nm=(namePrefix||('r'+Date.now()+Math.random()));
@@ -215,7 +228,6 @@
       return {td:td, yes:s, no:n, group:g};
     }
 
-    // columnas
     var cNombre   = tdInput('Nombre', true);
     var cApellidos= tdInput('Apellidos', true);
     var cCedula   = tdInput('Cédula', true, 'text');
@@ -247,31 +259,25 @@
     tr.appendChild(cEstado.td); tr.appendChild(cVinc.td);
 
     if (rowData){
-      cNombre .input.value = rowData.Nombre   || '';
-      cApellidos.input.value = rowData.Apellidos|| '';
-      cCedula .input.value = rowData.Cedula   || '';
-      cCorreo .input.value = rowData.Correo   || '';
-      cTelefono.input.value = rowData.Telefono|| '';
-      cSector .select.value = rowData.Sector  || '';
-      cCargo  .input.value = rowData.Cargo    || '';
-      cSalario.input.value = rowData.Salario  || '';
+      cNombre.input.value    = rowData.Nombre||'';   cApellidos.input.value = rowData.Apellidos||'';
+      cCedula.input.value    = rowData.Cedula||'';   cCorreo.input.value    = rowData.Correo||'';
+      cTelefono.input.value  = rowData.Telefono||''; cSector.select.value   = rowData.Sector||'';
+      cCargo.input.value     = rowData.Cargo||'';    cSalario.input.value   = rowData.Salario||'';
       if (rowData.CCSS==='Si') cCcss.yes.checked = true; else if (rowData.CCSS==='No') cCcss.no.checked = true;
       if (rowData.INS==='Si')  cIns.yes.checked  = true; else if (rowData.INS==='No')  cIns.no.checked  = true;
-      for (var j=0;j<periodCfg.count;j++){ var k='P'+(j+1); if (rowData[k]!=null) pagos[j].input.value = rowData[k]; }
+      for (var j=0;j<periodCfg.count;j++) if (rowData['P'+(j+1)]!=null) pagos[j].input.value = rowData['P'+(j+1)];
       cEstado.select.value = rowData.Estado || '';
-      cVinc  .select.value = rowData.VincQbo || '';
+      cVinc.select.value   = rowData.VincQbo || '';
     }
 
+    var del = qsa('button', tr)[0];
     del.addEventListener('click', function(){
       if (grid.children.length <= 1) return;
       tr.remove(); validateAll();
     });
 
     grid.appendChild(tr);
-    qsa('input,select', tr).forEach(function(el){
-      el.addEventListener('input', validateAll);
-      el.addEventListener('change', validateAll);
-    });
+    qsa('input,select', tr).forEach(function(el){ el.addEventListener('input', validateAll); el.addEventListener('change', validateAll); });
   }
 
   function validateAll(){
@@ -280,7 +286,7 @@
       qsa('.is-invalid', tr).forEach(function(el){ el.classList.remove('is-invalid'); });
 
       function req(el){ if (!el) return true; var val=(el.value||'').trim(); var good=(val!==''); if(!good) el.classList.add('is-invalid'); return good; }
-      function reqGroup(g){ if (!g) return true; var radios=qsa('input[type=radio]', g); var r=false; for(var i=0;i<radios.length;i++){ if(radios[i].checked){ r=true; break; } } if(!r) g.classList.add('is-invalid'); return r; }
+      function reqGroup(g){ if (!g) return true; var rs=qsa('input[type=radio]', g); var r=false; for (var i=0;i<rs.length;i++){ if (rs[i].checked){ r=true; break; } } if(!r) g.classList.add('is-invalid'); return r; }
 
       var cells = qsa('td', tr);
       var idx = 1;
@@ -311,13 +317,13 @@
       ok = req(estadoSel) && ok;
       ok = req(vincSel) && ok;
 
-      if (cedula && !/^\d+$/.test(cedula.value.trim())) { cedula.classList.add('is-invalid'); ok=false; }
-      if (telefono && telefono.value.trim()!=='' && !/^\d+$/.test(telefono.value.trim())) { telefono.classList.add('is-invalid'); ok=false; }
-      if (salario && (isNaN(parseFloat(salario.value)) || parseFloat(salario.value)<0)) { salario.classList.add('is-invalid'); ok=false; }
+      if (cedula && !/^\d+$/.test((cedula.value||'').trim())) { cedula.classList.add('is-invalid'); ok=false; }
+      if (telefono && (telefono.value||'').trim()!=='' && !/^\d+$/.test((telefono.value||'').trim())) { telefono.classList.add('is-invalid'); ok=false; }
+      if (salario) { var sv=parseFloat(salario.value); if (isNaN(sv) || sv<0) { salario.classList.add('is-invalid'); ok=false; } }
 
       var sum = 0;
-      for (var j=0;j<periodCfg.count;j++){ var v = parseInt(pagos[j].value||'0',10); if(!isNaN(v)) sum += v; }
-      if (sum !== 100){ for (var k=0;k<pagos.length;k++){ pagos[k].classList.add('is-invalid'); } ok=false; }
+      for (var j=0;j<periodCfg.count;j++){ var v = parseInt(pagos[j].value||'0',10); sum += (isNaN(v)?0:v); }
+      if (sum !== 100){ for (var j=0;j<periodCfg.count;j++){ pagos[j].classList.add('is-invalid'); } ok=false; }
     });
 
     var btn = qs('#btnContinuar');
@@ -341,8 +347,7 @@
       cols.push('Estado','VinculacionQBO');
       var csv = cols.join(',') + '\r\n';
       var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-      var a = ce('a'); a.href = URL.createObjectURL(blob); a.download = 'PlantillaColaboradores.csv'; a.click();
-      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
+      var a = ce('a'); a.href = URL.createObjectURL(blob); a.download = 'PlantillaColaboradores.csv'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 500);
     });
 
     up.addEventListener('change', function(){
@@ -371,8 +376,9 @@
             VincQbo: parts[idx('VinculacionQBO')]||''
           };
           for (var j=0;j<periodCfg.count;j++){
-            var key = 'Periodo'+(j+1); var col = idx(key);
-            row['P'+(j+1)] = (col==null) ? periodCfg.defaults[j] : (parts[col]||'0');
+            var key = 'Periodo'+(j+1);
+            var col = idx(key);
+            row['P'+(j+1)] = col==null? periodCfg.defaults[j] : parts[col]||'0';
           }
           addRow(row);
         }
@@ -383,9 +389,9 @@
   }
 
   var tQ=qs('#tab-qbo'), tM=qs('#tab-manual'), tE=qs('#tab-excel');
-  if (tQ) tQ.addEventListener('click', function(){ tQ.classList.replace('btn-outline-primary','btn-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderQbo(); });
-  if (tM) tM.addEventListener('click', function(){ tM.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderManual(); });
-  if (tE) tE.addEventListener('click', function(){ tE.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); renderExcel(); });
+  if (tQ) tQ.addEventListener('click', function(){ tQ.classList.replace('btn-outline-primary','btn-primary'); if (tM) tM.classList.replace('btn-primary','btn-outline-secondary'); if (tE) tE.classList.replace('btn-primary','btn-outline-secondary'); renderQbo(); });
+  if (tM) tM.addEventListener('click', function(){ tM.classList.replace('btn-outline-secondary','btn-primary'); if (tQ) tQ.classList.replace('btn-primary','btn-outline-primary'); if (tE) tE.classList.replace('btn-primary','btn-outline-secondary'); renderManual(); });
+  if (tE) tE.addEventListener('click', function(){ tE.classList.replace('btn-outline-secondary','btn-primary'); if (tQ) tQ.classList.replace('btn-primary','btn-outline-primary'); if (tM) tM.classList.replace('btn-primary','btn-outline-secondary'); renderExcel(); });
 
   var dlg = document.getElementById('dlgAgregar');
   if (dlg){

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -33,7 +34,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         public List<string> SectorNames { get; private set; } = new() { "General" };
         public string Periodo { get; private set; } = "Mensual";
 
-        // Estado real de la empresa
+        // Estado real de la empresa (derivado como en Empresas)
         public string CompanyState { get; private set; } = "";
         public bool CompanyReady { get; private set; } = false;   // Solo TRUE si CompanyState == "Listo"
 
@@ -77,22 +78,23 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             }
 
             // 3) Cargar PayPolicy (Periodo + Sectores)
+            string? payPolicy = null;
             try
             {
                 if (CompanyId.HasValue)
                 {
                     var comp = await _db.Companies.FindAsync(new object[] { CompanyId.Value }, ct);
-                    var json = comp?.PayPolicy;
-                    if (!string.IsNullOrWhiteSpace(json))
+                    payPolicy = comp?.PayPolicy;
+                    if (!string.IsNullOrWhiteSpace(payPolicy))
                     {
-                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        using var doc = JsonDocument.Parse(payPolicy);
                         var root = doc.RootElement;
 
-                        if (root.TryGetProperty("periodo", out var per) && per.ValueKind == System.Text.Json.JsonValueKind.String)
+                        if (root.TryGetProperty("periodo", out var per) && per.ValueKind == JsonValueKind.String)
                             Periodo = per.GetString() ?? "Mensual";
 
                         var secs = new List<string>();
-                        if (root.TryGetProperty("sectors", out var arr) && arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        if (root.TryGetProperty("sectors", out var arr) && arr.ValueKind == JsonValueKind.Array)
                         {
                             foreach (var e in arr.EnumerateArray())
                             {
@@ -107,42 +109,28 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             }
             catch { /* defaults ya establecidos */ }
 
-            // 4) Estado de la empresa y gating exacto: seleccionado + estado "Listo"
+            // 4) Derivar estado EXACTAMENTE como Empresas (tokens + PayPolicy parametrizada)
             try
             {
-                CompanyReady = false;
-                if (CompanyId.HasValue)
-                {
-                    var comp = await _db.Companies.FindAsync(new object[] { CompanyId.Value }, ct);
-                    string? state = null;
-                    var t = comp?.GetType();
-                    if (t != null)
-                    {
-                        foreach (var name in new[] { "PayrollStatus", "PayrollState", "Estado", "State", "Status" })
-                        {
-                            var p = t.GetProperty(name);
-                            if (p != null)
-                            {
-                                var val = p.GetValue(comp);
-                                if (val != null) { state = val.ToString(); break; }
-                            }
-                        }
-                    }
-                    CompanyState = state ?? "";
-                    CompanyReady = !string.IsNullOrWhiteSpace(CompanyState)
-                                   && CompanyState.Equals("Listo", StringComparison.OrdinalIgnoreCase);
-                }
+                var hasTokens = CompanyId.HasValue && _db.PayrollQboTokens.Any(t => t.CompanyId == CompanyId.Value);
+                var isParam   = IsParametrized(payPolicy);
+                CompanyState  = !hasTokens ? "Sin conexión" : (isParam ? "Listo" : "Pendiente");
+                CompanyReady  = hasTokens && isParam; // habilita Agregar solo cuando es Listo
             }
-            catch { CompanyReady = false; }
+            catch
+            {
+                CompanyState = "Sin conexión";
+                CompanyReady = false;
+            }
 
-            // 5) (Opcional) Poblado de lista QBO (si existe tabla/servicio); dejamos vacío por ahora
+            // 5) (Opcional) Poblado de lista QBO; dejamos vacío por ahora
             try
             {
                 if (CompanyId.HasValue)
                 {
-                    // Ejemplo:
+                    // Ejemplo si tuvieras tabla local:
                     // QboEmployees = _db.QboEmployees.Where(e => e.CompanyId == CompanyId.Value)
-                    //                   .Select(e => e.FullName).ToList();
+                    //                                 .Select(e => e.FullName).ToList();
                 }
             }
             catch { /* noop */ }
@@ -214,6 +202,87 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             add(p1); add(p2); add(p3); add(p4);
             return parts.Count == 0 ? "" : string.Join("/", parts);
         }
+
+        // Misma regla que Empresas: periodo válido, ≥1 sector, y claves contables requeridas.
+        private static bool IsParametrized(string? payPolicy)
+        {
+            if (string.IsNullOrWhiteSpace(payPolicy)) return false;
+            try
+            {
+                using var doc = JsonDocument.Parse(payPolicy);
+                var root = doc.RootElement;
+
+                // Periodo
+                if (!(root.TryGetProperty("periodo", out var p) &&
+                      p.ValueKind == JsonValueKind.String &&
+                      !string.IsNullOrWhiteSpace(p.GetString())))
+                    return false;
+
+                // Sectores
+                var sectors = new List<string>();
+                if (root.TryGetProperty("sectors", out var secs) && secs.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var e in secs.EnumerateArray())
+                    {
+                        var s = e.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) sectors.Add(s!);
+                    }
+                }
+                if (sectors.Count == 0) return false;
+
+                // splitBySector
+                bool split = false;
+                if (root.TryGetProperty("splitBySector", out var sb))
+                {
+                    split = sb.ValueKind == JsonValueKind.True
+                            || (sb.ValueKind == JsonValueKind.String && bool.TryParse(sb.GetString(), out var b) && b);
+                }
+
+                // accounts
+                if (!(root.TryGetProperty("accounts", out var accNode) && accNode.ValueKind == JsonValueKind.Object))
+                    return false;
+
+                var keys = new[] { "SalarioBruto", "Extras", "CCSS", "Deducciones", "SalarioNeto" };
+
+                if (split)
+                {
+                    if (!(accNode.TryGetProperty("perSector", out var perSector) && perSector.ValueKind == JsonValueKind.Object))
+                        return false;
+
+                    foreach (var secName in sectors)
+                    {
+                        if (!(perSector.TryGetProperty(secName, out var map) && map.ValueKind == JsonValueKind.Object))
+                            return false;
+
+                        foreach (var k in keys)
+                        {
+                            if (!(map.TryGetProperty(k, out var v) &&
+                                  v.ValueKind == JsonValueKind.String &&
+                                  !string.IsNullOrWhiteSpace(v.GetString())))
+                                return false;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!(accNode.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object))
+                        return false;
+
+                    foreach (var k in keys)
+                    {
+                        if (!(gen.TryGetProperty(k, out var v) &&
+                              v.ValueKind == JsonValueKind.String &&
+                              !string.IsNullOrWhiteSpace(v.GetString())))
+                            return false;
+                    }
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }
-
