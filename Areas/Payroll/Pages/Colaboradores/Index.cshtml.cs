@@ -26,15 +26,22 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             _qbo = qbo;
         }
 
+        // Query
         public int? CompanyId { get; private set; }
         public string Status { get; private set; } = "activos";
 
+        // Empresa / política
         public List<string> SectorNames { get; private set; } = new() { "General" };
         public string Periodo { get; private set; } = "Mensual";
 
-        public bool CompanyReady { get; private set; } = false;  // HasTokens && IsParametrized(payPolicy)
-        public List<string> QboEmployees { get; private set; } = new();
+        // Gating (igual que Empresas): tokens QBO + paypolicy parametrizado
+        public bool CompanyReady { get; private set; } = false;
 
+        // QBO
+        public List<string> QboEmployees { get; private set; } = new();
+        public string QboRawJson { get; private set; } = "[]"; // objetos con FullName/GivenName/FamilyName/Email/Phone
+
+        // Tabla actual
         public List<RowVM> Rows { get; private set; } = new();
         public class RowVM
         {
@@ -60,7 +67,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             var qsStatus = (HttpContext.Request.Query["status"].ToString() ?? "").Trim().ToLowerInvariant();
             Status = (qsStatus == "inactivos") ? "inactivos" : "activos";
 
-            // Cargar PayPolicy y sectores/periodo
+            // PayPolicy (sectores/periodo)
             string payPolicy = "";
             try
             {
@@ -70,14 +77,14 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                     payPolicy = comp?.PayPolicy ?? "";
                     if (!string.IsNullOrWhiteSpace(payPolicy))
                     {
-                        using var doc = System.Text.Json.JsonDocument.Parse(payPolicy);
+                        using var doc = JsonDocument.Parse(payPolicy);
                         var root = doc.RootElement;
 
-                        if (root.TryGetProperty("periodo", out var per) && per.ValueKind == System.Text.Json.JsonValueKind.String)
+                        if (root.TryGetProperty("periodo", out var per) && per.ValueKind == JsonValueKind.String)
                             Periodo = per.GetString() ?? "Mensual";
 
                         var secs = new List<string>();
-                        if (root.TryGetProperty("sectors", out var arr) && arr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        if (root.TryGetProperty("sectors", out var arr) && arr.ValueKind == JsonValueKind.Array)
                         {
                             foreach (var e in arr.EnumerateArray())
                             {
@@ -92,7 +99,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             }
             catch { /* defaults */ }
 
-            // Gating EXACTO: HasTokens && IsParametrized(payPolicy) (igual que en Empresas)
+            // Gating: Tokens QBO + paypolicy válida
             try
             {
                 CompanyReady = false;
@@ -104,10 +111,103 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             }
             catch { CompanyReady = false; }
 
-            // (Opcional) poblar lista de empleados QBO si tienes tabla/servicio interno. Se deja vacío.
-            // QboEmployees = ...
+            // Lista de empleados QBO (nombres y datos básicos) usando reflexión para no romper compilación
+            try
+            {
+                if (CompanyId.HasValue)
+                {
+                    var names = new List<string>();
+                    var rows = new List<Dictionary<string, string>>();
 
-            // Grilla actual
+                    object? ResToObj(Task task)
+                    {
+                        var pr = task.GetType().GetProperty("Result");
+                        return pr?.GetValue(task);
+                    }
+
+                    string? TryString(object obj, params string[] props)
+                    {
+                        foreach (var p in props)
+                        {
+                            var pi = obj.GetType().GetProperty(p);
+                            if (pi == null) continue;
+                            var v = pi.GetValue(obj);
+                            if (v is string s && !string.IsNullOrWhiteSpace(s)) return s;
+                            // nested: PrimaryEmailAddr.Address / PrimaryPhone.FreeFormNumber
+                            if (v != null)
+                            {
+                                var addr = v.GetType().GetProperty("Address")?.GetValue(v) as string;
+                                if (!string.IsNullOrWhiteSpace(addr)) return addr;
+                                var num = v.GetType().GetProperty("FreeFormNumber")?.GetValue(v) as string;
+                                if (!string.IsNullOrWhiteSpace(num)) return num;
+                            }
+                        }
+                        return null;
+                    }
+
+                    var candidateNames = new[] { "ListEmployeesAsync", "GetEmployeesAsync", "GetEmployeeNamesAsync", "ListQBEmployeesAsync" };
+                    var mi = candidateNames.Select(n => _qbo.GetType().GetMethod(n)).FirstOrDefault(m => m != null);
+                    if (mi != null)
+                    {
+                        var pars = mi.GetParameters();
+                        object?[] args =
+                            pars.Length == 2 ? new object?[] { CompanyId.Value, ct } :
+                            pars.Length == 1 ? new object?[] { CompanyId.Value } :
+                            Array.Empty<object?>();
+
+                        var task = mi.Invoke(_qbo, args) as Task;
+                        if (task != null)
+                        {
+                            await task;
+                            var result = ResToObj(task);
+
+                            if (result is IEnumerable<string> onlyNames)
+                            {
+                                names = onlyNames.Where(s => !string.IsNullOrWhiteSpace(s))
+                                                 .Select(s => s.Trim())
+                                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                                 .OrderBy(s => s).ToList();
+                            }
+                            else if (result is System.Collections.IEnumerable seq)
+                            {
+                                foreach (var it in seq)
+                                {
+                                    string? full = TryString(it, "FullName", "DisplayName", "Name");
+                                    string? given = TryString(it, "GivenName", "FirstName");
+                                    string? family = TryString(it, "FamilyName", "LastName");
+                                    string? email = TryString(it, "PrimaryEmailAddr", "Email", "Mail");
+                                    string? phone = TryString(it, "PrimaryPhone", "Phone");
+
+                                    var show = full ?? ((given ?? "").Trim() + " " + (family ?? "").Trim()).Trim();
+                                    if (!string.IsNullOrWhiteSpace(show)) names.Add(show);
+
+                                    var row = new Dictionary<string, string>
+                                    {
+                                        ["FullName"]   = show ?? "",
+                                        ["GivenName"]  = given ?? "",
+                                        ["FamilyName"] = family ?? "",
+                                        ["Email"]      = email ?? "",
+                                        ["Phone"]      = phone ?? ""
+                                    };
+                                    rows.Add(row);
+                                }
+                                names = names.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s).ToList();
+                            }
+
+                            QboEmployees = names;
+                            QboRawJson = JsonSerializer.Serialize(rows);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "No se pudo obtener la lista de empleados QBO.");
+                QboEmployees = new List<string>();
+                QboRawJson = "[]";
+            }
+
+            // Grilla actual (BD)
             try
             {
                 var isActivos = Status == "activos";
@@ -150,6 +250,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             }
         }
 
+        // Respaldo: redirige a handler real de importación si lo necesitas
         public Microsoft.AspNetCore.Mvc.IActionResult OnGetImportQbo(int companyId)
         {
             if (companyId <= 0) return BadRequest();
@@ -165,7 +266,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             return parts.Count == 0 ? "" : string.Join("/", parts);
         }
 
-        // ===== Mismas reglas que en Empresas (HasTokens + parametrización) =====
+        // ===== Validación de PayPolicy como en Empresas =====
         private static bool IsParametrized(string? payPolicy)
         {
             if (string.IsNullOrWhiteSpace(payPolicy)) return false;

@@ -3,7 +3,7 @@
 @{
     ViewData["Title"] = "Colaboradores";
     ViewData["PayrollSection"] = "Colaboradores";
-    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null) ?? "";
+    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null)!;
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
@@ -83,10 +83,6 @@
         </div>
 
         <div id="pane"></div>
-
-        <hr/>
-        <h6>Porcentaje de pago por periodo</h6>
-        <div id="pct-editor"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -103,41 +99,27 @@
 </style>
 
 <script>
-window.addEventListener('DOMContentLoaded', function(){
+(function(){
   if (window.__payroll_colab__) return; window.__payroll_colab__ = true;
-
-  // ==== Datos del servidor (100% serializados a JSON) ====
-  var companyId = @(Model.CompanyId ?? 0);
-  var periodo   = (@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Periodo ?? "Mensual"))).toLowerCase();
-  var sectorList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>()));
-  var qboList    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QboEmployees ?? new List<string>()));
-  var canOpen    = @((Model.CompanyId.HasValue && Model.CompanyReady) ? "true" : "false");
 
   function qs(s){ return document.querySelector(s); }
   function qsa(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
   function ce(tag, cls){ var el=document.createElement(tag); if(cls) el.className=cls; return el; }
 
-  // === Config de periodos
+  var companyId = @(Model.CompanyId ?? 0);
+  var periodo   = (@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Periodo ?? "Mensual"))).toLowerCase();
+  var sectorList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>()));
+  var qboList    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QboEmployees ?? new List<string>()));
+  var qboData    = @Html.Raw(Model.QboRawJson ?? "[]");
+
+  // Periodos
   var periodCfg = (function(p){
-    if (p==='mensual')   return {count:1, defaults:[100],           editable:[false]};
-    if (p==='quincenal') return {count:2, defaults:[50,50],         editable:[true,true]};
-    return                  {count:4, defaults:[25,25,25,25],      editable:[true,true,true,true]}; // semanal
+    if (p==='mensual') return {count:1, defaults:[100], editable:[false]};
+    if (p==='quincenal') return {count:2, defaults:[50,50], editable:[true,true]};
+    return {count:4, defaults:[25,25,25,25], editable:[true,true,true,true]};
   })(periodo);
 
-  // ====== QBO
-  function renderQbo(){
-    var host = qs('#pane'); host.innerHTML = '';
-    var info = ce('div','mb-2 text-muted');
-    info.textContent = 'Sin datos. Presione "Traer de QBO".';
-    var btn = ce('button','btn btn-primary mb-3'); btn.id='go-qbo'; btn.textContent='Traer de QBO';
-    host.appendChild(info); host.appendChild(btn);
-    btn.addEventListener('click', function(e){
-      e.preventDefault();
-      if (companyId>0) window.location.href='?handler=ImportQbo&companyId='+companyId;
-    });
-  }
-
-  // ====== MANUAL / EXCEL
+  // --- GRID base (usada por Manual/Excel/QBO) ---
   var grid; // tbody
   function buildGridShell(host){
     host.innerHTML = '';
@@ -231,10 +213,14 @@ window.addEventListener('DOMContentLoaded', function(){
     tr.appendChild(cEstado.td); tr.appendChild(cVinc.td);
 
     if (rowData){
-      cNombre.input.value    = rowData.Nombre||'';   cApellidos.input.value = rowData.Apellidos||'';
-      cCedula.input.value    = rowData.Cedula||'';   cCorreo.input.value    = rowData.Correo||'';
-      cTelefono.input.value  = rowData.Telefono||''; cSector.select.value   = rowData.Sector||'';
-      cCargo.input.value     = rowData.Cargo||'';    cSalario.input.value   = rowData.Salario||'';
+      cNombre.input.value    = rowData.Nombre||'';
+      cApellidos.input.value = rowData.Apellidos||'';
+      cCedula.input.value    = rowData.Cedula||'';
+      cCorreo.input.value    = rowData.Correo||'';
+      cTelefono.input.value  = rowData.Telefono||'';
+      cSector.select.value   = rowData.Sector||'';
+      cCargo.input.value     = rowData.Cargo||'';
+      cSalario.input.value   = rowData.Salario||'';
       if (rowData.CCSS==='Si') cCcss.yes.checked = true; else if (rowData.CCSS==='No') cCcss.no.checked = true;
       if (rowData.INS==='Si')  cIns.yes.checked  = true; else if (rowData.INS==='No')  cIns.no.checked  = true;
       for (var j=0;j<periodCfg.count;j++) if (rowData['P'+(j+1)]!=null) pagos[j].input.value = rowData['P'+(j+1)];
@@ -305,7 +291,43 @@ window.addEventListener('DOMContentLoaded', function(){
     if (btn){ if (!ok){ btn.setAttribute('disabled','disabled'); btn.classList.add('disabled'); } else { btn.removeAttribute('disabled'); btn.classList.remove('disabled'); } }
   }
 
-  function renderManual(){ var host = qs('#pane'); buildGridShell(host); addRow(); validateAll(); }
+  // ---- Renderizadores ----
+  function renderQbo(){
+    var host = qs('#pane');
+    if (qboData && qboData.length){
+      buildGridShell(host);
+      for (var i=0;i<qboData.length;i++){
+        var r = qboData[i] || {};
+        var full = r.FullName || ((r.GivenName||'') + ' ' + (r.FamilyName||'')).trim();
+        var parts = full.split(' ');
+        var nombre = r.GivenName || (parts.length ? parts[0] : '');
+        var apell  = r.FamilyName || (parts.length > 1 ? full.substring(nombre.length).trim() : '');
+        addRow({
+          Nombre: nombre, Apellidos: apell, Cedula: '', Correo: r.Email||'', Telefono: r.Phone||'',
+          Sector: '', Cargo: '', Salario: '', CCSS: '', INS: '', Estado: 'Activo',
+          VincQbo: full, P1: null, P2: null, P3: null, P4: null
+        });
+      }
+      validateAll();
+    } else {
+      host.innerHTML = '';
+      var info = ce('div','mb-2 text-muted'); info.textContent = 'Sin datos. Presione "Traer de QBO".';
+      var btn = ce('button','btn btn-primary'); btn.textContent='Traer de QBO';
+      host.appendChild(info); host.appendChild(btn);
+      btn.addEventListener('click', function(e){ e.preventDefault(); if (companyId>0) window.location.href='?handler=ImportQbo&companyId='+companyId; });
+    }
+    // Activar estado visual del tab
+    qs('#tab-qbo').classList.replace('btn-outline-primary','btn-primary');
+    qs('#tab-manual').classList.replace('btn-primary','btn-outline-secondary');
+    qs('#tab-excel').classList.replace('btn-primary','btn-outline-secondary');
+  }
+
+  function renderManual(){
+    var host = qs('#pane'); buildGridShell(host); addRow(); validateAll();
+    qs('#tab-manual').classList.replace('btn-outline-secondary','btn-primary');
+    qs('#tab-qbo').classList.replace('btn-primary','btn-outline-primary');
+    qs('#tab-excel').classList.replace('btn-primary','btn-outline-secondary');
+  }
 
   function renderExcel(){
     var host = qs('#pane'); host.innerHTML='';
@@ -361,25 +383,23 @@ window.addEventListener('DOMContentLoaded', function(){
       };
       r.readAsText(f, 'utf-8');
     });
+
+    qs('#tab-excel').classList.replace('btn-outline-secondary','btn-primary');
+    qs('#tab-qbo').classList.replace('btn-primary','btn-outline-primary');
+    qs('#tab-manual').classList.replace('btn-primary','btn-outline-secondary');
   }
 
-  // Pestañas
+  // Tabs
   var tQ=qs('#tab-qbo'), tM=qs('#tab-manual'), tE=qs('#tab-excel');
-  if (tQ) tQ.addEventListener('click', function(){ tQ.classList.replace('btn-outline-primary','btn-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderQbo(); });
-  if (tM) tM.addEventListener('click', function(){ tM.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderManual(); });
-  if (tE) tE.addEventListener('click', function(){ tE.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); renderExcel(); });
+  if (tQ) tQ.addEventListener('click', renderQbo);
+  if (tM) tM.addEventListener('click', renderManual);
+  if (tE) tE.addEventListener('click', renderExcel);
 
-  // Abrir modal => pintar QBO por defecto, y mover foco al modal (evita warning aria-hidden)
+  // Al abrir: dejar QBO activo y, si hay data, prellenar
   var dlg = document.getElementById('dlgAgregar');
   if (dlg){
-    dlg.addEventListener('shown.bs.modal', function(){ if (tQ) tQ.click(); dlg.focus && dlg.focus(); });
+    dlg.addEventListener('shown.bs.modal', function(){ renderQbo(); });
   }
-
-  // Fallback por si el listener anterior no quedó enganchado (layout particular)
-  var addBtn = document.getElementById('btnAgregar');
-  if (addBtn && canOpen){
-    addBtn.addEventListener('click', function(){ setTimeout(function(){ if (tQ) tQ.click(); }, 0); });
-  }
-});
+})();
 </script>
 }
