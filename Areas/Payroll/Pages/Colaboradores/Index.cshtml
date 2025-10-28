@@ -614,3 +614,116 @@
 </script>
 
 
+
+@* PAYROLL_COLAB_SCRIPT_V2 *@
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+  // === 0) Utilidades ===
+  function findBtnByText(txt){
+    const nodes = Array.from(document.querySelectorAll('a.btn,button.btn'));
+    return nodes.find(el => (el.innerText||'').trim().toLowerCase() === txt.toLowerCase());
+  }
+  function getCompanyId(){
+    const sel = document.getElementById('sel-company');
+    return sel ? parseInt(sel.value||'0',10) : 0;
+  }
+  function getEstado(){
+    const b = document.getElementById('empresa-estado');
+    return (b && b.textContent) ? b.textContent.trim().toLowerCase() : '';
+  }
+  function canAdd(){
+    const id  = getCompanyId();
+    const est = getEstado();
+    // tolerante: habilita con "listo" o "activa"
+    const okEstado = (est === 'listo' || est === 'activa' || est === '');
+    return id > 0 && okEstado;
+  }
+
+  // === 1) Gating del botón "Agregar" ===
+  let addBtn = findBtnByText('Agregar');
+  if (addBtn){
+    // dale un id fijo para siguientes iteraciones
+    addBtn.id = 'btn-colabs-add';
+    const enabled = canAdd();
+    if (!enabled) {
+      // deshabilitar de forma robusta (link o button)
+      addBtn.classList.add('disabled');
+      addBtn.setAttribute('aria-disabled', 'true');
+      addBtn.setAttribute('title','Seleccione una empresa con estado Listo');
+      addBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); });
+      if (addBtn.tagName === 'A') addBtn.setAttribute('href','#');
+    }
+  }
+
+  // === 2) Acciones del menú: QBO / Manual / Excel ===
+  const companyId = getCompanyId();
+  // QBO
+  const traerQbo = Array.from(document.querySelectorAll('a,button'))
+                        .find(el => (el.innerText||'').trim().startsWith('Traer de QBO'));
+  if (traerQbo){
+    traerQbo.addEventListener('click', function(e){
+      e.preventDefault();
+      if (companyId > 0) window.location.href = ?handler=ImportQbo&companyId=;
+    });
+  }
+  // Manual
+  const btnManual = Array.from(document.querySelectorAll('a,button'))
+                         .find(el => (el.innerText||'').trim() === 'Manual');
+  if (btnManual){
+    btnManual.addEventListener('click', function(e){
+      e.preventDefault();
+      if (companyId > 0) window.location.href = ./Manual?companyId=;
+    });
+  }
+  // Excel
+  const btnExcel = Array.from(document.querySelectorAll('a,button'))
+                        .find(el => (el.innerText||'').trim() === 'Excel');
+  if (btnExcel){
+    btnExcel.addEventListener('click', function(e){
+      e.preventDefault();
+      if (companyId > 0) window.location.href = ./Excel?companyId=;
+    });
+  }
+
+  // === 3) Periodo reactivo con suma = 100 ===
+  // Inserta un pequeño editor debajo del encabezado de columnas 'Porcentaje de pago por periodo'
+  const marker = Array.from(document.querySelectorAll('th,td,div,section,h5'))
+                      .find(el => (el.textContent||'').trim().toLowerCase().startsWith('porcentaje de pago por periodo'));
+  const host = document.createElement('div'); host.id='periodo-editor'; host.className='mt-2';
+  if (marker && marker.parentElement) marker.parentElement.insertAdjacentElement('afterend', host);
+
+  // Por ahora lo derivamos de una heurística: si el texto del periodo de empresa se conoce,
+  // podrías reemplazarlo por un valor del modelo.
+  const periodo = (('@Model.Periodo'||'Mensual') + '').toLowerCase();
+  function render(p) {
+    const cfg = (p === 'mensual') ? [100] : (p === 'quincenal' ? [50,50] : [25,25,25,25]);
+    host.innerHTML = '';
+    const row = document.createElement('div'); row.className='d-flex gap-2 align-items-end flex-wrap';
+    cfg.forEach((v,i) => {
+      const wrap = document.createElement('div'); wrap.className='d-flex flex-column me-2';
+      const lab = document.createElement('label'); lab.className='form-label'; lab.textContent = 'Periodo ' + (i+1);
+      const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1'; inp.value = v; inp.className='form-control';
+      inp.name = 'PayPct' + (i+1);
+      wrap.appendChild(lab); wrap.appendChild(inp); row.appendChild(wrap);
+      inp.addEventListener('input', validate);
+    });
+    const info = document.createElement('div'); info.id='pct-total'; info.className='ms-3 fw-bold';
+    host.appendChild(row); host.appendChild(info);
+    validate();
+    function validate(){
+      const values = Array.from(host.querySelectorAll('input[type=number]')).map(x => parseInt(x.value||'0'));
+      const sum = values.reduce((a,b)=>a+b,0);
+      info.textContent = 'Total: ' + sum + '%';
+      const cont = Array.from(document.querySelectorAll('a.btn,button.btn'))
+                        .find(el => (el.innerText||'').trim().toLowerCase() === 'continuar');
+      if (cont) { 
+        const ok = (sum === 100);
+        cont.toggleAttribute('disabled', !ok);
+        cont.classList.toggle('disabled', !ok);
+      }
+    }
+  }
+  render(periodo);
+});
+</script>
