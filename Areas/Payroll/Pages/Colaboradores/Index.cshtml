@@ -12,22 +12,50 @@
 {
     @if (Model.CompanyId.HasValue && Model.CanAdd)
 {
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-primary"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
 }
 else
 {
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-primary"" disabled aria-disabled=""true"">Agregar</button>
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
 }
 }
 else
 {
     @if (Model.CompanyId.HasValue && Model.CanAdd)
 {
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-primary"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
 }
 else
 {
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-primary"" disabled aria-disabled=""true"">Agregar</button>
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+}
+}
+else
+{
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+}
+else
+{
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
 }
 }
 </div>
@@ -1031,3 +1059,143 @@ document.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 
+
+@* PAYROLL_COLAB_ALLINONE *@
+<script>
+(function(){
+  if (window.__colab_bootstrap__) return;
+  window.__colab_bootstrap__ = true;
+
+  function qs(s){ return document.querySelector(s); }
+  function qsa(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
+  function byText(tagList, txt){
+    var nodes = qsa(tagList);
+    txt = (txt||'').toLowerCase();
+    for(var i=0;i<nodes.length;i++){
+      var t = (nodes[i].innerText || nodes[i].textContent || '').trim().toLowerCase();
+      if (t === txt) return nodes[i];
+    }
+    return null;
+  }
+
+  // --- Datos del modelo ---
+  var sel = qs('#sel-company');
+  var companyId = 0;
+  if (sel && sel.value) companyId = parseInt(sel.value,10);
+  if (!companyId) companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
+  var canAddModel = @Model.CanAdd.ToString().ToLowerInvariant();  // boolean JS
+  var periodo = ('@Model.Periodo' || 'Mensual').toLowerCase();
+
+  // --- Refuerzo client-side del gating (por si el DOM cambia) ---
+  var addBtn = qs('#btnAgregar') || byText('a.btn,button.btn','agregar');
+  if (addBtn){
+    var shouldDisable = (!companyId) || (!canAddModel);
+    if (shouldDisable){
+      addBtn.classList.add('disabled');
+      addBtn.setAttribute('aria-disabled','true');
+      addBtn.removeAttribute('data-bs-toggle');
+      addBtn.removeAttribute('data-bs-target');
+      addBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+      if (addBtn.tagName === 'A') addBtn.setAttribute('href','#');
+    }
+  }
+
+  // --- Tabs del modal: QBO / Manual / Excel (todo en la misma página) ---
+  function ensurePane(){
+    var modal = qs('#dlgAgregar') || qs('.modal#dlgAgregar');
+    var host = qs('#colab-pane');
+    if (!host){
+      host = document.createElement('div');
+      host.id = 'colab-pane';
+      var body = modal ? (modal.querySelector('.modal-body') || modal) : document.body;
+      body.appendChild(host);
+    }
+    return host;
+  }
+  function openPane(kind){
+    var host = ensurePane();
+    host.innerHTML = '';
+    if (kind === 'qbo'){
+      var info = document.createElement('div');
+      info.innerHTML = '<div class="mb-2 text-muted">Importar desde QuickBooks Online</div>' +
+                       '<button id="colab-qbo-go" class="btn btn-primary">Traer de QBO</button>';
+      host.appendChild(info);
+      var go = qs('#colab-qbo-go');
+      if (go){
+        go.addEventListener('click', function(ev){
+          ev.preventDefault();
+          if (companyId > 0) window.location.href = '?handler=ImportQbo&companyId=' + companyId;
+        });
+      }
+    } else if (kind === 'manual'){
+      var wrap = document.createElement('div');
+      wrap.innerHTML =
+        '<div class="mb-2 text-muted">Ingreso manual</div>' +
+        '<div class="row g-2">' +
+          '<div class="col"><label class="form-label">Cédula</label><input class="form-control"></div>' +
+          '<div class="col"><label class="form-label">Nombre</label><input class="form-control"></div>' +
+          '<div class="col"><label class="form-label">Apellido</label><input class="form-control"></div>' +
+        '</div>';
+      host.appendChild(wrap);
+    } else if (kind === 'excel'){
+      var x = document.createElement('div');
+      x.innerHTML =
+        '<div class="mb-2 text-muted">Importar desde Excel</div>' +
+        '<input type="file" class="form-control" accept=".xlsx,.xls,.csv">';
+      host.appendChild(x);
+    }
+  }
+  var tabQbo    = byText('a,button','qbo');
+  var tabManual = byText('a,button','manual');
+  var tabExcel  = byText('a,button','excel');
+  if (tabQbo)    tabQbo.addEventListener('click',    function(e){ e.preventDefault(); openPane('qbo');    });
+  if (tabManual) tabManual.addEventListener('click', function(e){ e.preventDefault(); openPane('manual'); });
+  if (tabExcel)  tabExcel.addEventListener('click',  function(e){ e.preventDefault(); openPane('excel');  });
+
+  // --- Editor de porcentaje por periodo (1/2/4) y validación = 100% ---
+  function ensurePctEditor(){
+    var modal = qs('#dlgAgregar') || qs('.modal#dlgAgregar');
+    var host = qs('#colab-periodo-editor');
+    if (!host){
+      host = document.createElement('div');
+      host.id = 'colab-periodo-editor';
+      var body = modal ? (modal.querySelector('.modal-body') || modal) : document.body;
+      body.appendChild(host);
+    }
+    return host;
+  }
+  function renderPct(p){
+    var cfg = (p === 'mensual') ? [100] : (p === 'quincenal' ? [50,50] : [25,25,25,25]);
+    var host = ensurePctEditor();
+    host.innerHTML = '';
+    var row = document.createElement('div'); row.className='d-flex gap-2 align-items-end flex-wrap';
+    for (var i=0; i<cfg.length; i++){
+      var w = document.createElement('div'); w.className='d-flex flex-column me-2';
+      var lb = document.createElement('label'); lb.className='form-label'; lb.innerText = 'Periodo ' + (i+1);
+      var inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1'; inp.value=cfg[i]; inp.className='form-control';
+      inp.name='PayPct' + (i+1);
+      w.appendChild(lb); w.appendChild(inp); row.appendChild(w);
+    }
+    var info = document.createElement('div'); info.id='colab-pct-total'; info.className='ms-3 fw-bold';
+    host.appendChild(row); host.appendChild(info);
+
+    function validate(){
+      var inputs = qsa('#colab-periodo-editor input[type=number]');
+      var sum = 0;
+      for (var k=0;k<inputs.length;k++){
+        var val = parseInt(inputs[k].value || '0', 10);
+        if (!isNaN(val)) sum += val;
+      }
+      info.innerText = 'Total: ' + sum + '%';
+      var cont = byText('a.btn,button.btn','continuar');
+      if (cont){
+        if (sum !== 100) { cont.setAttribute('disabled','disabled'); cont.classList.add('disabled'); }
+        else             { cont.removeAttribute('disabled');       cont.classList.remove('disabled'); }
+      }
+    }
+    qsa('#colab-periodo-editor input[type=number]').forEach(function(x){ x.addEventListener('input', validate); });
+    validate();
+  }
+  renderPct(periodo);
+})();
+</script>
