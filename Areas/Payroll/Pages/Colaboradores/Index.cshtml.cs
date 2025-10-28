@@ -31,6 +31,7 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         public List<string> SectorNames { get; private set; } = new() { "General" };
         public bool IsCompanyLinked { get; private set; }
         public string Periodo { get; private set; } = "Mensual";
+        public bool CanAdd { get; private set; }
 
         // Tabla
         public List<RowVM> Rows { get; private set; } = new();
@@ -103,6 +104,13 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                 }
             }
             catch { /* si falla policy: defaults */ }
+            // Habilitar "Agregar" sólo si: empresa seleccionada + vinculada a QBO + periodo definido + al menos 1 sector.
+            CanAdd = CompanyId.HasValue
+                     && IsCompanyLinked
+                     && !string.IsNullOrWhiteSpace(Periodo)
+                     && SectorNames != null
+                     && SectorNames.Count > 0;
+
 
             
             try
@@ -151,7 +159,14 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                 _log.LogError(ex, "[Colaboradores] Error cargando empleados");
                 Rows = new List<RowVM>();
             }
-        }
+        }// GET: Traer de QBO (placeholder; conecta aquí tu flujo real)
+public Microsoft.AspNetCore.Mvc.IActionResult OnGetImportQbo(int companyId)
+{
+    if (companyId <= 0) return BadRequest();
+    TempData["Colab_Import"] = "qbo";
+    return RedirectToPage(new { companyId = companyId, status = this.Status });
+}
+
 
         private static string BuildPctString(decimal? p1, decimal? p2, decimal? p3, decimal? p4)
         {
@@ -166,6 +181,8 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         }
     }
 }
+
+
 
 
 
