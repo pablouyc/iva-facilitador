@@ -132,7 +132,7 @@
     <th rowspan="2">Cargo <span class="text-danger">*</span></th>
     <th rowspan="2">CCSS <span class="text-danger">*</span></th>
     <th rowspan="2">INS <span class="text-danger">*</span></th>
-    <th id="thPctGroup" id="thPctGroup" id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
+    <th id="thPctGroup" id="thPctGroup" id="thPctGroup" id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
     <th rowspan="2">Estado</th>
   </tr>
   <tr>
@@ -243,226 +243,6 @@
   <textarea id="csvText" class="form-control" rows="8" placeholder="Encabezados esperados: NationalId,FirstName,LastName,Email,Phone"></textarea>
   <div class="mt-3" id="uploadMsg" style="display:none;"></div>
 </div>
-
-<script>
-window.addEventListener('error', (e) => {
-  try {
-    console.error('[Colab] global error handler:', { message: e.message, filename: e.filename, lineno: e.lineno, colno: e.colno, error: e.error });
-  } catch(_) {}
-});
-console.log('[Colab] boot: script tag parsed');
-
-  const COMPANY_ID = @(Model.CompanyId ?? 0);
-  const LINKED     = @(Model.IsCompanyLinked.ToString().ToLower());
-  const SECTORS    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>{"General"}));
-  const PERIOD     = "@(Model.Periodo ?? "Mensual")";
-  const PCT_SLOTS  = (PERIOD === "Mensual" ? 1 : (PERIOD === "Quincenal" ? 2 : 4));
-  console.log("[Colab] consts:", { COMPANY_ID, LINKED, PERIOD, PCT_SLOTS });
-(() => {
-  // --- helpers ---
-  const qs  = (s) => document.querySelector(s);
-  const qsa = (s) => Array.from(document.querySelectorAll(s));
-  const show = (el) => el && (el.style.display="");
-  const hide = (el) => el && (el.style.display="none");
-
-  // Constantes ya declaradas en la vista:
-  // COMPANY_ID, LINKED, SECTORS, PERIOD, PCT_SLOTS
-
-  // -------- Vistas (tabs) --------
-  const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
-  function switchView(name){
-    Object.entries(views).forEach(([k,el]) => { if (!el) return; (k===name)? el.classList.remove("d-none") : el.classList.add("d-none"); });
-    qsa('[data-view]').forEach(b => (b.getAttribute('data-view')===name? b.classList.add("active") : b.classList.remove("active")));
-    if (name==="qbo") setQboReadyState();
-  }
-
-  // -------- QBO wiring --------
-  const btnFetchQbo = qs("#btnFetchQbo");
-  const qboSpinner  = qs("#qboSpinner");
-  const qboNotice   = qs("#qboNotice");
-  const tblBody     = () => qs("#tblQbo tbody");
-  let QBO_LIST = [];
-
-  function defaultPctSlots(){
-    const slots = PCT_SLOTS || 1;
-    if (slots===1) return [100,0,0,0];
-    if (slots===2) return [50,50,0,0];
-    return [25,25,25,25];
-  }
-
-  function sectorOptions(selected){
-    const list = (SECTORS && SECTORS.length ? SECTORS : ["General"]);
-    return list.map(s => `<option value="${s}" ${s===selected?'selected':''}>${s}</option>`).join("");
-  }
-
-  function splitName(first,last,display){
-    if ((first||"").trim() || (last||"").trim()) return {first:first||"", last:last||""};
-    const d = (display||"").trim();
-    if (!d) return {first:"", last:""};
-    const parts = d.split(/\s+/);
-    return { first: parts[0]||"", last: parts.slice(1).join(" ")||"" };
-  }
-
-  function qboApplyPctVisibility(){
-  const tbl   = document.querySelector("#tblQbo"); if (!tbl) return;
-  const slots = (typeof window.PCT_SLOTS !== "undefined" && window.PCT_SLOTS) ? window.PCT_SLOTS : 1;
-
-  // El encabezado agrupador debe abarcar solo las columnas visibles
-  const g = tbl.querySelector("#thPctGroup");
-  if (g) g.colSpan = slots;
-
-  // Mostrar/ocultar columnas de % según slots y mantener alineado "Estado"
-  ["1","2","3","4"].forEach((k,i)=>{
-    const disp = (i < slots) ? "" : "none";
-    tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k)
-       .forEach(el => { el.style.display = disp; });
-  });
-
-  // Mensual: fijar %1=100 no editable; otros períodos: habilitar edición
-  const disable = slots === 1;
-  tbl.querySelectorAll("tbody td.pct1 input").forEach(inp=>{
-    if (disable){ inp.value = 100; inp.readOnly = true; inp.disabled = true; }
-    else { inp.readOnly = false; inp.disabled = false; }
-  });
-});
-  });
-
-  // Mensual: forzar 100 y bloquear %1; otros: editable con defaults si vacío
-  const disable = slots === 1;
-  tbl.querySelectorAll("tbody td.pct1 input").forEach(inp => {
-    if (disable){ inp.value = 100; inp.readOnly = true; inp.disabled = true; }
-    else { inp.readOnly = false; inp.disabled = false; if (!inp.value) inp.value = (slots===2?50:(slots===4?25:100)); }
-  });
-});
-  });
-});
-
-  // 3) Mensual: %1 = 100 bloqueado. Otros: editable y con defaults suaves si vacío
-  tbl.querySelectorAll("tbody td.pct1 input.pct1").forEach(inp=>{
-    if (slots === 1){
-      inp.value = "100";
-      inp.readOnly = true;
-    } else {
-      if (inp.readOnly) inp.readOnly = false;
-      if (!inp.value) inp.value = (slots===2) ? "50" : (slots===4 ? "25" : "100");
-    }
-  });
-});
-    // Mensual: forzar 100 y deshabilitar la celda
-    const disable = (PCT_SLOTS||1)===1;
-    tbl.querySelectorAll("tbody td.pct1 input").forEach(inp => { if (disable){ inp.value = 100; inp.disabled = true; } else { inp.disabled = false; }});
-  }
-
-  function qboRowTpl(e,i){
-    const name   = splitName(e.givenName, e.familyName, e.displayName);
-    const pct    = defaultPctSlots();
-    const sector = (SECTORS && SECTORS[0]) || "";
-    const isAct  = (e.active !== false);           // Estado desde QBO (true/undefined = Activo)
-    const ccssYes = false;                         // QBO no trae CCSS/INS -> por defecto No
-    const insYes  = false;
-
-    return `
-    <tr>
-      <td><input class="form-control form-control-sm nationalId" placeholder="Cédula" value=""></td>
-      <td><input class="form-control form-control-sm firstName"  placeholder="Nombre"  value="${name.first}"></td>
-      <td><input class="form-control form-control-sm lastName"   placeholder="Apellido" value="${name.last}"></td>
-      <td><input class="form-control form-control-sm joinDate"   type="date" value=""></td>
-      <td><input class="form-control form-control-sm email"      type="email" placeholder="email@dominio" value="${e.email||""}"></td>
-      <td><input class="form-control form-control-sm phone"      type="tel"   value="${e.phone||""}"></td>
-      <td><input class="form-control form-control-sm baseSalary" type="number" step="0.01" min="0" placeholder="0.00"></td>
-      <td><select class="form-select form-select-sm sector">${sectorOptions(sector)}</select></td>
-      <td><input class="form-control form-control-sm jobTitle"   placeholder="Cargo"></td>
-
-      <td class="text-center">
-        <div class="btn-group" role="group" aria-label="CCSS">
-          <input type="radio" class="btn-check ccss ccss-yes" name="ccss_${i}" id="ccssY_${i}" autocomplete="off" ${ccssYes?'checked':''} value="1">
-          <label class="btn btn-sm btn-outline-secondary" for="ccssY_${i}">Sí</label>
-          <input type="radio" class="btn-check ccss ccss-no"  name="ccss_${i}" id="ccssN_${i}" autocomplete="off" ${!ccssYes?'checked':''} value="0">
-          <label class="btn btn-sm btn-outline-secondary" for="ccssN_${i}">No</label>
-        </div>
-      </td>
-      <td class="text-center">
-        <div class="btn-group" role="group" aria-label="INS">
-          <input type="radio" class="btn-check ins ins-yes" name="ins_${i}" id="insY_${i}" autocomplete="off" ${insYes?'checked':''} value="1">
-          <label class="btn btn-sm btn-outline-secondary" for="insY_${i}">Sí</label>
-          <input type="radio" class="btn-check ins ins-no"  name="ins_${i}" id="insN_${i}" autocomplete="off" ${!insYes?'checked':''} value="0">
-          <label class="btn btn-sm btn-outline-secondary" for="insN_${i}">No</label>
-        </div>
-      </td>
-
-      <td class="pctcol pct1"><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
-      <td class="pctcol pct2"><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
-      <td class="pctcol pct3"><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
-      <td class="pctcol pct4"><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
-
-      <td>
-        <select class="form-select form-select-sm status">
-          <option value="Activo"   ${isAct?'selected':''}>Activo</option>
-          <option value="Inactivo" ${!isAct?'selected':''}>Inactivo</option>
-        </select>
-      </td>
-    </tr>`;
-  }
-
-  function setQboReadyState(){
-    if (!COMPANY_ID || !LINKED) {
-      if (qboNotice){ qboNotice.className="alert alert-warning"; qboNotice.textContent = !COMPANY_ID
-        ? "Seleccione una empresa en el header para habilitar QBO."
-        : "Esta empresa no está vinculada a QBO."; show(qboNotice); }
-      if (btnFetchQbo) btnFetchQbo.disabled = true;
-    } else {
-      if (qboNotice) hide(qboNotice);
-      if (btnFetchQbo) btnFetchQbo.disabled = false;
-    }
-  }
-
-  async function fetchQboEmployees(){
-    if (!COMPANY_ID || !LINKED) return;
-    if (qboSpinner) show(qboSpinner);
-    try{
-      const url  = `/payroll/api/qbo/employees?companyId=${COMPANY_ID}&includeInactive=false`;
-      const resp = await fetch(url, { method:"GET" });
-      const data = await resp.json();
-      const tb = tblBody(); if (!tb) return;
-      tb.innerHTML = data.map((e,i)=> qboRowTpl(e,i)).join("");
-      qboApplyPctVisibility();
-      QBO_LIST = Array.isArray(data) ? data : [];
-    }catch(err){
-      const tb = tblBody(); if (tb) tb.innerHTML = `<tr><td colspan="16" class="text-danger">Error QBO: ${err}</td></tr>`;
-    }finally{
-      if (qboSpinner) hide(qboSpinner);
-    }
-  }
-
-  function qboCollectRows(){
-    const rows = []; const tb = tblBody(); if(!tb) return rows;
-    for (const tr of tb.querySelectorAll("tr")){
-      const get = s => tr.querySelector(s);
-      const num = s => { const v = parseFloat(get(s)?.value?.replace(",", ".")||""); return isNaN(v)?0:v; };
-      rows.push({
-        nationalId: (get(".nationalId")?.value||"").trim(),
-        firstName : (get(".firstName")?.value ||"").trim(),
-        lastName  : (get(".lastName")?.value  ||"").trim(),
-        joinDate  : (get(".joinDate")?.value  ||"").trim(),
-        email     : (get(".email")?.value     ||"").trim(),
-        phone     : (get(".phone")?.value     ||"").trim(),
-        baseSalary: parseFloat(get(".baseSalary")?.value||"0")||0,
-        sector    : get(".sector")?.value || "",
-        jobTitle  : (get(".jobTitle")?.value||"").trim(),
-        ccss      : !!tr.querySelector(".ccss-yes")?.checked,
-        ins       : !!tr.querySelector(".ins-yes")?.checked,
-        payPct1   : num(".pct1"),
-        payPct2   : num(".pct2"),
-        payPct3   : num(".pct3"),
-        payPct4   : num(".pct4"),
-        status    : get(".status")?.value || "Activo"
-      });
-    }
-    return rows;
-  }
-
-
-
 <script>
 (() => {
   // ---- helpers ----
@@ -471,7 +251,7 @@ console.log('[Colab] boot: script tag parsed');
   const show = (el) => el && (el.style.display = "");
   const hide = (el) => el && (el.style.display = "none");
 
-  // ---- consts (con saneos si el servidor no las inyectó) ----
+  // ---- consts con fallback ----
   const COMPANY_ID = (typeof window.COMPANY_ID !== "undefined") ? window.COMPANY_ID : null;
   const LINKED     = (typeof window.LINKED     !== "undefined") ? window.LINKED     : false;
   const SECTORS    = (typeof window.SECTORS    !== "undefined" && Array.isArray(window.SECTORS) && window.SECTORS.length) ? window.SECTORS : ["General"];
@@ -507,7 +287,7 @@ console.log('[Colab] boot: script tag parsed');
     const parts = d.split(/\s+/); return { first: parts[0]||"", last: parts.slice(1).join(" ")||"" };
   }
 
-  // ---- mostrar/ocultar % y ajustar colSpan del grupo ----
+  // ---- visibilidad de % y colSpan del grupo ----
   function qboApplyPctVisibility(){
     const tbl = qs("#tblQbo"); if (!tbl) return;
 
