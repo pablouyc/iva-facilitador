@@ -525,14 +525,14 @@
 @* PAYROLL_COLAB_SCRIPT *@
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-  const canAdd = @(Model.CanAdd ? "true" : "false");
+  const canAdd = @Model.CanAdd.ToString().ToLowerInvariant();
   const companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
 
   // 1) Botón "Agregar" (deshabilitar si no Listo)
   const clickables = Array.from(document.querySelectorAll('a,button'));
   const addBtn = clickables.find(el => el.textContent && el.textContent.trim() === 'Agregar');
   if (addBtn) {
-    if (!canAdd) {
+    if (!canAdd || companyId <= 0) {
       addBtn.classList.add('disabled'); addBtn.setAttribute('aria-disabled','true');
       addBtn.setAttribute('title', 'Seleccione una empresa con estado Listo');
       addBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
@@ -597,3 +597,4 @@ document.addEventListener('DOMContentLoaded', function(){
   render(periodo);
 });
 </script>
+
