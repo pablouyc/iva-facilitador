@@ -3,7 +3,10 @@
 @{
     ViewData["Title"] = "Colaboradores";
     ViewData["PayrollSection"] = "Colaboradores";
-    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null)!;
+    string ActUrl(string s)
+{
+    return Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null) ?? string.Empty;
+}
 }
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
@@ -107,19 +110,20 @@
   function ce(tag, cls){ var el=document.createElement(tag); if(cls) el.className=cls; return el; }
 
   var companyId = @(Model.CompanyId ?? 0);
+  var canOpen   = @((Model.CompanyId.HasValue && Model.CompanyReady) ? "true" : "false");
   var periodo   = (@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Periodo ?? "Mensual"))).toLowerCase();
   var sectorList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>()));
   var qboList    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QboEmployees ?? new List<string>()));
-  var qboData    = @Html.Raw(Model.QboRawJson ?? "[]");
+  var qboData    = @Html.Raw(Model.QboRawJson ?? "[]"); // [{Id,GivenName,FamilyName,DisplayName,Email,Phone,Active}]
 
-  // Periodos
+  // === Config de periodos
   var periodCfg = (function(p){
     if (p==='mensual') return {count:1, defaults:[100], editable:[false]};
     if (p==='quincenal') return {count:2, defaults:[50,50], editable:[true,true]};
-    return {count:4, defaults:[25,25,25,25], editable:[true,true,true,true]};
+    return {count:4, defaults:[25,25,25,25], editable:[true,true,true,true]}; // semanal
   })(periodo);
 
-  // --- GRID base (usada por Manual/Excel/QBO) ---
+  // ===== Grilla común (Manual / QBO / Excel)
   var grid; // tbody
   function buildGridShell(host){
     host.innerHTML = '';
@@ -139,8 +143,38 @@
     var tools = ce('div','mt-2 d-flex gap-2');
     var add = ce('button','btn btn-outline-primary'); add.textContent='Añadir fila';
     tools.appendChild(add); host.appendChild(tools);
-
     add.addEventListener('click', function(){ addRow(); validateAll(); });
+  }
+
+  function tdInput(ph, required, type){
+    var td=ce('td'); var inp=ce('input','form-control form-control-sm');
+    inp.placeholder=ph || ''; if(type) inp.type=type;
+    if(required) inp.setAttribute('data-required','1');
+    td.appendChild(inp); return {td:td, input:inp};
+  }
+
+  function tdSelect(options, required){
+    var td=ce('td'); var sel=ce('select','form-select form-select-sm');
+    if (!options || !options.length) options=[];
+    sel.appendChild(new Option('Seleccione...', ''));
+    for (var i=0;i<options.length;i++) sel.appendChild(new Option(options[i], options[i]));
+    if(required) sel.setAttribute('data-required','1');
+    td.appendChild(sel); return {td:td, select:sel};
+  }
+
+  function tdRadio(required, namePrefix){
+    var td=ce('td'); var g=ce('div','btn-group btn-group-sm');
+    var nm=(namePrefix||('r'+Date.now()+Math.random()));
+    var s=ce('input'); s.type='radio'; s.name=nm; s.value='Si';
+    var n=ce('input'); n.type='radio'; n.name=nm; n.value='No';
+    var lb1=ce('label','btn btn-outline-secondary'); lb1.textContent='Sí';
+    var lb2=ce('label','btn btn-outline-secondary'); lb2.textContent='No';
+    s.className='btn-check'; n.className='btn-check'; s.id=nm+'_1'; n.id=nm+'_0';
+    lb1.setAttribute('for',s.id); lb2.setAttribute('for',n.id);
+    g.appendChild(s); g.appendChild(lb1); g.appendChild(n); g.appendChild(lb2);
+    if(required) g.setAttribute('data-required','1');
+    td.appendChild(g);
+    return {td:td, yes:s, no:n, group:g};
   }
 
   function addRow(rowData){
@@ -149,37 +183,6 @@
     // borrar
     var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.textContent = '\u00D7';
     tdDel.appendChild(del); tr.appendChild(tdDel);
-
-    function tdInput(ph, required, type){
-      var td=ce('td'); var inp=ce('input','form-control form-control-sm');
-      inp.placeholder=ph || ''; if(type) inp.type=type;
-      if(required) inp.setAttribute('data-required','1');
-      td.appendChild(inp); return {td:td, input:inp};
-    }
-
-    function tdSelect(options, required){
-      var td=ce('td'); var sel=ce('select','form-select form-select-sm');
-      if (!options || !options.length) options=[];
-      sel.appendChild(new Option('Seleccione...', ''));
-      for (var i=0;i<options.length;i++) sel.appendChild(new Option(options[i], options[i]));
-      if(required) sel.setAttribute('data-required','1');
-      td.appendChild(sel); return {td:td, select:sel};
-    }
-
-    function tdRadio(required, namePrefix){
-      var td=ce('td'); var g=ce('div','btn-group btn-group-sm');
-      var nm=(namePrefix||('r'+Date.now()+Math.random()));
-      var s=ce('input'); s.type='radio'; s.name=nm; s.value='Si';
-      var n=ce('input'); n.type='radio'; n.name=nm; n.value='No';
-      var lb1=ce('label','btn btn-outline-secondary'); lb1.textContent='Sí';
-      var lb2=ce('label','btn btn-outline-secondary'); lb2.textContent='No';
-      s.className='btn-check'; n.className='btn-check'; s.id=nm+'_1'; n.id=nm+'_0';
-      lb1.setAttribute('for',s.id); lb2.setAttribute('for',n.id);
-      g.appendChild(s); g.appendChild(lb1); g.appendChild(n); g.appendChild(lb2);
-      if(required) g.setAttribute('data-required','1');
-      td.appendChild(g);
-      return {td:td, yes:s, no:n, group:g};
-    }
 
     // columnas
     var cNombre   = tdInput('Nombre', true);
@@ -212,15 +215,12 @@
 
     tr.appendChild(cEstado.td); tr.appendChild(cVinc.td);
 
+    // Datos iniciales
     if (rowData){
-      cNombre.input.value    = rowData.Nombre||'';
-      cApellidos.input.value = rowData.Apellidos||'';
-      cCedula.input.value    = rowData.Cedula||'';
-      cCorreo.input.value    = rowData.Correo||'';
-      cTelefono.input.value  = rowData.Telefono||'';
-      cSector.select.value   = rowData.Sector||'';
-      cCargo.input.value     = rowData.Cargo||'';
-      cSalario.input.value   = rowData.Salario||'';
+      cNombre.input.value    = rowData.Nombre||'';   cApellidos.input.value = rowData.Apellidos||'';
+      cCedula.input.value    = rowData.Cedula||'';   cCorreo.input.value    = rowData.Correo||'';
+      cTelefono.input.value  = rowData.Telefono||''; cSector.select.value   = rowData.Sector||'';
+      cCargo.input.value     = rowData.Cargo||'';    cSalario.input.value   = rowData.Salario||'';
       if (rowData.CCSS==='Si') cCcss.yes.checked = true; else if (rowData.CCSS==='No') cCcss.no.checked = true;
       if (rowData.INS==='Si')  cIns.yes.checked  = true; else if (rowData.INS==='No')  cIns.no.checked  = true;
       for (var j=0;j<periodCfg.count;j++) if (rowData['P'+(j+1)]!=null) pagos[j].input.value = rowData['P'+(j+1)];
@@ -228,6 +228,7 @@
       cVinc.select.value   = rowData.VincQbo || '';
     }
 
+    // eliminar fila (protege si es la única)
     del.addEventListener('click', function(){
       if (grid.children.length <= 1) return;
       tr.remove(); validateAll();
@@ -291,43 +292,50 @@
     if (btn){ if (!ok){ btn.setAttribute('disabled','disabled'); btn.classList.add('disabled'); } else { btn.removeAttribute('disabled'); btn.classList.remove('disabled'); } }
   }
 
-  // ---- Renderizadores ----
+  // ===== Renders
   function renderQbo(){
     var host = qs('#pane');
-    if (qboData && qboData.length){
+    // Si ya hay data QBO, construimos la grilla igual que Manual y prellenamos
+    if (Array.isArray(qboData) && qboData.length > 0){
       buildGridShell(host);
-      for (var i=0;i<qboData.length;i++){
-        var r = qboData[i] || {};
-        var full = r.FullName || ((r.GivenName||'') + ' ' + (r.FamilyName||'')).trim();
-        var parts = full.split(' ');
-        var nombre = r.GivenName || (parts.length ? parts[0] : '');
-        var apell  = r.FamilyName || (parts.length > 1 ? full.substring(nombre.length).trim() : '');
-        addRow({
-          Nombre: nombre, Apellidos: apell, Cedula: '', Correo: r.Email||'', Telefono: r.Phone||'',
-          Sector: '', Cargo: '', Salario: '', CCSS: '', INS: '', Estado: 'Activo',
-          VincQbo: full, P1: null, P2: null, P3: null, P4: null
-        });
-      }
+      qboData.forEach(function(e){
+        var full = (e.DisplayName||'').trim();
+        var gn = (e.GivenName||'').trim(), fn = (e.FamilyName||'').trim();
+        var nombre = gn || (full.split(' ')[0]||'');
+        var apell  = fn || (full.split(' ').slice(1).join(' ').trim());
+        var row = {
+          Nombre: nombre,
+          Apellidos: apell,
+          Cedula: '',
+          Correo: e.Email||'',
+          Telefono: e.Phone||'',
+          Sector: (sectorList && sectorList.length)? sectorList[0] : '',
+          Cargo: '',
+          Salario: '',
+          CCSS: null, // el usuario decide
+          INS:  null, // el usuario decide
+          Estado: e.Active ? 'Activo' : 'Inactivo',
+          VincQbo: e.DisplayName || ''
+        };
+        for (var j=0;j<periodCfg.count;j++){ row['P'+(j+1)] = periodCfg.defaults[j]; }
+        addRow(row);
+      });
       validateAll();
     } else {
+      // Fallback: mostrar botón para recargar desde handler
       host.innerHTML = '';
-      var info = ce('div','mb-2 text-muted'); info.textContent = 'Sin datos. Presione "Traer de QBO".';
-      var btn = ce('button','btn btn-primary'); btn.textContent='Traer de QBO';
+      var info = ce('div','mb-2 text-muted');
+      info.textContent = 'Sin datos. Presione "Traer de QBO".';
+      var btn = ce('button','btn btn-primary mb-3'); btn.id='go-qbo'; btn.textContent='Traer de QBO';
       host.appendChild(info); host.appendChild(btn);
-      btn.addEventListener('click', function(e){ e.preventDefault(); if (companyId>0) window.location.href='?handler=ImportQbo&companyId='+companyId; });
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        if (companyId>0) window.location.href='?handler=ImportQbo&companyId='+companyId;
+      });
     }
-    // Activar estado visual del tab
-    qs('#tab-qbo').classList.replace('btn-outline-primary','btn-primary');
-    qs('#tab-manual').classList.replace('btn-primary','btn-outline-secondary');
-    qs('#tab-excel').classList.replace('btn-primary','btn-outline-secondary');
   }
 
-  function renderManual(){
-    var host = qs('#pane'); buildGridShell(host); addRow(); validateAll();
-    qs('#tab-manual').classList.replace('btn-outline-secondary','btn-primary');
-    qs('#tab-qbo').classList.replace('btn-primary','btn-outline-primary');
-    qs('#tab-excel').classList.replace('btn-primary','btn-outline-secondary');
-  }
+  function renderManual(){ var host = qs('#pane'); buildGridShell(host); addRow(); validateAll(); }
 
   function renderExcel(){
     var host = qs('#pane'); host.innerHTML='';
@@ -383,23 +391,19 @@
       };
       r.readAsText(f, 'utf-8');
     });
-
-    qs('#tab-excel').classList.replace('btn-outline-secondary','btn-primary');
-    qs('#tab-qbo').classList.replace('btn-primary','btn-outline-primary');
-    qs('#tab-manual').classList.replace('btn-primary','btn-outline-secondary');
   }
 
-  // Tabs
+  // Pestañas
   var tQ=qs('#tab-qbo'), tM=qs('#tab-manual'), tE=qs('#tab-excel');
-  if (tQ) tQ.addEventListener('click', renderQbo);
-  if (tM) tM.addEventListener('click', renderManual);
-  if (tE) tE.addEventListener('click', renderExcel);
+  if (tQ) tQ.addEventListener('click', function(){ tQ.classList.replace('btn-outline-primary','btn-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderQbo(); });
+  if (tM) tM.addEventListener('click', function(){ tM.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tE.classList.replace('btn-primary','btn-outline-secondary'); renderManual(); });
+  if (tE) tE.addEventListener('click', function(){ tE.classList.replace('btn-outline-secondary','btn-primary'); tQ.classList.replace('btn-primary','btn-outline-primary'); tM.classList.replace('btn-primary','btn-outline-secondary'); renderExcel(); });
 
-  // Al abrir: dejar QBO activo y, si hay data, prellenar
   var dlg = document.getElementById('dlgAgregar');
   if (dlg){
-    dlg.addEventListener('shown.bs.modal', function(){ renderQbo(); });
+    dlg.addEventListener('shown.bs.modal', function(){ if (tQ) tQ.click(); });
   }
 })();
 </script>
 }
+
