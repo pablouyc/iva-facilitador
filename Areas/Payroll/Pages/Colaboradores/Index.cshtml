@@ -113,8 +113,8 @@
   var companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
   var canOpen   = @((Model.CompanyId.HasValue && Model.CompanyReady) ? "true" : "false");
   var periodo   = ('@Model.Periodo' || 'Mensual').toLowerCase();
-  var sectorList = @((Model.SectorNames!=null && Model.SectorNames.Count>0)? "['" + string.Join("','", Model.SectorNames) + "']" : "[]");
-  var qboList = @((Model.QboEmployees!=null && Model.QboEmployees.Count>0)? "['" + string.Join("','", Model.QboEmployees) + "']" : "[]");
+  var sectorList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>()));
+  var qboList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.QboEmployees ?? new List<string>()));
 
   // === Config de periodos
   var periodCfg = (function(p){
@@ -187,7 +187,7 @@
     var tr = ce('tr');
 
     // borrar
-    var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.innerHTML='&times;';
+    var tdDel = ce('td'); var del = ce('button','btn btn-sm btn-outline-danger'); del.textContent = '×';
     tdDel.appendChild(del); tr.appendChild(tdDel);
 
     function tdInput(ph, required, type){
@@ -397,5 +397,6 @@
 })();
 </script>
 }
+
 
 
