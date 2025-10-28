@@ -1,1586 +1,174 @@
 @page
-<style>
-#sel-company.form-select {
-  background-color: #198754 !important;
-  color: #fff !important;
-  border-color: #198754 !important;
-}
-#sel-company.form-select option { color: #000; }
-</style>
-
-
 @model IvaFacilitador.Areas.Payroll.Pages.Colaboradores.IndexModel
-
-
 @{
-
-
     ViewData["Title"] = "Colaboradores";
-
-
     ViewData["PayrollSection"] = "Colaboradores";
-
-
+    string ActUrl(string s) => Url.Page("", null, new { companyId = Model.CompanyId, status = s }, null)!;
 }
-
 
 @await Html.PartialAsync("~/Areas/Payroll/Components/_Topbar.cshtml")
 
-
 <div class="d-flex justify-content-between align-items-center mb-3">
-
-
-  <h2>Colaboradores</h2>
-
-
-  
-
-
-@if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
+    <h2 class="mb-0">Colaboradores</h2>
     @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-else
-
-
-{
-
-
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-else
-{
-    @if (Model.CompanyId.HasValue && Model.CanAdd)
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-}
-else
-{
-    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-}
-}
-
-
-}
-
-
-}
-
-
-}
-
-
-}
-
-
+    {
+        <button id="btnAgregar" type="button" class="btn btn-success text-white">Agregar</button>
+    }
+    else
+    {
+        <button type="button" class="btn btn-outline-secondary" disabled aria-disabled="true">Agregar</button>
+    }
 </div>
 
-
-
-
-
-<div class="card">
-
-
-  <div class="card-body p-0">
-
-
-    <ul class="nav nav-tabs px-3 pt-3" role="tablist">
-
-
-      <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabActivos" role="tab">Activos</a></li>
-
-
-      <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabInactivos" role="tab">Inactivos</a></li>
-
-
+<div class="card mb-3">
+  <div class="card-header p-2">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a class="nav-link @(Model.Status=="activos"?"active":"")" href="@ActUrl("activos")">Activos</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link @(Model.Status=="inactivos"?"active":"")" href="@ActUrl("inactivos")">Inactivos</a>
+      </li>
     </ul>
-
-
-    <div class="tab-content p-3">
-
-
-      <div class="tab-pane fade show active" id="tabActivos" role="tabpanel">
-
-
-        <div class="table-responsive">
-
-
-          <table class="table table-hover align-middle mb-0">
-
-
-            <thead>
-
-
-              <tr>
-
-
-                <th>Nombre</th>
-
-
-                <th>Cédula</th>
-
-
-                <th>Sector</th>
-
-
-                <th>Cargo</th>
-
-
-                <th>Salario</th>
-
-
-                <th>CCSS</th>
-
-
-                <th>INS</th>
-
-
-                <th>Pago</th>
-
-
-                <th>Estado</th>
-
-
-              </tr>
-
-
-            </thead>
-
-
-            <tbody>
-
-
-              @foreach (var r in Model.Rows.Where(x => (x.Estado ?? "Activo") == "Activo"))
-
-
-              {
-
-
-                <tr>
-
-
-                  <td>@r.Nombre</td>
-
-
-                  <td>@r.Cedula</td>
-
-
-                  <td>@r.Sector</td>
-
-
-                  <td>@r.Cargo</td>
-
-
-                  <td>@(r.SalarioMensual)</td>
-
-
-                  <td>@(r.HasCcss ? "Sí" : "No")</td>
-
-
-                  <td>@(r.HasIns ? "Sí" : "No")</td>
-
-
-                  <td>@r.PorcentajePago</td>
-
-
-                  <td>@r.Estado</td>
-
-
-                </tr>
-
-
-              }
-
-
-            </tbody>
-
-
-          </table>
-
-
-        </div>
-
-
-      </div>
-
-
-      <div class="tab-pane fade" id="tabInactivos" role="tabpanel">
-
-
-        <div class="table-responsive">
-
-
-          <table class="table table-hover align-middle mb-0">
-
-
-            <thead>
-
-
-              <tr>
-
-
-                <th>Nombre</th>
-
-
-                <th>Cédula</th>
-
-
-                <th>Sector</th>
-
-
-                <th>Cargo</th>
-
-
-                <th>Salario</th>
-
-
-                <th>CCSS</th>
-
-
-                <th>INS</th>
-
-
-                <th>Pago</th>
-
-
-                <th>Estado</th>
-
-
-              </tr>
-
-
-            </thead>
-
-
-            <tbody>
-
-
-              @foreach (var r in Model.Rows.Where(x => (x.Estado ?? "Activo") != "Activo"))
-
-
-              {
-
-
-                <tr>
-
-
-                  <td>@r.Nombre</td>
-
-
-                  <td>@r.Cedula</td>
-
-
-                  <td>@r.Sector</td>
-
-
-                  <td>@r.Cargo</td>
-
-
-                  <td>@(r.SalarioMensual)</td>
-
-
-                  <td>@(r.HasCcss ? "Sí" : "No")</td>
-
-
-                  <td>@(r.HasIns ? "Sí" : "No")</td>
-
-
-                  <td>@r.PorcentajePago</td>
-
-
-                  <td>@r.Estado</td>
-
-
-                </tr>
-
-
-              }
-
-
-            </tbody>
-
-
-          </table>
-
-
-        </div>
-
-
-      </div>
-
-
-    </div>
-
-
   </div>
-
-
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Nombre</th><th>Cédula</th><th>Sector</th><th>Cargo</th><th>Salario</th>
+            <th>CCSS</th><th>INS</th><th>Pago</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+        @if (Model.Rows == null || Model.Rows.Count == 0)
+        {
+            <tr><td colspan="9" class="text-muted px-3">Sin datos.</td></tr>
+        }
+        else
+        {
+            foreach (var r in Model.Rows)
+            {
+                <tr>
+                    <td>@r.Nombre</td>
+                    <td>@r.Cedula</td>
+                    <td>@(r.Sector ?? "-")</td>
+                    <td>@(r.Cargo ?? "-")</td>
+                    <td>@(r.SalarioMensual?.ToString("N2"))</td>
+                    <td>@(r.HasCcss ? "Sí" : "No")</td>
+                    <td>@(r.HasIns ? "Sí" : "No")</td>
+                    <td>@r.PorcentajePago</td>
+                    <td>@r.Estado</td>
+                </tr>
+            }
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
-
-
-
-
-<!-- Modal Agregar -->
-
-
-<div class="modal fade" id="dlgAgregar" tabindex="-1" aria-labelledby="dlgAgregarLabel" aria-hidden="true">
-
-
-  <div class="modal-dialog modal-fullscreen modal-dialog-scrollable modal-lg">
-
-
-    <div class="modal-content">
-
-
-      <div class="modal-header">
-
-
-        <h5 class="modal-title" id="dlgAgregarLabel">Agregar colaboradores</h5>
-
-
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-
-
-      </div>
-
-
-
-
-
-      <div class="modal-body">
-
-
-        <!-- Tabs de método -->
-
-
-        <div class="mb-3">
-
-
-          <div class="btn-group" role="group" aria-label="Método de alta">
-
-
-            <button type="button" class="btn btn-outline-primary active" data-view="qbo" id="btnViewQbo">QBO</button>
-
-
-            <button type="button" class="btn btn-outline-primary" data-view="manual" id="btnViewManual">Manual</button>
-
-
-            <button type="button" class="btn btn-outline-primary" data-view="excel" id="btnViewExcel">Excel</button>
-
-
-          </div>
-
-
-        </div>
-
-
-
-
-
-        <!-- Vista QBO -->
-
-
-        <div id="view-qbo">
-
-
-          <div class="alert alert-info" id="qboNotice" style="display:none;"></div>
-
-
-          <div class="d-flex gap-2 mb-2">
-
-
-            <button type="button" class="btn btn-secondary" id="btnFetchQbo">Traer de QBO</button>
-
-
-            <div class="spinner-border spinner-border-sm text-secondary" role="status" id="qboSpinner" style="display:none;">
-
-
-              <span class="visually-hidden">Cargando…</span>
-
-
-            </div>
-
-
-          </div>
-
-
-
-
-
-          <div class="table-responsive" style="max-height: 350px; overflow:auto;">
-
-
-            <table class="table table-sm table-striped" id="tblQbo">
-
-
-              <thead>
-
-
-                <tr>
-
-
-                  <th rowspan="2">Cédula <span class="text-danger">*</span></th>
-
-
-                  <th rowspan="2">Nombre <span class="text-danger">*</span></th>
-
-
-                  <th rowspan="2">Apellido <span class="text-danger">*</span></th>
-
-
-                  <th rowspan="2">Fecha ingreso</th>
-
-
-                  <th rowspan="2">Email</th>
-
-
-                  <th rowspan="2">Teléfono</th>
-
-
-                  <th rowspan="2">Salario mensual <span class="text-danger">*</span></th>
-
-
-                  <th rowspan="2">Sector <span class="text-danger">*</span></th>
-
-
-                  <th rowspan="2">Cargo <span class="text-danger">*</span></th>
-
-
-                  <th rowspan="2">CCSS <span class="text-danger">*</span></th>
-
-
-                  <th rowspan="2">INS <span class="text-danger">*</span></th>
-
-
-                  <th id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
-
-
-                  <th rowspan="2">Estado</th>
-
-
-                </tr>
-
-
-                <tr>
-
-
-                  <th class="pct-col pct1">Periodo 1</th>
-
-
-                  <th class="pct-col pct2">Periodo 2</th>
-
-
-                  <th class="pct-col pct3">Periodo 3</th>
-
-
-                  <th class="pct-col pct4">Periodo 4</th>
-
-
-                </tr>
-
-
-              </thead>
-
-
-              <tbody>
-
-
-                <tr><td colspan="16" class="text-muted">Sin datos. Presione “Traer de QBO”.</td></tr>
-
-
-              </tbody>
-
-
-            </table>
-
-
-          </div>
-
-
-        </div>
-
-
-
-
-
-        <!-- Vista Manual -->
-
-
-        <div id="view-manual" class="d-none">
-
-
-          <form id="frmManual" class="row g-3">
-
-
-            <div class="col-md-3">
-
-
-              <label class="form-label">Cédula</label>
-
-
-              <input type="text" class="form-control" id="mnNationalId" maxlength="50" required>
-
-
-            </div>
-
-
-            <div class="col-md-3">
-
-
-              <label class="form-label">Nombre</label>
-
-
-              <input type="text" class="form-control" id="mnFirstName" required>
-
-
-            </div>
-
-
-            <div class="col-md-3">
-
-
-              <label class="form-label">Apellido</label>
-
-
-              <input type="text" class="form-control" id="mnLastName" required>
-
-
-            </div>
-
-
-            <div class="col-md-3">
-
-
-              <label class="form-label">Fecha ingreso</label>
-
-
-              <input type="date" class="form-control" id="mnJoinDate">
-
-
-            </div>
-
-
-
-
-
-            <div class="col-md-4">
-
-
-              <label class="form-label">Email</label>
-
-
-              <input type="email" class="form-control" id="mnEmail">
-
-
-            </div>
-
-
-            <div class="col-md-4">
-
-
-              <label class="form-label">Teléfono</label>
-
-
-              <input type="text" class="form-control" id="mnPhone">
-
-
-            </div>
-
-
-            <div class="col-md-4">
-
-
-              <label class="form-label">Salario mensual</label>
-
-
-              <input type="number" class="form-control" id="mnSalary" step="0.01" min="0">
-
-
-            </div>
-
-
-
-
-
-            <div class="col-md-4">
-
-
-              <label class="form-label">Sector</label>
-
-
-              <input type="text" class="form-control" id="mnSector" placeholder="(coincidir con sectores parametrizados)">
-
-
-            </div>
-
-
-            <div class="col-md-4">
-
-
-              <label class="form-label">Cargo</label>
-
-
-              <input type="text" class="form-control" id="mnJob">
-
-
-            </div>
-
-
-            <div class="col-md-4 d-flex align-items-end gap-3">
-
-
-              <div class="form-check">
-
-
-                <input class="form-check-input" type="checkbox" id="mnCcss">
-
-
-                <label class="form-check-label" for="mnCcss">CCSS</label>
-
-
-              </div>
-
-
-              <div class="form-check">
-
-
-                <input class="form-check-input" type="checkbox" id="mnIns">
-
-
-                <label class="form-check-label" for="mnIns">INS</label>
-
-
-              </div>
-
-
-            </div>
-
-
-
-
-
-            <div class="col-12">
-
-
-              <label class="form-label">Porcentajes de pago (la suma debe ser 100)</label>
-
-
-              <div class="row g-2">
-
-
-                <div class="col-6 col-md-3"><input type="number" class="form-control pct" id="mnPct1" min="0" max="100" step="0.01" placeholder="%1"></div>
-
-
-                <div class="col-6 col-md-3"><input type="number" class="form-control pct" id="mnPct2" min="0" max="100" step="0.01" placeholder="%2"></div>
-
-
-                <div class="col-6 col-md-3"><input type="number" class="form-control pct" id="mnPct3" min="0" max="100" step="0.01" placeholder="%3"></div>
-
-
-                <div class="col-6 col-md-3"><input type="number" class="form-control pct" id="mnPct4" min="0" max="100" step="0.01" placeholder="%4"></div>
-
-
-              </div>
-
-
-              <small class="text-muted">Mensual: use solo %1=100. Quincenal: %1/%2 (50/50). Semanal: distribuya %1–%4.</small>
-
-
-              <div class="mt-1"><span>Suma actual: </span><span id="sumPct" class="badge bg-secondary">0</span></div>
-
-
-            </div>
-
-
-
-
-
-            <div class="col-12">
-
-
-              <button type="button" class="btn btn-primary" id="btnManualSubmit">Guardar (stub)</button>
-
-
-              <span class="ms-2 text-muted">Crea/matchea en QBO y (aún) no persiste en BD.</span>
-
-
-            </div>
-
-
-          </form>
-
-
-          <div class="mt-3" id="manualMsg" style="display:none;"></div>
-
-
-        </div>
-
-
-
-
-
-        <!-- Vista Excel -->
-
-
-        <div id="view-excel" class="d-none">
-
-
-          <p class="text-muted">Cargue colaboradores de forma masiva. Use la plantilla (o genere una mínima aquí) y pegue el CSV debajo.</p>
-
-
-          <div class="d-flex gap-2 mb-2">
-
-
-            <button type="button" class="btn btn-outline-secondary" id="btnGenCsv">Descargar plantilla mínima</button>
-
-
-            <button type="button" class="btn btn-primary" id="btnUploadCsv">Procesar CSV (stub)</button>
-
-
-          </div>
-
-
-          <textarea id="csvText" class="form-control" rows="8" placeholder="Encabezados esperados: NationalId,FirstName,LastName,Email,Phone"></textarea>
-
-
-          <div class="mt-3" id="uploadMsg" style="display:none;"></div>
-
-
-        </div>
-
-
-      </div>
-
-
-
-
-
-      <div class="modal-footer">
-
-
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-
-
-        <button type="button" class="btn btn-primary">Continuar</button>
-
-
-      </div>
-
-
+<!-- Panel AGREGAR dentro de la misma página -->
+<section id="addPanel" class="card d-none">
+  <div class="card-header">Agregar colaboradores</div>
+  <div class="card-body">
+    <div class="btn-group mb-3" role="group" aria-label="método">
+      <button type="button" class="btn btn-outline-primary" id="tab-qbo">QBO</button>
+      <button type="button" class="btn btn-outline-secondary" id="tab-manual">Manual</button>
+      <button type="button" class="btn btn-outline-secondary" id="tab-excel">Excel</button>
     </div>
 
+    <div id="pane" class="mb-3"></div>
 
+    <div>
+      <label class="form-label">Porcentaje de pago por periodo</label>
+      <div id="pct-editor"></div>
+    </div>
   </div>
-
-
-</div>
-
-
-
-
-
-@section Scripts {
-
-
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@* PAYROLL_COLAB_SCRIPT *@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@* PAYROLL_COLAB_SCRIPT_V2 *@
-
-
-
-
-
-
-
-
-@* PAYROLL_COLAB_ALLINONE *@
-
-
-
-
-
-
-
-
-@* PAYROLL_COLAB_ALLINONE *@
-
-
-
-
-
-
-
-
-
-
-
-@* PAYROLL_COLAB_ALLINONE *@
-<!-- PAYROLL_COLAB_FIXED -->
+  <div class="card-footer d-flex gap-2">
+    <button type="button" class="btn btn-secondary" id="btnCerrar">Cerrar</button>
+    <button type="button" class="btn btn-primary" id="btnContinuar" disabled>Continuar</button>
+  </div>
+</section>
+
+@section Scripts{
 <script>
 (function(){
-  if (window.__colab_ok__) return; window.__colab_ok__ = true;
+  if (window.__colab_wired) return; window.__colab_wired = true;
 
   function qs(s){ return document.querySelector(s); }
   function qsa(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
 
-  // Datos del modelo desde Razor (booleans nativos de JS)
   var companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
   var canOpen   = @((Model.CompanyId.HasValue && Model.CanAdd) ? "true" : "false");
   var periodo   = ('@Model.Periodo' || 'Mensual').toLowerCase();
 
-  // Fallback para abrir modal si data-bs no dispara
-  var addBtn = qs('#btnAgregar');
-  if (addBtn && canOpen) {
-    addBtn.addEventListener('click', function(){
-      var m = document.getElementById('dlgAgregar');
-      try {
-        var bs = window.bootstrap;
-        if (m && bs && bs.Modal) bs.Modal.getOrCreateInstance(m).show();
-      } catch(e){}
-    }, { once:true });
-  }
+  var addPanel = qs('#addPanel');
+  var btnAdd   = qs('#btnAgregar');
+  var btnClose = qs('#btnCerrar');
+  var btnCont  = qs('#btnContinuar');
 
-  // Pestañas
+  function showPanel(){ if (addPanel) { addPanel.classList.remove('d-none'); addPanel.scrollIntoView({behavior:'smooth',block:'start'}); } }
+  function hidePanel(){ if (addPanel) { addPanel.classList.add('d-none'); } }
+
+  if (btnAdd && (String(canOpen)==='true')) { btnAdd.addEventListener('click', function(){ showPanel(); }); }
+  if (btnClose) btnClose.addEventListener('click', hidePanel);
+
+  // Pestañas de método
   function openPane(kind){
-    var host = document.getElementById('colab-pane');
-    if (!host) return;
-    host.innerHTML = '';
-    if (kind === 'qbo') {
-      var d = document.createElement('div');
-      d.innerHTML = '<div class=""mb-2 text-muted"">Importar desde QuickBooks Online</div>'+
-                    '<button id=""colab-qbo-go"" class=""btn btn-primary"">Traer de QBO</button>';
+    var host = qs('#pane'); if (!host) return; host.innerHTML='';
+    if (kind==='qbo'){
+      var d=document.createElement('div');
+      d.innerHTML = '<div class="mb-2 text-muted">Importar desde QuickBooks Online</div>'+
+                    '<button id="go-qbo" class="btn btn-primary">Traer de QBO</button>';
       host.appendChild(d);
-      var go = document.getElementById('colab-qbo-go');
-      if (go) go.addEventListener('click', function(e){ e.preventDefault();
-        if (companyId > 0) window.location.href = '?handler=ImportQbo&companyId=' + companyId;
-      });
-    } else if (kind === 'manual') {
-      var w = document.createElement('div');
-      w.innerHTML = '<div class=""mb-2 text-muted"">Ingreso manual</div>'+
-                    '<div class=""row g-2"">'+
-                      '<div class=""col""><label class=""form-label"">Cédula</label><input class=""form-control""></div>'+
-                      '<div class=""col""><label class=""form-label"">Nombre</label><input class=""form-control""></div>'+
-                      '<div class=""col""><label class=""form-label"">Apellido</label><input class=""form-control""></div>'+
+      var g=qs('#go-qbo');
+      if (g) g.addEventListener('click', function(e){ e.preventDefault(); if (companyId>0) window.location.href = "?handler=ImportQbo&companyId="+companyId; });
+    } else if (kind==='manual'){
+      var w=document.createElement('div');
+      w.innerHTML = '<div class="mb-2 text-muted">Ingreso manual rápido</div>'+
+                    '<div class="row g-2">'+
+                    '<div class="col"><label class="form-label">Cédula</label><input class="form-control"></div>'+
+                    '<div class="col"><label class="form-label">Nombre</label><input class="form-control"></div>'+
+                    '<div class="col"><label class="form-label">Apellido</label><input class="form-control"></div>'+
                     '</div>';
       host.appendChild(w);
-    } else if (kind === 'excel') {
-      var x = document.createElement('div');
-      x.innerHTML = '<div class=""mb-2 text-muted"">Importar desde Excel</div>'+
-                    '<input type=""file"" class=""form-control"" accept="".xlsx,.xls,.csv"">';
+    } else if (kind==='excel'){
+      var x=document.createElement('div');
+      x.innerHTML = '<div class="mb-2 text-muted">Importar desde Excel</div>'+
+                    '<input type="file" class="form-control" accept=".xlsx,.xls,.csv">';
       host.appendChild(x);
     }
   }
-  var tabQ=qs('#tab-qbo'), tabM=qs('#tab-manual'), tabE=qs('#tab-excel');
-  if (tabQ) tabQ.addEventListener('click', function(e){ e.preventDefault(); openPane('qbo'); });
-  if (tabM) tabM.addEventListener('click', function(e){ e.preventDefault(); openPane('manual'); });
-  if (tabE) tabE.addEventListener('click', function(e){ e.preventDefault(); openPane('excel'); });
+  var tQ=qs('#tab-qbo'), tM=qs('#tab-manual'), tE=qs('#tab-excel');
+  if (tQ) tQ.addEventListener('click', function(){ openPane('qbo'); });
+  if (tM) tM.addEventListener('click', function(){ openPane('manual'); });
+  if (tE) tE.addEventListener('click', function(){ openPane('excel'); });
 
-  // Periodos
+  // Editor de periodo (1/2/4) y validación=100%
   function renderPct(p){
-    var cfg = (p === 'mensual') ? [100] : (p === 'quincenal' ? [50,50] : [25,25,25,25]);
-    var host = document.getElementById('colab-periodo-editor');
-    if (!host) return;
-    host.innerHTML = '';
-    var row = document.createElement('div'); row.className = 'd-flex gap-2 align-items-end flex-wrap';
-    for (var i=0; i<cfg.length; i++){
-      var w = document.createElement('div'); w.className = 'd-flex flex-column me-2';
-      var lb = document.createElement('label'); lb.className = 'form-label'; lb.innerText = 'Periodo ' + (i+1);
-      var inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1';
-      inp.value = cfg[i]; inp.className='form-control'; inp.name='PayPct' + (i+1);
+    var host = qs('#pct-editor'); if (!host) return;
+    host.innerHTML='';
+    var cfg = (p==='mensual')?[100]:(p==='quincenal'?[50,50]:[25,25,25,25]);
+    var row=document.createElement('div'); row.className='d-flex gap-2 align-items-end flex-wrap';
+    for (var i=0;i<cfg.length;i++){
+      var w=document.createElement('div'); w.className='d-flex flex-column me-2';
+      var lb=document.createElement('label'); lb.className='form-label'; lb.innerText='Periodo '+(i+1);
+      var inp=document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1'; inp.value=cfg[i]; inp.className='form-control'; inp.name='PayPct'+(i+1);
       w.appendChild(lb); w.appendChild(inp); row.appendChild(w);
     }
-    var info = document.createElement('div'); info.id = 'colab-pct-total'; info.className = 'ms-3 fw-bold';
+    var info=document.createElement('div'); info.id='pct-total'; info.className='ms-3 fw-bold pt-2';
     host.appendChild(row); host.appendChild(info);
     function validate(){
-      var inputs = qsa('#colab-periodo-editor input[type=number]'); var sum = 0;
-      for (var k=0; k<inputs.length; k++){ var v = parseInt(inputs[k].value||'0',10); if (!isNaN(v)) sum += v; }
-      info.innerText = 'Total: ' + sum + '%';
-      var cont = document.getElementById('btnContinuar');
-      if (cont){ if (sum !== 100){ cont.setAttribute('disabled','disabled'); cont.classList.add('disabled'); }
-                 else { cont.removeAttribute('disabled'); cont.classList.remove('disabled'); } }
+      var inputs=qsa('#pct-editor input[type=number]'); var sum=0;
+      for (var k=0;k<inputs.length;k++){ var v=parseInt(inputs[k].value||'0',10); if(!isNaN(v)) sum+=v; }
+      info.textContent='Total: '+sum+'%';
+      if (btnCont){ if(sum!==100){ btnCont.setAttribute('disabled','disabled'); btnCont.classList.add('disabled'); } else { btnCont.removeAttribute('disabled'); btnCont.classList.remove('disabled'); } }
     }
-    qsa('#colab-periodo-editor input[type=number]').forEach(function(i){ i.addEventListener('input', validate); });
+    qsa('#pct-editor input[type=number]').forEach(function(x){ x.addEventListener('input', validate); });
     validate();
   }
   renderPct(periodo);
 })();
 </script>
-<div class=""modal fade"" id=""dlgAgregar"" tabindex=""-1"" aria-labelledby=""dlgAgregarLabel"" aria-hidden=""true"">
-  <div class=""modal-dialog modal-xl modal-dialog-scrollable"">
-    <div class=""modal-content"">
-      <div class=""modal-header"">
-        <h5 class=""modal-title"" id=""dlgAgregarLabel"">Agregar colaboradores</h5>
-        <button type=""button"" class=""btn-close"" data-bs-dismiss=""modal"" aria-label=""Cerrar""></button>
-      </div>
-      <div class=""modal-body"">
-        <div class=""d-flex gap-2 mb-3"">
-          <button type=""button"" class=""btn btn-outline-primary"" id=""tab-qbo"">QBO</button>
-          <button type=""button"" class=""btn btn-outline-secondary"" id=""tab-manual"">Manual</button>
-          <button type=""button"" class=""btn btn-outline-secondary"" id=""tab-excel"">Excel</button>
-        </div>
-        <div id=""colab-pane""></div>
-        <div id=""colab-periodo-editor"" class=""mt-3""></div>
-      </div>
-      <div class=""modal-footer"">
-        <button type=""button"" class=""btn btn-secondary"" data-bs-dismiss=""modal"">Cerrar</button>
-        <button type=""button"" class=""btn btn-primary"" id=""btnContinuar"" disabled>Continuar</button>
-      </div>
-    </div>
-  </div>
-</div>
+}
