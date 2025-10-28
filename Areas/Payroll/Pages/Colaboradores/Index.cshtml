@@ -1,4 +1,12 @@
 @page
+<style>
+#sel-company.form-select {
+  background-color: #198754 !important;
+  color: #fff !important;
+  border-color: #198754 !important;
+}
+#sel-company.form-select option { color: #000; }
+</style>
 
 
 @model IvaFacilitador.Areas.Payroll.Pages.Colaboradores.IndexModel
@@ -52,21 +60,13 @@
 {
 
 
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-
-
 }
-
-
 else
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-
-
 }
 
 
@@ -80,26 +80,12 @@ else
 
 
     @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-
-
 }
-
-
 else
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-
-
 }
 
 
@@ -122,26 +108,12 @@ else
 
 
     @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-
-
 }
-
-
 else
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-
-
 }
 
 
@@ -155,26 +127,12 @@ else
 
 
     @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-
-
 }
-
-
 else
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-
-
 }
 
 
@@ -206,26 +164,12 @@ else
 
 
     @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-
-
 }
-
-
 else
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-
-
 }
 
 
@@ -239,26 +183,12 @@ else
 
 
     @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
-
-
 }
-
-
 else
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
-
-
 }
 
 
@@ -281,12 +211,13 @@ else
 
 
     @if (Model.CompanyId.HasValue && Model.CanAdd)
-
-
 {
-
-
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
 
 
 }
@@ -298,7 +229,20 @@ else
 {
 
 
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+
+
+}
+
+
+}
 
 
 }
@@ -319,7 +263,26 @@ else
 {
 
 
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
     <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
 
 
 }
@@ -331,7 +294,164 @@ else
 {
 
 
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
     <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+
+
+}
+
+
+}
+
+
+else
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+
+
+}
+
+
+else
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+
+
+}
+
+
+}
+
+
+}
+
+
+else
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+
+
+}
+
+
+else
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+
+
+}
+
+
+}
+
+
+else
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
+
+
+}
+
+
+else
+
+
+{
+
+
+    @if (Model.CompanyId.HasValue && Model.CanAdd)
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-success text-white"" data-bs-toggle=""modal"" data-bs-target=""#dlgAgregar"">Agregar</button>
+}
+else
+{
+    <button id=""btnAgregar"" type=""button"" class=""btn btn-outline-secondary"" disabled aria-disabled=""true"">Agregar</button>
+}
 
 
 }
@@ -1057,7 +1177,7 @@ else
 @section Scripts {
 
 
-__SCRIPT_PLACEHOLDER__0
+
 
 
 }
@@ -1084,7 +1204,7 @@ __SCRIPT_PLACEHOLDER__0
 @* PAYROLL_COLAB_SCRIPT *@
 
 
-__SCRIPT_PLACEHOLDER__0
+
 
 
 
@@ -1099,25 +1219,13 @@ __SCRIPT_PLACEHOLDER__0
 @* PAYROLL_COLAB_SCRIPT_V2 *@
 
 
-__SCRIPT_PLACEHOLDER__0
 
-
-
-
-
-@* PAYROLL_COLAB_ALLINONE *@
-
-
-__SCRIPT_PLACEHOLDER__0
 
 
 
 
 
 @* PAYROLL_COLAB_ALLINONE *@
-
-
-__SCRIPT_PLACEHOLDER__0
 
 
 
@@ -1129,7 +1237,6 @@ __SCRIPT_PLACEHOLDER__0
 @* PAYROLL_COLAB_ALLINONE *@
 
 
-__SCRIPT_PLACEHOLDER__0
 
 
 
@@ -1139,9 +1246,95 @@ __SCRIPT_PLACEHOLDER__0
 
 
 
+@* PAYROLL_COLAB_ALLINONE *@
+<!-- PAYROLL_COLAB_FIXED -->
+<script>
+(function(){
+  if (window.__colab_ok__) return; window.__colab_ok__ = true;
 
+  function qs(s){ return document.querySelector(s); }
+  function qsa(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
 
+  // Datos del modelo desde Razor (booleans nativos de JS)
+  var companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
+  var canOpen   = @((Model.CompanyId.HasValue && Model.CanAdd) ? "true" : "false");
+  var periodo   = ('@Model.Periodo' || 'Mensual').toLowerCase();
 
+  // Fallback para abrir modal si data-bs no dispara
+  var addBtn = qs('#btnAgregar');
+  if (addBtn && canOpen) {
+    addBtn.addEventListener('click', function(){
+      var m = document.getElementById('dlgAgregar');
+      try {
+        var bs = window.bootstrap;
+        if (m && bs && bs.Modal) bs.Modal.getOrCreateInstance(m).show();
+      } catch(e){}
+    }, { once:true });
+  }
 
+  // Pestañas
+  function openPane(kind){
+    var host = document.getElementById('colab-pane');
+    if (!host) return;
+    host.innerHTML = '';
+    if (kind === 'qbo') {
+      var d = document.createElement('div');
+      d.innerHTML = '<div class=""mb-2 text-muted"">Importar desde QuickBooks Online</div>'+
+                    '<button id=""colab-qbo-go"" class=""btn btn-primary"">Traer de QBO</button>';
+      host.appendChild(d);
+      var go = document.getElementById('colab-qbo-go');
+      if (go) go.addEventListener('click', function(e){ e.preventDefault();
+        if (companyId > 0) window.location.href = '?handler=ImportQbo&companyId=' + companyId;
+      });
+    } else if (kind === 'manual') {
+      var w = document.createElement('div');
+      w.innerHTML = '<div class=""mb-2 text-muted"">Ingreso manual</div>'+
+                    '<div class=""row g-2"">'+
+                      '<div class=""col""><label class=""form-label"">Cédula</label><input class=""form-control""></div>'+
+                      '<div class=""col""><label class=""form-label"">Nombre</label><input class=""form-control""></div>'+
+                      '<div class=""col""><label class=""form-label"">Apellido</label><input class=""form-control""></div>'+
+                    '</div>';
+      host.appendChild(w);
+    } else if (kind === 'excel') {
+      var x = document.createElement('div');
+      x.innerHTML = '<div class=""mb-2 text-muted"">Importar desde Excel</div>'+
+                    '<input type=""file"" class=""form-control"" accept="".xlsx,.xls,.csv"">';
+      host.appendChild(x);
+    }
+  }
+  var tabQ=qs('#tab-qbo'), tabM=qs('#tab-manual'), tabE=qs('#tab-excel');
+  if (tabQ) tabQ.addEventListener('click', function(e){ e.preventDefault(); openPane('qbo'); });
+  if (tabM) tabM.addEventListener('click', function(e){ e.preventDefault(); openPane('manual'); });
+  if (tabE) tabE.addEventListener('click', function(e){ e.preventDefault(); openPane('excel'); });
 
+  // Periodos
+  function renderPct(p){
+    var cfg = (p === 'mensual') ? [100] : (p === 'quincenal' ? [50,50] : [25,25,25,25]);
+    var host = document.getElementById('colab-periodo-editor');
+    if (!host) return;
+    host.innerHTML = '';
+    var row = document.createElement('div'); row.className = 'd-flex gap-2 align-items-end flex-wrap';
+    for (var i=0; i<cfg.length; i++){
+      var w = document.createElement('div'); w.className = 'd-flex flex-column me-2';
+      var lb = document.createElement('label'); lb.className = 'form-label'; lb.innerText = 'Periodo ' + (i+1);
+      var inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1';
+      inp.value = cfg[i]; inp.className='form-control'; inp.name='PayPct' + (i+1);
+      w.appendChild(lb); w.appendChild(inp); row.appendChild(w);
+    }
+    var info = document.createElement('div'); info.id = 'colab-pct-total'; info.className = 'ms-3 fw-bold';
+    host.appendChild(row); host.appendChild(info);
+    function validate(){
+      var inputs = qsa('#colab-periodo-editor input[type=number]'); var sum = 0;
+      for (var k=0; k<inputs.length; k++){ var v = parseInt(inputs[k].value||'0',10); if (!isNaN(v)) sum += v; }
+      info.innerText = 'Total: ' + sum + '%';
+      var cont = document.getElementById('btnContinuar');
+      if (cont){ if (sum !== 100){ cont.setAttribute('disabled','disabled'); cont.classList.add('disabled'); }
+                 else { cont.removeAttribute('disabled'); cont.classList.remove('disabled'); } }
+    }
+    qsa('#colab-periodo-editor input[type=number]').forEach(function(i){ i.addEventListener('input', validate); });
+    validate();
+  }
+  renderPct(periodo);
+})();
+</script>
 
