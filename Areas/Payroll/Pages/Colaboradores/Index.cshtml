@@ -1,20 +1,108 @@
+@page
+@model IvaFacilitador.Areas.Payroll.Pages.Colaboradores.IndexModel
+@{
+    ViewData["Title"] = "Colaboradores";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Colaboradores</h2>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#dlgAgregar" id="btnOpenAgregar">
+    Agregar
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <ul class="nav nav-tabs px-3 pt-3" role="tablist">
+      <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tabActivos" role="tab">Activos</a></li>
+      <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tabInactivos" role="tab">Inactivos</a></li>
+    </ul>
+    <div class="tab-content p-3">
+      <div class="tab-pane fade show active" id="tabActivos" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Sector</th>
+                <th>Cargo</th>
+                <th>Salario</th>
+                <th>CCSS</th>
+                <th>INS</th>
+                <th>Pago</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var r in Model.Rows.Where(x => (x.Estado ?? "Activo") == "Activo"))
+              {
+                <tr>
+                  <td>@r.Nombre</td>
+                  <td>@r.Cedula</td>
+                  <td>@r.Sector</td>
+                  <td>@r.Cargo</td>
+                  <td>@(r.SalarioMensual?.ToString("N2"))</td>
+                  <td>@(r.HasCcss ? "Sí" : "No")</td>
+                  <td>@(r.HasIns ? "Sí" : "No")</td>
+                  <td>@r.PorcentajePago</td>
+                  <td>@r.Estado</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="tabInactivos" role="tabpanel">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Cédula</th>
+                <th>Sector</th>
+                <th>Cargo</th>
+                <th>Salario</th>
+                <th>CCSS</th>
+                <th>INS</th>
+                <th>Pago</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var r in Model.Rows.Where(x => (x.Estado ?? "Activo") != "Activo"))
+              {
+                <tr>
+                  <td>@r.Nombre</td>
+                  <td>@r.Cedula</td>
+                  <td>@r.Sector</td>
+                  <td>@r.Cargo</td>
+                  <td>@(r.SalarioMensual?.ToString("N2"))</td>
+                  <td>@(r.HasCcss ? "Sí" : "No")</td>
+                  <td>@(r.HasIns ? "Sí" : "No")</td>
+                  <td>@r.PorcentajePago</td>
+                  <td>@r.Estado</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Agregar -->
 <div class="modal fade" id="dlgAgregar" tabindex="-1" aria-labelledby="dlgAgregarLabel" aria-hidden="true">
   <div class="modal-dialog modal-fullscreen modal-dialog-scrollable modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="dlgAgregarLabel">Agregar colaboradores</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
 
       <div class="modal-body">
-        <style>
-          #dlgAgregar .table-responsive { max-height: 360px; overflow:auto; }
-          #tblQbo thead th.pct-col, #tblQbo tbody td.pctcol { min-width: 110px; }
-          #tblQbo thead th.status-col, #tblQbo tbody td.status-col { min-width: 120px; }
-          #tblQbo input.form-control-sm { min-width: 120px; }
-        </style>
-
-        <!-- Tabs -->
+        <!-- Tabs de método -->
         <div class="mb-3">
           <div class="btn-group" role="group" aria-label="Método de alta">
             <button type="button" class="btn btn-outline-primary active" data-view="qbo" id="btnViewQbo">QBO</button>
@@ -23,10 +111,9 @@
           </div>
         </div>
 
-        <!-- QBO -->
+        <!-- Vista QBO -->
         <div id="view-qbo">
           <div class="alert alert-info" id="qboNotice" style="display:none;"></div>
-
           <div class="d-flex gap-2 mb-2">
             <button type="button" class="btn btn-secondary" id="btnFetchQbo">Traer de QBO</button>
             <div class="spinner-border spinner-border-sm text-secondary" role="status" id="qboSpinner" style="display:none;">
@@ -34,8 +121,8 @@
             </div>
           </div>
 
-          <div class="table-responsive">
-            <table class="table table-sm table-striped align-middle" id="tblQbo">
+          <div class="table-responsive" style="max-height: 350px; overflow:auto;">
+            <table class="table table-sm table-striped" id="tblQbo">
               <thead>
                 <tr>
                   <th rowspan="2">Cédula <span class="text-danger">*</span></th>
@@ -50,7 +137,7 @@
                   <th rowspan="2">CCSS <span class="text-danger">*</span></th>
                   <th rowspan="2">INS <span class="text-danger">*</span></th>
                   <th id="thPctGroup" colspan="4" class="text-center">Porcentaje de pago por periodo</th>
-                  <th rowspan="2" class="status-col">Estado</th>
+                  <th rowspan="2">Estado</th>
                 </tr>
                 <tr>
                   <th class="pct-col pct1">Periodo 1</th>
@@ -66,7 +153,7 @@
           </div>
         </div>
 
-        <!-- Manual -->
+        <!-- Vista Manual -->
         <div id="view-manual" class="d-none">
           <form id="frmManual" class="row g-3">
             <div class="col-md-3">
@@ -126,7 +213,7 @@
                 <div class="col-6 col-md-3"><input type="number" class="form-control pct" id="mnPct3" min="0" max="100" step="0.01" placeholder="%3"></div>
                 <div class="col-6 col-md-3"><input type="number" class="form-control pct" id="mnPct4" min="0" max="100" step="0.01" placeholder="%4"></div>
               </div>
-              <small class="text-muted">Mensual: solo %1=100. Quincenal: %1/%2 (p.ej. 50/50). Semanal: distribuya %1–%4. </small>
+              <small class="text-muted">Mensual: use solo %1=100. Quincenal: %1/%2 (50/50). Semanal: distribuya %1–%4.</small>
               <div class="mt-1"><span>Suma actual: </span><span id="sumPct" class="badge bg-secondary">0</span></div>
             </div>
 
@@ -138,14 +225,14 @@
           <div class="mt-3" id="manualMsg" style="display:none;"></div>
         </div>
 
-        <!-- Excel -->
+        <!-- Vista Excel -->
         <div id="view-excel" class="d-none">
           <p class="text-muted">Cargue colaboradores de forma masiva. Use la plantilla (o genere una mínima aquí) y pegue el CSV debajo.</p>
           <div class="d-flex gap-2 mb-2">
             <button type="button" class="btn btn-outline-secondary" id="btnGenCsv">Descargar plantilla mínima</button>
             <button type="button" class="btn btn-primary" id="btnUploadCsv">Procesar CSV (stub)</button>
           </div>
-          <textarea id="csvText" class="form-control" rows="8" placeholder="Encabezados: NationalId,FirstName,LastName,Email,Phone"></textarea>
+          <textarea id="csvText" class="form-control" rows="8" placeholder="Encabezados esperados: NationalId,FirstName,LastName,Email,Phone"></textarea>
           <div class="mt-3" id="uploadMsg" style="display:none;"></div>
         </div>
       </div>
@@ -158,77 +245,61 @@
   </div>
 </div>
 
+@section Scripts {
 <script>
-(function(){
-  // --------- Globals (seguros) ----------
-  const COMPANY_ID = (typeof window.COMPANY_ID !== "undefined") ? window.COMPANY_ID : null;
-  const LINKED     = (typeof window.LINKED     !== "undefined") ? window.LINKED     : false;
-  const SECTORS    = Array.isArray(window.SECTORS) ? window.SECTORS : ["General"];
-  const PERIOD     = window.PERIOD || "Mensual";
-  const PCT_SLOTS  = window.PCT_SLOTS || (PERIOD === "Mensual" ? 1 : (PERIOD === "Quincenal" ? 2 : 4));
+(() => {
+  "use strict";
 
-  // --------- Helpers ----------
+  // ---- Constantes desde el modelo (tipadas para JS) ----
+  const COMPANY_ID = @(Model.CompanyId.HasValue ? Model.CompanyId.Value.ToString() : "null");
+  const LINKED     = @(Model.IsCompanyLinked.ToString().ToLower());
+  const SECTORS    = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SectorNames ?? new List<string>{"General"}));
+  const PERIOD     = "@(Model.Periodo ?? "Mensual")";
+  const PCT_SLOTS  = (PERIOD === "Mensual" ? 1 : (PERIOD === "Quincenal" ? 2 : 4));
+
   const qs  = (s) => document.querySelector(s);
   const qsa = (s) => Array.from(document.querySelectorAll(s));
-  const show = (el) => el && (el.style.display = "");
-  const hide = (el) => el && (el.style.display = "none");
+  const show = (el) => { if (el) el.style.display = ""; };
+  const hide = (el) => { if (el) el.style.display = "none"; };
+
+  // ---- Tabs dentro del modal ----
+  const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
+  function switchView(name){
+    Object.entries(views).forEach(([k,el]) => { if (!el) return; (k===name)? el.classList.remove("d-none") : el.classList.add("d-none"); });
+    qsa("[data-view]").forEach(b => { (b.getAttribute("data-view")===name) ? b.classList.add("active") : b.classList.remove("active"); });
+    if (name === "qbo") setQboReadyState();
+  }
+
+  // ---- QBO helpers ----
+  const btnFetchQbo = qs("#btnFetchQbo");
+  const qboSpinner  = qs("#qboSpinner");
+  const qboNotice   = qs("#qboNotice");
+  const tblBody     = () => qs("#tblQbo tbody");
 
   function defaultPctSlots(){
     if (PCT_SLOTS === 1) return [100,0,0,0];
     if (PCT_SLOTS === 2) return [50,50,0,0];
     return [25,25,25,25];
   }
+
   function sectorOptions(selected){
-    const list = SECTORS.length ? SECTORS : ["General"];
-    return list.map(s => `<option value="${s}" ${s===selected ? "selected" : ""}>${s}</option>`).join("");
+    const list = (SECTORS && SECTORS.length) ? SECTORS : ["General"];
+    return list.map(s => `<option value="${s}" ${s===selected?'selected':''}>${s}</option>`).join("");
   }
+
   function splitName(first,last,display){
-    if ((first||"").trim() || (last||"").trim()) return { first:first||"", last:last||"" };
-    const d = (display||"").trim(); if (!d) return {first:"", last:""};
-    const parts = d.split(/\s+/); return { first:parts[0]||"", last:parts.slice(1).join(" ")||"" };
+    if ((first||"").trim() || (last||"").trim()) return {first:first||"", last:last||""};
+    const d = (display||"").trim();
+    if (!d) return {first:"", last:""};
+    const parts = d.split(/\s+/);
+    return { first: parts[0]||"", last: parts.slice(1).join(" ")||"" };
   }
 
-  // --------- Tabs ----------
-  const views = { qbo: qs("#view-qbo"), manual: qs("#view-manual"), excel: qs("#view-excel") };
-  function switchView(name){
-    Object.entries(views).forEach(([k,el]) => { if (!el) return; (k===name)? el.classList.remove("d-none") : el.classList.add("d-none"); });
-    qsa('[data-view]').forEach(b => (b.getAttribute('data-view')===name? b.classList.add("active") : b.classList.remove("active")));
-    setQboReadyState(); // re-evalúa aviso/botón QBO cuando cambias de tab
-  }
-
-  // --------- QBO ----------
-  const btnFetchQbo = qs("#btnFetchQbo");
-  const qboSpinner  = qs("#qboSpinner");
-  const qboNotice   = qs("#qboNotice");
-  const tblBody     = () => qs("#tblQbo tbody");
-  let QBO_LIST = [];
-
-  function qboApplyPctVisibility(){
-    const tbl = qs("#tblQbo"); if (!tbl) return;
-    const slots = PCT_SLOTS || 1;
-
-    // Header de grupo
-    const g = tbl.querySelector("#thPctGroup"); if (g) g.colSpan = slots;
-
-    // Mostrar/Ocultar columnas
-    ["1","2","3","4"].forEach((k,i) => {
-      const disp = (i < slots) ? "" : "none";
-      tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => el.style.display = disp);
-    });
-
-    // %1 fijo a 100 si es mensual
-    tbl.querySelectorAll("tbody td.pct1 input.pct1").forEach(inp=>{
-      if (slots === 1){ inp.value = "100"; inp.readOnly = true; }
-      else { inp.readOnly = false; if (!inp.value) inp.value = (slots===2)? "50" : "25"; }
-    });
-  }
-
-  function qboRowTpl(e,i){
+  function qboRowTpl(e, i){
     const name   = splitName(e.givenName, e.familyName, e.displayName);
     const pct    = defaultPctSlots();
-    const sector = SECTORS[0] || "General";
+    const sector = (SECTORS && SECTORS[0]) || "General";
     const isAct  = (e.active !== false);
-    const ccssYes = false, insYes = false; // QBO no trae estos flags
 
     return `
       <tr>
@@ -244,45 +315,37 @@
 
         <td class="text-center">
           <div class="btn-group" role="group" aria-label="CCSS">
-            <input type="radio" class="btn-check ccss ccss-yes" name="ccss_${i}" id="ccssY_${i}" autocomplete="off" ${ccssYes?'checked':''} value="1">
+            <input type="radio" class="btn-check ccss ccss-yes" name="ccss_${i}" id="ccssY_${i}" autocomplete="off" value="1">
             <label class="btn btn-sm btn-outline-secondary" for="ccssY_${i}">Sí</label>
-            <input type="radio" class="btn-check ccss ccss-no"  name="ccss_${i}" id="ccssN_${i}" autocomplete="off" ${!ccssYes?'checked':''} value="0">
+            <input type="radio" class="btn-check ccss ccss-no"  name="ccss_${i}" id="ccssN_${i}" autocomplete="off" value="0" checked>
             <label class="btn btn-sm btn-outline-secondary" for="ccssN_${i}">No</label>
           </div>
         </td>
         <td class="text-center">
           <div class="btn-group" role="group" aria-label="INS">
-            <input type="radio" class="btn-check ins ins-yes" name="ins_${i}" id="insY_${i}" autocomplete="off" ${insYes?'checked':''} value="1">
+            <input type="radio" class="btn-check ins ins-yes" name="ins_${i}" id="insY_${i}" autocomplete="off" value="1">
             <label class="btn btn-sm btn-outline-secondary" for="insY_${i}">Sí</label>
-            <input type="radio" class="btn-check ins ins-no"  name="ins_${i}" id="insN_${i}" autocomplete="off" ${!insYes?'checked':''} value="0">
+            <input type="radio" class="btn-check ins ins-no"  name="ins_${i}" id="insN_${i}" autocomplete="off" value="0" checked>
             <label class="btn btn-sm btn-outline-secondary" for="insN_${i}">No</label>
           </div>
         </td>
 
-        <td class="pctcol pct1"><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]??0}"></td>
-        <td class="pctcol pct2"><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]??0}"></td>
-        <td class="pctcol pct3"><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]??0}"></td>
-        <td class="pctcol pct4"><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]??0}"></td>
+        <td class="pctcol pct1"><input class="form-control form-control-sm pct1" type="number" step="0.01" value="${pct[0]}"></td>
+        <td class="pctcol pct2"><input class="form-control form-control-sm pct2" type="number" step="0.01" value="${pct[1]}"></td>
+        <td class="pctcol pct3"><input class="form-control form-control-sm pct3" type="number" step="0.01" value="${pct[2]}"></td>
+        <td class="pctcol pct4"><input class="form-control form-control-sm pct4" type="number" step="0.01" value="${pct[3]}"></td>
 
-        <td class="status-col">
+        <td>
           <select class="form-select form-select-sm status">
             <option value="Activo"   ${isAct?'selected':''}>Activo</option>
             <option value="Inactivo" ${!isAct?'selected':''}>Inactivo</option>
           </select>
         </td>
-      </tr>
-    `;
+      </tr>`;
   }
 
   function setQboReadyState(){
-    const onQbo = views.qbo && !views.qbo.classList.contains("d-none");
-    const canQbo = !!COMPANY_ID && !!LINKED;
-    if (!onQbo){
-      hide(qboNotice);
-      if (btnFetchQbo) btnFetchQbo.disabled = true;
-      return;
-    }
-    if (!canQbo){
+    if (!COMPANY_ID || !LINKED) {
       if (qboNotice){
         qboNotice.className = "alert alert-warning";
         qboNotice.textContent = !COMPANY_ID
@@ -292,7 +355,7 @@
       }
       if (btnFetchQbo) btnFetchQbo.disabled = true;
     } else {
-      hide(qboNotice);
+      if (qboNotice) hide(qboNotice);
       if (btnFetchQbo) btnFetchQbo.disabled = false;
     }
   }
@@ -300,19 +363,36 @@
   async function fetchQboEmployees(){
     if (!COMPANY_ID || !LINKED) return;
     if (qboSpinner) show(qboSpinner);
-    try{
+    try {
       const url  = `/payroll/api/qbo/employees?companyId=${COMPANY_ID}&includeInactive=false`;
-      const resp = await fetch(url, { method:"GET" });
+      const resp = await fetch(url, { method: "GET" });
       const data = await resp.json();
       const tb = tblBody(); if (!tb) return;
-      tb.innerHTML = (Array.isArray(data) ? data : []).map((e,i)=> qboRowTpl(e,i)).join("");
+      tb.innerHTML = Array.isArray(data) ? data.map((e,i)=> qboRowTpl(e,i)).join("") : "";
       qboApplyPctVisibility();
-      QBO_LIST = Array.isArray(data) ? data : [];
-    }catch(err){
+    } catch (err) {
       const tb = tblBody(); if (tb) tb.innerHTML = `<tr><td colspan="16" class="text-danger">Error QBO: ${err}</td></tr>`;
-    }finally{
+    } finally {
       if (qboSpinner) hide(qboSpinner);
     }
+  }
+
+  function tblBody(){ return qs("#tblQbo tbody"); }
+
+  function qboApplyPctVisibility(){
+    const tbl = qs("#tblQbo"); if (!tbl) return;
+    const slots = PCT_SLOTS || 1;
+    const g = tbl.querySelector("#thPctGroup"); if (g) g.colSpan = slots;
+
+    ["1","2","3","4"].forEach((k,i)=>{
+      const disp = (i < slots) ? "" : "none";
+      tbl.querySelectorAll("thead th.pct"+k+", tbody td.pct"+k).forEach(el => { el.style.display = disp; });
+    });
+
+    // Mensual: forzar 100 en %1 y readonly
+    tbl.querySelectorAll("tbody td.pct1 input").forEach(inp => {
+      if (slots === 1) { inp.value = 100; inp.readOnly = true; } else { inp.readOnly = false; }
+    });
   }
 
   function qboCollectRows(){
@@ -342,7 +422,7 @@
     return rows;
   }
 
-  function qboIsActive(){ return views.qbo && !views.qbo.classList.contains("d-none"); }
+  function qboIsActive(){ return !qs("#view-qbo")?.classList.contains("d-none"); }
   function markInvalid(el, bad){ if(!el) return; el.classList.toggle("is-invalid", !!bad); }
 
   function qboValidateAndContinue(ev){
@@ -354,15 +434,12 @@
     const tb     = tblBody();
 
     tb?.querySelectorAll(".is-invalid").forEach(x=> x.classList.remove("is-invalid"));
-    if (!rows || rows.length===0){
-      if (notice){ notice.className="alert alert-danger"; notice.textContent="No hay filas para continuar."; show(notice); }
-      return;
-    }
+    if (!rows || rows.length===0){ if (notice){ notice.className="alert alert-danger"; notice.textContent="No hay filas para continuar."; show(notice);} return; }
 
     const EPS = 0.01; let idx = 0;
     for (const tr of tb.querySelectorAll("tr")){
       const get = s => tr.querySelector(s);
-      const num = s => { const v = parseFloat(get(s)?.value?.replace(",", ".")||""); return isNaN(v)?0:v; };
+      const num = s => { const v = parseFloat(get(s)?.value?.replace(",", ".")||""); return isNaN(v)? 0 : v; };
 
       const nationalId = get(".nationalId");
       const firstName  = get(".firstName");
@@ -401,27 +478,40 @@
       });
 
       if (bad){
-        if (notice){ notice.className="alert alert-danger"; notice.innerHTML = `Fila ${idx+1}: complete obligatorios y verifique que la suma de % sea 100. (Actual: ${sum.toFixed(2)})`; show(notice); }
+        if (notice){
+          notice.className = "alert alert-danger";
+          notice.innerHTML = `Fila ${idx+1}: complete obligatorios y verifique que la suma de % sea 100. (Actual: ${sum.toFixed(2)})`;
+          show(notice);
+        }
         return;
       }
       idx++;
     }
+
     if (notice){ notice.className="alert alert-success"; notice.textContent="Validación OK. Listo para enviar."; show(notice); }
+    // Aquí podrías POSTear rows si ya quieres persistir
   }
 
-  // --------- Eventos ----------
-  if (btnFetchQbo) btnFetchQbo.addEventListener("click", fetchQboEmployees);
-
+  // ---- Eventos ----
   document.addEventListener("click", (ev) => {
     const t = ev.target.closest("[data-view]");
     if (t){ ev.preventDefault(); switchView(t.getAttribute("data-view")); return; }
+
+    if (ev.target.closest("#btnFetchQbo")) { ev.preventDefault(); fetchQboEmployees(); return; }
+
     const cont = ev.target.closest("#dlgAgregar .modal-footer .btn-primary");
-    if (cont && qboIsActive()) qboValidateAndContinue(ev);
+    if (cont && qboIsActive()) { ev.preventDefault(); qboValidateAndContinue(ev); }
   });
 
-  // --------- Init ----------
-  setQboReadyState();
-  qboApplyPctVisibility();
-  switchView("qbo");
+  // Iniciar cada vez que se abre el modal
+  const dlg = document.getElementById("dlgAgregar");
+  if (dlg){
+    dlg.addEventListener("shown.bs.modal", () => {
+      setQboReadyState();
+      qboApplyPctVisibility();
+      switchView("qbo");
+    });
+  }
 })();
 </script>
+}
