@@ -524,77 +524,93 @@
 
 @* PAYROLL_COLAB_SCRIPT *@
 <script>
-document.addEventListener('DOMContentLoaded', function(){
-  const canAdd = @Model.CanAdd.ToString().ToLowerInvariant();
-  const companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0));
+(function(){
+  function init(){
+    const canAdd = @Model.CanAdd.ToString().ToLowerInvariant();      // boolean JS
+    const companyId = @((Model.CompanyId.HasValue ? Model.CompanyId.Value : 0)); // 0 si 'Todas las empresas'
 
-  // 1) Botón "Agregar" (deshabilitar si no Listo)
-  const clickables = Array.from(document.querySelectorAll('a,button'));
-  const addBtn = clickables.find(el => el.textContent && el.textContent.trim() === 'Agregar');
-  if (addBtn) {
-    if (!canAdd || companyId <= 0) {
-      addBtn.classList.add('disabled'); addBtn.setAttribute('aria-disabled','true');
-      addBtn.setAttribute('title', 'Seleccione una empresa con estado Listo');
-      addBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+    // --- 1) Botón Agregar: deshabilitar si no hay empresa o no está Listo ---
+    const nodes = Array.from(document.querySelectorAll('a,button'));
+    const addBtn = nodes.find(el => el.textContent && el.textContent.trim().toLowerCase() === 'agregar');
+    if (addBtn) {
+      const shouldDisable = (!canAdd) || (companyId <= 0);
+      if (shouldDisable) {
+        addBtn.classList.add('disabled');
+        addBtn.setAttribute('aria-disabled','true');
+        addBtn.style.pointerEvents = 'none';
+        // Quitar disparadores de modal para que NO abra
+        addBtn.removeAttribute('data-bs-toggle');
+        addBtn.removeAttribute('data-bs-target');
+        addBtn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); }, true);
+      }
     }
-  }
 
-  // 2) Acciones del modal: QBO / Manual / Excel
-  const traerQbo = clickables.find(el => el.textContent && el.textContent.trim().startsWith('Traer de QBO'));
-  if (traerQbo) {
-    traerQbo.addEventListener('click', e => {
-      e.preventDefault();
-      if (companyId > 0) window.location.href = ?handler=ImportQbo&companyId=;
-    });
-  }
-  const btnManual = clickables.find(el => el.textContent && el.textContent.trim() === 'Manual');
-  if (btnManual) {
-    btnManual.addEventListener('click', e => { e.preventDefault(); if (companyId > 0) window.location.href = ./Manual?companyId=; });
-  }
-  const btnExcel = clickables.find(el => el.textContent && el.textContent.trim() === 'Excel');
-  if (btnExcel) {
-    btnExcel.addEventListener('click', e => { e.preventDefault(); if (companyId > 0) window.location.href = ./Excel?companyId=; });
-  }
-
-  // 3) Periodo reactivo (mensual/quincenal/semanal) con suma = 100%
-  const periodo = '@Model.Periodo'.toLowerCase(); // viene de PayPolicy leído en el code-behind
-  const host = (function(){
-    const marker = Array.from(document.querySelectorAll('th,td,div,section,h5,h6'))
-                        .find(el => el.textContent && el.textContent.trim().startsWith('Porcentaje de pago por periodo'));
-    const d = document.createElement('div'); d.id = 'periodo-editor'; d.className='mt-2';
-    if (marker && marker.parentElement) marker.parentElement.insertAdjacentElement('afterend', d);
-    else document.body.appendChild(d);
-    return d;
-  })();
-
-  function render(p) {
-    const cfg = (p === 'mensual') ? [100] : (p === 'quincenal' ? [50,50] : [25,25,25,25]);
-    host.innerHTML = '';
-    const row = document.createElement('div'); row.className='d-flex gap-2 align-items-end flex-wrap';
-
-    cfg.forEach((v,i) => {
-      const wrap = document.createElement('div'); wrap.className='d-flex flex-column me-2';
-      const lab = document.createElement('label'); lab.textContent = 'Periodo ' + (i+1);
-      const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1'; inp.value = v; inp.className='form-control';
-      inp.name = 'PayPct' + (i+1);
-      inp.addEventListener('input', validate);
-      wrap.appendChild(lab); wrap.appendChild(inp); row.appendChild(wrap);
-    });
-
-    const info = document.createElement('div'); info.id='pct-total'; info.className='ms-3 fw-bold';
-    host.appendChild(row); host.appendChild(info);
-    validate();
-
-    function validate(){
-      const values = Array.from(host.querySelectorAll('input[type=number]')).map(x => parseInt(x.value||'0'));
-      const sum = values.reduce((a,b) => a+b, 0);
-      info.textContent = 'Total: ' + sum + '%';
-      const ok = (sum === 100);
-      const cont = clickables.find(el => el.textContent && el.textContent.trim().toLowerCase() === 'continuar');
-      if (cont) { cont.toggleAttribute('disabled', !ok); cont.classList.toggle('disabled', !ok); }
+    // --- 2) Acciones del modal: QBO / Manual / Excel ---
+    const traerQbo = nodes.find(el => el.textContent && el.textContent.trim().startsWith('Traer de QBO'));
+    if (traerQbo) {
+      traerQbo.addEventListener('click', function(e){
+        e.preventDefault();
+        if (companyId > 0) window.location.href = ?handler=ImportQbo&companyId=;
+      });
     }
+    const btnManual = nodes.find(el => el.textContent && el.textContent.trim() === 'Manual');
+    if (btnManual) {
+      btnManual.addEventListener('click', function(e){
+        e.preventDefault();
+        if (companyId > 0) window.location.href = ./Manual?companyId=;
+      });
+    }
+    const btnExcel = nodes.find(el => el.textContent && el.textContent.trim() === 'Excel');
+    if (btnExcel) {
+      btnExcel.addEventListener('click', function(e){
+        e.preventDefault();
+        if (companyId > 0) window.location.href = ./Excel?companyId=;
+      });
+    }
+
+    // --- 3) Periodo reactivo (mensual/quincenal/semanal) ---
+    const periodo = '@Model.Periodo'.toLowerCase();
+    const host = (function(){
+      const marker = Array.from(document.querySelectorAll('th,td,div,section,h5,h6'))
+                          .find(el => el.textContent && el.textContent.trim().startsWith('Porcentaje de pago por periodo'));
+      const d = document.createElement('div'); d.id = 'periodo-editor'; d.className='mt-2';
+      if (marker && marker.parentElement) marker.parentElement.insertAdjacentElement('afterend', d);
+      else document.body.appendChild(d);
+      return d;
+    })();
+
+    function render(p) {
+      const cfg = (p === 'mensual') ? [100] : (p === 'quincenal' ? [50,50] : [25,25,25,25]);
+      host.innerHTML = '';
+      const row = document.createElement('div'); row.className='d-flex gap-2 align-items-end flex-wrap';
+
+      cfg.forEach((v,i) => {
+        const wrap = document.createElement('div'); wrap.className='d-flex flex-column me-2';
+        const lab = document.createElement('label'); lab.textContent = 'Periodo ' + (i+1);
+        const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.max='100'; inp.step='1'; inp.value = v; inp.className='form-control';
+        inp.name = 'PayPct' + (i+1);
+        inp.addEventListener('input', validate);
+        wrap.appendChild(lab); wrap.appendChild(inp); row.appendChild(wrap);
+      });
+
+      const info = document.createElement('div'); info.id='pct-total'; info.className='ms-3 fw-bold';
+      host.appendChild(row); host.appendChild(info);
+      validate();
+
+      function validate(){
+        const values = Array.from(host.querySelectorAll('input[type=number]')).map(x => parseInt(x.value||'0',10));
+        const sum = values.reduce((a,b) => a+b, 0);
+        info.textContent = 'Total: ' + sum + '%';
+        const cont = nodes.find(el => el.textContent && el.textContent.trim().toLowerCase() === 'continuar');
+        if (cont) { cont.toggleAttribute('disabled', sum !== 100); cont.classList.toggle('disabled', sum !== 100); }
+      }
+    }
+    render(periodo);
   }
-  render(periodo);
-});
+
+  if (document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', init, {once:true}); }
+  else { init(); }
+})();
 </script>
+
 
