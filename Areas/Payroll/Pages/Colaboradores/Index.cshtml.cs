@@ -130,9 +130,11 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                             }
                         }
                     }
-                    CompanyState = state ?? "";
-                    CompanyReady = !string.IsNullOrWhiteSpace(CompanyState)
-                                   && CompanyState.Equals("Listo", StringComparison.OrdinalIgnoreCase);
+                    CompanyState = (state ?? "").Trim();
+var listo = CompanyState.Equals("Listo", StringComparison.OrdinalIgnoreCase)
+         || CompanyState.Equals("Ready", StringComparison.OrdinalIgnoreCase)
+         || CompanyState.Equals("Aprobado", StringComparison.OrdinalIgnoreCase);
+CompanyReady = CompanyId.HasValue && listo;
                 }
             }
             catch { CompanyReady = false; }
@@ -223,4 +225,5 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         }
     }
 }
+
 

@@ -405,5 +405,26 @@
   }
 })();
 </script>
+
+@* __addbtn_fix__ *@
+<script>
+(function(){
+  if (window.__addbtn_fix__) return; window.__addbtn_fix__ = true;
+  document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('btnAgregar');
+    var dlg = document.getElementById('dlgAgregar');
+    if (!btn || !dlg) return;
+    btn.addEventListener('click', function(){
+      if (btn.hasAttribute('disabled')) return;  // sigue respetando el gating
+      try {
+        if (window.bootstrap && bootstrap.Modal) {
+          bootstrap.Modal.getOrCreateInstance(dlg).show();
+        }
+      } catch(e) {}
+    });
+  });
+})();
+</script>
 }
+
 
