@@ -34,14 +34,14 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         public List<string> SectorNames { get; private set; } = new() { "General" };
         public string Periodo { get; private set; } = "Mensual";
 
-        // Estado de la empresa (gating)
+        // Estado/gating
         public string CompanyState { get; private set; } = "";
         public bool CompanyReady { get; private set; } = false;
 
         // QBO
         public bool IsCompanyLinked { get; private set; } = false;
         public List<string> QboEmployees { get; private set; } = new();
-        public string QboRawJson { get; private set; } = "[]"; // lista de QboEmployeeDto serializada
+        public string QboRawJson { get; private set; } = "[]"; // [{Id,GivenName,FamilyName,DisplayName,Email,Phone,Active}]
 
         // Tabla
         public List<RowVM> Rows { get; private set; } = new();
@@ -71,23 +71,24 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
             var qsStatus = (HttpContext.Request.Query["status"].ToString() ?? "").Trim().ToLowerInvariant();
             Status = (qsStatus == "inactivos") ? "inactivos" : "activos";
 
-            // 2) ¿Vinculada a QBO?
+            // 2) Vinculación QBO
             if (CompanyId.HasValue)
             {
                 try { IsCompanyLinked = await _qbo.IsCompanyLinkedAsync(CompanyId.Value, ct); }
                 catch { IsCompanyLinked = false; }
             }
 
-            // 3) PayPolicy: Periodo + Sectores
+            // 3) PayPolicy: periodo + sectores
+            string? payPolicy = null;
             try
             {
                 if (CompanyId.HasValue)
                 {
                     var comp = await _db.Companies.FindAsync(new object[] { CompanyId.Value }, ct);
-                    var json = comp?.PayPolicy;
-                    if (!string.IsNullOrWhiteSpace(json))
+                    payPolicy = comp?.PayPolicy;
+                    if (!string.IsNullOrWhiteSpace(payPolicy))
                     {
-                        using var doc = JsonDocument.Parse(json);
+                        using var doc = JsonDocument.Parse(payPolicy);
                         var root = doc.RootElement;
 
                         if (root.TryGetProperty("periodo", out var per) && per.ValueKind == JsonValueKind.String)
@@ -107,64 +108,49 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
                     }
                 }
             }
-            catch { /* defaults ya establecidos */ }
+            catch { /* defaults ok */ }
 
-            // 4) Estado real de la empresa (Listo)
+            // 4) Estado como en Empresas: tokens + PayPolicy parametrizada => "Listo"
             try
             {
-                CompanyReady = false;
-                if (CompanyId.HasValue)
-                {
-                    var comp = await _db.Companies.FindAsync(new object[] { CompanyId.Value }, ct);
-                    string? state = null;
-                    var t = comp?.GetType();
-                    if (t != null)
-                    {
-                        foreach (var name in new[] { "PayrollStatus","PayrollState","Estado","State","Status" })
-                        {
-                            var p = t.GetProperty(name);
-                            if (p != null)
-                            {
-                                var val = p.GetValue(comp);
-                                if (val != null) { state = val.ToString(); break; }
-                            }
-                        }
-                    }
-                    CompanyState = (state ?? "").Trim();
-var listo = CompanyState.Equals("Listo", StringComparison.OrdinalIgnoreCase)
-         || CompanyState.Equals("Ready", StringComparison.OrdinalIgnoreCase)
-         || CompanyState.Equals("Aprobado", StringComparison.OrdinalIgnoreCase);
-CompanyReady = CompanyId.HasValue && listo;
-                }
+                var hasTokens = CompanyId.HasValue && _db.PayrollQboTokens.Any(t => t.CompanyId == CompanyId.Value);
+                var isParam   = IsParametrized(payPolicy, SectorNames);
+                CompanyState  = !hasTokens ? "Sin conexión" : (isParam ? "Listo" : "Pendiente");
+                CompanyReady  = hasTokens && isParam;
             }
-            catch { CompanyReady = false; }
+            catch
+            {
+                CompanyState = "Sin conexión";
+                CompanyReady = false;
+            }
 
-            // 5) Traer empleados QBO (para QBO-tab y la lista de "Vinculación QBO" en Manual)
+            // 5) Lista empleados QBO para pestaña y vinculación
             try
             {
                 if (CompanyId.HasValue && IsCompanyLinked)
                 {
                     var qbo = await _qbo.GetEmployeesAsync(CompanyId.Value, includeInactive: false, ct);
-                    QboEmployees = qbo.Select(e => e.DisplayName).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
-                    QboRawJson   = JsonSerializer.Serialize(qbo); // [{Id,GivenName,FamilyName,DisplayName,Email,Phone,Active}]
+                    QboEmployees = qbo.Select(e => e.DisplayName)
+                                      .Where(s => !string.IsNullOrWhiteSpace(s))
+                                      .Distinct()
+                                      .ToList();
+                    QboRawJson   = JsonSerializer.Serialize(qbo);
                 }
             }
             catch (Exception ex)
             {
-                _log.LogWarning(ex, "[Colaboradores] No se pudo recuperar la lista de empleados QBO.");
+                _log.LogWarning(ex, "[Colaboradores] No se pudo recuperar lista QBO.");
                 QboEmployees = new();
                 QboRawJson   = "[]";
             }
 
-            // 6) Cargar empleados locales (tabla principal)
+            // 6) Tabla principal
             try
             {
                 var isActivos = Status == "activos";
                 var q = _db.Employees.AsNoTracking().AsQueryable();
 
-                if (CompanyId.HasValue)
-                    q = q.Where(e => e.CompanyId == CompanyId.Value);
-
+                if (CompanyId.HasValue) q = q.Where(e => e.CompanyId == CompanyId.Value);
                 q = isActivos ? q.Where(e => e.Status == "Activo")
                               : q.Where(e => e.Status != "Activo");
 
@@ -204,7 +190,6 @@ CompanyReady = CompanyId.HasValue && listo;
             }
         }
 
-        // GET: Traer de QBO (fallback por si algún día quieres forzar refresh/redirección)
         public Microsoft.AspNetCore.Mvc.IActionResult OnGetImportQbo(int companyId)
         {
             if (companyId <= 0) return BadRequest();
@@ -223,7 +208,80 @@ CompanyReady = CompanyId.HasValue && listo;
             add(p1); add(p2); add(p3); add(p4);
             return parts.Count == 0 ? "" : string.Join("/", parts);
         }
+
+        // Misma regla que Empresas: periodo válido, ≥1 sector y cuentas requeridas
+        private static bool IsParametrized(string? payPolicy, List<string> sectorNames)
+        {
+            if (string.IsNullOrWhiteSpace(payPolicy)) return false;
+            try
+            {
+                using var doc = JsonDocument.Parse(payPolicy);
+                var root = doc.RootElement;
+
+                // Periodo
+                if (!(root.TryGetProperty("periodo", out var p) &&
+                      p.ValueKind == JsonValueKind.String &&
+                      !string.IsNullOrWhiteSpace(p.GetString())))
+                    return false;
+
+                // Sectores
+                var sectors = sectorNames ?? new List<string>();
+                if (sectors.Count == 0) return false;
+
+                // splitBySector
+                bool split = false;
+                if (root.TryGetProperty("splitBySector", out var sb))
+                {
+                    split = sb.ValueKind == JsonValueKind.True
+                            || (sb.ValueKind == JsonValueKind.String &&
+                                bool.TryParse(sb.GetString(), out var b) && b);
+                }
+
+                // accounts
+                if (!(root.TryGetProperty("accounts", out var accNode) && accNode.ValueKind == JsonValueKind.Object))
+                    return false;
+
+                var keys = new[] { "SalarioBruto", "Extras", "CCSS", "Deducciones", "SalarioNeto" };
+
+                if (split)
+                {
+                    if (!(accNode.TryGetProperty("perSector", out var perSector) && perSector.ValueKind == JsonValueKind.Object))
+                        return false;
+
+                    foreach (var secName in sectors)
+                    {
+                        if (!(perSector.TryGetProperty(secName, out var map) && map.ValueKind == JsonValueKind.Object))
+                            return false;
+
+                        foreach (var k in keys)
+                        {
+                            if (!(map.TryGetProperty(k, out var v) &&
+                                  v.ValueKind == JsonValueKind.String &&
+                                  !string.IsNullOrWhiteSpace(v.GetString())))
+                                return false;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!(accNode.TryGetProperty("general", out var gen) && gen.ValueKind == JsonValueKind.Object))
+                        return false;
+
+                    foreach (var k in keys)
+                    {
+                        if (!(gen.TryGetProperty(k, out var v) &&
+                              v.ValueKind == JsonValueKind.String &&
+                              !string.IsNullOrWhiteSpace(v.GetString())))
+                            return false;
+                    }
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 }
-
-
