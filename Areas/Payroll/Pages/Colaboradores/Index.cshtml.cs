@@ -5,7 +5,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+
+using Microsoft.AspNetCore.Mvc;using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using IvaFacilitador.Payroll.Services;
@@ -285,3 +286,4 @@ namespace IvaFacilitador.Areas.Payroll.Pages.Colaboradores
         }
     }
 }
+

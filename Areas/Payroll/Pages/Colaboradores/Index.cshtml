@@ -394,6 +394,79 @@
 
   var dlg = document.getElementById('dlgAgregar');
   if (dlg){ dlg.addEventListener('shown.bs.modal', function(){ if (tQ) tQ.click(); }); }
+  // === Continuar: recolecta filas y guarda en memoria (TempData) ===
+  var currentTab = "qbo";
+  var _tq = document.getElementById("tab-qbo");
+  var _tm = document.getElementById("tab-manual");
+  var _te = document.getElementById("tab-excel");
+  if (_tq) _tq.addEventListener("click", function(){ currentTab = "qbo"; });
+  if (_tm) _tm.addEventListener("click", function(){ currentTab = "manual"; });
+  if (_te) _te.addEventListener("click", function(){ currentTab = "excel"; });
+
+  function _readRadioVal(group){
+    var rs = group ? group.querySelectorAll("input[type=radio]") : [];
+    for (var i=0;i<rs.length;i++){ if (rs[i].checked) return rs[i].value; }
+    return null;
+  }
+
+  function _collectGridRows(){
+    var rows = [];
+    var tbody = document.querySelector("#pane tbody");
+    if (!tbody) return rows;
+    var trs = Array.prototype.slice.call(tbody.children);
+    for (var i=0;i<trs.length;i++){
+      var cells = trs[i].querySelectorAll("td");
+      var idx=1;
+      var nombre    = (cells[idx++].querySelector("input")||{}).value || "";
+      var apellidos = (cells[idx++].querySelector("input")||{}).value || "";
+      var cedula    = (cells[idx++].querySelector("input")||{}).value || "";
+      var correo    = (cells[idx++].querySelector("input")||{}).value || "";
+      var telefono  = (cells[idx++].querySelector("input")||{}).value || "";
+      var sectorSel = (cells[idx++].querySelector("select")||{}).value || "";
+      var cargo     = (cells[idx++].querySelector("input")||{}).value || "";
+      var salario   = (cells[idx++].querySelector("input")||{}).value || "";
+      var ccssGroup = cells[idx++].querySelector("div.btn-group");
+      var insGroup  = cells[idx++].querySelector("div.btn-group");
+      var periodos = [];
+      for (var j=0;j<periodCfg.count;j++){
+        var v = (cells[idx++].querySelector("input")||{}).value || "0";
+        var n = parseInt(v,10); if (isNaN(n)) n = 0; periodos.push(n);
+      }
+      var estadoSel = (cells[idx++].querySelector("select")||{}).value || "";
+      var vincSel   = (cells[idx++].querySelector("select")||{}).value || "";
+
+      var rccss = _readRadioVal(ccssGroup), rins = _readRadioVal(insGroup);
+      rows.push({
+        Nombre:nombre, Apellidos:apellidos, Cedula:cedula, Correo:correo, Telefono:telefono,
+        Sector:sectorSel, Cargo:cargo, Salario: salario? parseFloat(salario): null,
+        CCSS: rccss ? (rccss==="Si") : null, INS: rins ? (rins==="Si") : null,
+        Periodos: periodos, Estado:estadoSel, VincQbo:vincSel
+      });
+    }
+    return rows;
+  }
+
+  (function hookContinuar(){
+    var btn = document.getElementById("btnContinuar");
+    if (!btn) return;
+    btn.addEventListener("click", async function(){
+      try{
+        var rows = _collectGridRows();
+        if (!rows.length){ alert("No hay filas."); return; }
+        var payload = { companyId: companyId, source: currentTab, rows: rows };
+        var res = await fetch("?handler=Stage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok){ alert("No se pudo guardar."); return; }
+        var rj = await res.json();
+        // Cierra modal
+        if (typeof hideModal === "function") hideModal();
+      }catch(e){ console.error(e); alert("Ocurrió un error."); }
+    });
+  })();
 })();
 </script>
 }
+
